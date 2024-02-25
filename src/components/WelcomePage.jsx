@@ -23,7 +23,7 @@ const WelcomePage = () => {
                 Professor
               </Link>
               <Link
-                to="/preceptor"
+                to="/login"
                 className="inline-block rounded bg-blue-500 px-5 
                 py-2 text-white hover:bg-sky-700"
               >
