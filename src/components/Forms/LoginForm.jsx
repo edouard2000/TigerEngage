@@ -1,3 +1,6 @@
+// Import React and Link component from react-router-dom
+import { Link } from 'react-router-dom';
+
 const LoginForm = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
@@ -10,7 +13,6 @@ const LoginForm = () => {
             <label
               htmlFor="email"
               className="text-sm font-medium text-gray-700"
-              
             >
               Email
             </label>
@@ -20,7 +22,6 @@ const LoginForm = () => {
               name="email"
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
               required
-        
             />
           </div>
           <div>
@@ -52,6 +53,12 @@ const LoginForm = () => {
           <button className="mt-3 w-full rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-200">
             Login with Google
           </button>
+        </div>
+        <div className="pt-5 text-center">
+          <p className="text-sm font-light">Don't have an account?</p>
+          <Link to="/signup" className="mt-3 inline-block w-full rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+            Sign Up
+          </Link>
         </div>
       </div>
     </div>
