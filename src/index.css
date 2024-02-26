@@ -1,3 +1,29 @@
+/* In your global CSS file */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+  @keyframes moveBackground {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  .hover-bg-animate {
+    background: linear-gradient(120deg, #89f7fe, #66a6ff);
+    background-size: 200% 200%;
+    transition: all 0.5s ease-in-out;
+  }
+
+  .hover-bg-animate:hover {
+    background-position: 100% 0;
+    animation: moveBackground 8s ease infinite;
+  }
+}

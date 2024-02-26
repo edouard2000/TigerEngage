@@ -17,12 +17,12 @@ const AnswerSubmissionForm = ({ question, isActive }) => {
   }
 
   return (
-    <div className="my-8 rounded-lg bg-white p-6 shadow">
+    <div className="my-8 rounded-lg border-2 border-sky-900 bg-white p-6 shadow-2xl">
       <h2 className="mb-4 text-lg font-semibold">Answer the Question</h2>
       <p className="mb-4">{question}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <textarea
-          className="w-full resize-none rounded border border-gray-300 p-2"
+          className=" w-full resize-none rounded border border-gray-300 p-2"
           rows="4"
           placeholder="Type your answer here..."
           value={answer}
@@ -30,7 +30,7 @@ const AnswerSubmissionForm = ({ question, isActive }) => {
         />
         <button
           type="submit"
-          className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          className="rounded bg-sky-900 px-4 py-2 text-white hover:bg-blue-900"
         >
           Submit Answer
         </button>

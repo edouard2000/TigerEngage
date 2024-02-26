@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 const dummyMessages = [
-  { id: 1, text: "What is the main concept of Object-Oriented Programming?", sender: "user" },
-  { id: 2, text: "It's a programming paradigm based on the concept of objects, which can contain data and code: data in the form of fields, and code, in the form of procedures.", sender: "responder" },
-  { id: 3, text: "How can I improve my algorithm skills?", sender: "user" }
+  {
+    id: 1,
+    text: 'What is the main concept of Object-Oriented Programming?',
+    sender: 'user',
+  },
+  {
+    id: 2,
+    text: "It's a programming paradigm based on the concept of objects, which can contain data and code: data in the form of fields, and code, in the form of procedures.",
+    sender: 'responder',
+  },
+  { id: 3, text: 'How can I improve my algorithm skills?', sender: 'user' },
 ];
 
 const ChatSystem = () => {
@@ -15,8 +23,11 @@ const ChatSystem = () => {
     if (!newMessage.trim()) return;
 
     const nextId = messages.length + 1;
-    setMessages([...messages, { id: nextId, text: newMessage, sender: "user" }]);
-    setNewMessage(''); 
+    setMessages([
+      ...messages,
+      { id: nextId, text: newMessage, sender: 'user' },
+    ]);
+    setNewMessage('');
   };
 
   return (
@@ -24,7 +35,11 @@ const ChatSystem = () => {
       <h2 className="mb-4 text-lg font-semibold">Classroom Chat</h2>
       <div className="mb-4 h-64 overflow-y-auto">
         {messages.map((message) => (
-          <div key={message.id} className={`my-2 rounded p-2 ${message.sender === "user" ? "ml-auto bg-blue-200" : "mr-auto bg-gray-200"}`} style={{ maxWidth: "80%" }}>
+          <div
+            key={message.id}
+            className={`my-2 rounded p-2 ${message.sender === 'user' ? 'ml-auto bg-blue-200' : 'mr-auto bg-gray-200'}`}
+            style={{ maxWidth: '80%' }}
+          >
             <p className="text-sm">{message.text}</p>
           </div>
         ))}
