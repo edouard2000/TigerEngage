@@ -1,4 +1,3 @@
-
 import { useNavigate } from 'react-router-dom';
 
 const RoleSelection = () => {
@@ -7,7 +6,7 @@ const RoleSelection = () => {
   const handleRoleSelect = (role) => {
     switch (role) {
       case 'student':
-        navigate('/student-info');
+        navigate('/student-Dashboard');
         break;
       case 'professor':
         navigate('/professor-info');
@@ -48,8 +47,6 @@ const RoleSelection = () => {
 };
 
 export default RoleSelection;
-
-
 
 import UAParser from 'ua-parser-js';
 

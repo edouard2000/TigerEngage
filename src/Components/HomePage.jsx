@@ -15,7 +15,7 @@ const HomePage = () => {
         </p>
         <Link
           to="/role-selection"
-          className="rounded-full bg-white px-4 py-2 font-bold text-blue-600 hover:bg-gray-100"
+          className="rounded-full bg-white px-4 py-2 font-bold text-sky-950 hover:bg-gray-100"
         >
           Get Started
         </Link>
