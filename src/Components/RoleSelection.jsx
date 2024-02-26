@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import SimpleNavBar from './SimpleNavBar';
 
 const RoleSelection = () => {
   const navigate = useNavigate();
@@ -6,7 +7,7 @@ const RoleSelection = () => {
   const handleRoleSelect = (role) => {
     switch (role) {
       case 'student':
-        navigate('/student-Dashboard');
+        navigate('/student-dashboard');
         break;
       case 'professor':
         navigate('/professor-info');
@@ -20,38 +21,46 @@ const RoleSelection = () => {
   };
 
   return (
-    <div className="mt-20 text-center">
-      <h2 className="mb-10 text-3xl font-semibold">Select Your Role</h2>
-      <div className="space-x-4">
-        <button
-          onClick={() => handleRoleSelect('student')}
-          className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+    <>
+      <SimpleNavBar />
+      <div className="mt-60 flex justify-center">
+        <div
+          className="w-full max-w-md rounded-lg bg-white px-8
+         py-10 shadow-lg transition-shadow duration-300 hover:shadow-2xl"
         >
-          Student
-        </button>
-        <button
-          onClick={() => handleRoleSelect('professor')}
-          className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
-        >
-          Professor
-        </button>
-        <button
-          onClick={() => handleRoleSelect('preceptor')}
-          className="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
-        >
-          Preceptor
-        </button>
+          <h2 className="mb-10 text-center text-3xl font-semibold">
+            Select Your Role
+          </h2>
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => handleRoleSelect('student')}
+              className="rounded bg-blue-500 px-4 py-2 font-bold
+               text-white transition-all duration-300 hover:scale-105
+                hover:bg-blue-700 hover:py-3"
+            >
+              Student
+            </button>
+            <button
+              onClick={() => handleRoleSelect('professor')}
+              className="rounded bg-blue-500 px-4 py-2 font-bold
+               text-white transition-all duration-300 hover:scale-105
+                hover:bg-blue-700 hover:py-3"
+            >
+              Professor
+            </button>
+            <button
+              onClick={() => handleRoleSelect('preceptor')}
+              className="rounded bg-blue-500 px-4 py-2 font-bold
+               text-white transition-all duration-300 
+               hover:scale-105 hover:bg-blue-700 hover:py-3"
+            >
+              Preceptor
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
 export default RoleSelection;
-
-import UAParser from 'ua-parser-js';
-
-const parser = new UAParser();
-const result = parser.getResult();
-const osName = result.os.name;
-
-console.log(osName);
