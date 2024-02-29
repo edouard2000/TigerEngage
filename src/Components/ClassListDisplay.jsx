@@ -8,7 +8,7 @@ const ClassListDisplay = ({ searchTerm }) => {
   );
 
   return (
-    <div className="flex flex-col items-center space-y-2">
+    <div className="flex flex-col items-center justify-center">
       {filteredClasses.length > 0 ? (
         filteredClasses.map((cls) => (
           <div

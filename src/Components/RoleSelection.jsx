@@ -28,8 +28,8 @@ const RoleSelection = () => {
           className="w-full max-w-md rounded-lg bg-white px-8
          py-10 shadow-lg transition-shadow duration-300 hover:shadow-2xl"
         >
-          <h2 className="mb-10 text-center text-3xl font-semibold">
-            Select Your Role
+          <h2 className="mb-10 text-center text-3xl font-semibold text-sky-950">
+            Select your role
           </h2>
           <div className="flex justify-center space-x-4">
             <button

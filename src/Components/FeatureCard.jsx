@@ -7,7 +7,7 @@ const FeatureCard = ({ title, description }) => {
     transition-colors duration-300 focus-within:bg-gray-100
      hover:bg-sky-900 hover:text-white "
     >
-      <h3 className="mb-2 text-xl font-semibold text-sky-900 ">{title}</h3>
+      <h3 className="mb-2 text-xl font-bold hover:underline">{title}</h3>
       <p>{description}</p>
     </div>
   );
