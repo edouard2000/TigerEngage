@@ -3,63 +3,154 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TigerEngage - Home Page</title>
+    <title>TigerEngage - Empower Your Educational Experience</title>
+    <!-- Bootstrap CSS -->
     <link
-      href="{{ url_for('static', filename='css/tailwind.css') }}"
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <!-- Tailwind CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.0.3/dist/tailwind.min.css"
       rel="stylesheet"
     />
   </head>
-  <body class="bg-gray-100 text-gray-800">
-    <nav class="bg-blue-800 p-4 text-white">
-      <div class="container mx-auto flex justify-between items-center">
-        <a class="text-xl font-bold" href="#">TigerEngage</a>
-        <div>
-          <a href="#" class="text-lg px-4 hover:text-blue-200">Features</a>
-          <a href="#" class="text-lg px-4 hover:text-blue-200">About</a>
-          <a href="#" class="text-lg px-4 hover:text-blue-200">Contact</a>
-        </div>
+  <body class="bg-gray-100">
+    <!-- Navigation Bar -->
+    <nav
+      class="navbar navbar-expand-lg navbar-light bg-white shadow-sm px-6 py-4"
+    >
+      <a class="navbar-brand font-bold text-xl text-gray-900" href="#"
+        >TigerEngage</a
+      >
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-toggle="collapse"
+        data-target="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item active">
+            <a class="nav-link text-gray-800 hover:text-gray-600" href="#"
+              >Home <span class="sr-only">(current)</span></a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-gray-800 hover:text-gray-600" href="#"
+              >Features</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-gray-800 hover:text-gray-600" href="#"
+              >About Us</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-gray-800 hover:text-gray-600" href="#"
+              >Support</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-gray-800 hover:text-gray-600" href="#"
+              >Contact</a
+            >
+          </li>
+        </ul>
       </div>
     </nav>
 
-    <header class="text-center py-10">
-      <h1 class="text-5xl font-bold mb-4">Welcome to TigerEngage</h1>
-      <p class="text-xl">Engage. Learn. Succeed.</p>
-    </header>
 
-    <section class="container mx-auto px-6">
-      <h2 class="text-3xl font-bold text-center mb-10">Features</h2>
-      <div class="flex flex-wrap -mx-4">
-        <div class="w-full md:w-1/2 lg:w-1/3 px-4 mb-8">
-          <div class="p-6 shadow-lg rounded-lg bg-white">
-            <h3 class="text-xl font-semibold mb-3">Live Chat</h3>
-            <p>
-              Communicate in real-time with students and instructors directly in
-              the classroom interface.
+    <div class="jumbotron jumbotron-fluid text-center bg-white py-16">
+      <div class="container">
+        <h1 class="display-4 font-bold text-gray-900 mb-4">
+          Empowering Educational Engagement
+        </h1>
+        <p class="lead text-gray-600 mb-8">
+          Streamline communication, enhance learning with TigerEngage.
+        </p>
+        <a
+          href="#"
+          class="btn btn-primary bg-blue-500 hover:bg-blue-400 text-white px-5 py-2 inline-block rounded"
+          >Get Started</a
+        >
+        <a
+          href="#"
+          class="btn btn-secondary bg-gray-500 hover:bg-gray-400 text-white ml-4 px-5 py-2 inline-block rounded"
+          >Discover More</a
+        >
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="container mx-auto px-6 py-12 text-center">
+      <h2 class="mb-8 text-3xl font-bold text-gray-900">Our Features</h2>
+      <div class="row">
+
+        <div class="col-md-4 mb-8">
+          <div class="card shadow-sm py-6 px-4">
+            <h5 class="card-title text-xl font-bold text-gray-900">
+              Live Chat
+            </h5>
+            <p class="card-text text-gray-600">
+              Facilitate real-time discussions between students and instructors.
             </p>
           </div>
         </div>
-        <div class="w-full md:w-1/2 lg:w-1/3 px-4 mb-8">
-          <div class="p-6 shadow-lg rounded-lg bg-white">
-            <h3 class="text-xl font-semibold mb-3">Attendance Tracking</h3>
-            <p>
-              Effortlessly track and manage class attendance with automatic
-              check-ins.
+
+        <div class="col-md-4 mb-8">
+          <div class="card shadow-sm py-6 px-4">
+            <h5 class="card-title text-xl font-bold text-gray-900">
+              Attendance Tracking
+            </h5>
+            <p class="card-text text-gray-600">
+              Automate attendance with easy check-ins and tracking.
             </p>
           </div>
         </div>
-        <div class="w-full md:w-1/2 lg:w-1/3 px-4 mb-8">
-          <div class="p-6 shadow-lg rounded-lg bg-white">
-            <h3 class="text-xl font-semibold mb-3">AI Summarization</h3>
-            <p>
-              Get concise summaries of lectures and discussions, powered by AI.
+    
+        <div class="col-md-4 mb-8">
+          <div class="card shadow-sm py-6 px-4">
+            <h5 class="card-title text-xl font-bold text-gray-900">
+              Summarization Tools
+            </h5>
+            <p class="card-text text-gray-600">
+              Get concise summaries of class discussions and materials.
             </p>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <footer class="bg-blue-800 text-white text-center mb-0">
-      <p>&copy; 2024 TigerEngage. All Rights Reserved.</p>
+  
+    <div class="text-center bg-blue-100 py-12">
+      <h2 class="text-3xl font-bold text-gray-900">Join TigerEngage Today</h2>
+      <p class="text-gray-600 mb-6">
+        Enhance your learning experience with our innovative platform.
+      </p>
+      <a
+        href="#"
+        class="btn bg-blue-500 hover:bg-blue-400 text-white px-5 py-3 rounded"
+        >Sign Up Now</a
+      >
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 bg-white shadow mt-5">
+      <p class="text-gray-600">
+        TigerEngage &copy; Your Gateway to Enhanced Learning
+      </p>
+      <a href="#" class="text-blue-500 hover:text-blue-400">Back to top</a>
     </footer>
+
+    <!-- Bootstrap and jQuery JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   </body>
 </html>
