@@ -11,6 +11,12 @@
   <header class="bg-sky-600 shadow-md">
     <nav class="flex justify-between items-center p-4 text-white">
       <a class="text-xl font-bold" href="{{ url_for('home') }}">TigerEngage</a>
+      <div>
+        <!-- Dynamic block for the student's name or default content -->
+        {% block navbar %} 
+        <a href="{{ url_for('student_dashboard') }}" class="ml-4 hover:underline">Student Dashboard</a>
+        {% endblock %}
+      </div>
     </nav>
   </header>
 
