@@ -10,24 +10,59 @@
     />
   </head>
   <body>
-    <nav class="bg-gray-800 text-white p-4 flex justify-between items-center">
+    <nav
+      class="bg-gray-800 text-white p-4 flex flex-wrap justify-between items-center"
+    >
       <span class="text-xl font-bold">{{ class_name }}</span>
-      <div class="space-x-4">
-        <a href="#" class="nav-item bg-blue-700 px-3 py-2 rounded">Chat</a>
-        <a href="#" class="nav-item hover:bg-blue-700 px-3 py-2 rounded"
+      <button id="menu-btn" class="md:hidden px-2 py-1 text-xl">&#9776;</button>
+      <div
+        id="menu"
+        class="hidden md:flex md:space-x-4 md:items-center md:justify-end mt-4 md:mt-0 w-full md:w-auto"
+      >
+        <a
+          href="#"
+          class="nav-item bg-blue-700 hover:bg-blue-800 text-white px-3 py-2 rounded block text-left md:text-center md:inline-block w-1/2"
+          >Chat</a
+        >
+        <a
+          href="#"
+          class="nav-item bg-gray-800 hover:bg-blue-800 text-white px-3 py-2 rounded block text-left md:text-center md:inline-block w-1/2"
           >Question</a
         >
-        <a href="#" class="nav-item hover:bg-blue-700 px-3 py-2 rounded"
+        <a
+          href="#"
+          class="nav-item bg-gray-800 hover:bg-blue-800 text-white px-3 py-2 rounded block text-left md:text-center md:inline-block w-1/2"
           >Feedback</a
         >
-        <a href="#" class="nav-item hover:bg-blue-700 px-3 py-2 rounded"
+        <a
+          href="#"
+          class="nav-item bg-gray-800 hover:bg-blue-800 text-white px-3 py-2 rounded block text-left md:text-center md:inline-block w-1/2"
           >Attendance</a
         >
       </div>
     </nav>
-    <div id="content-area">
+    <div id="content-area" class="p-4">
       <p>Chat content will be loaded here...</p>
     </div>
+
+    <script>
+      document
+        .getElementById("menu-btn")
+        .addEventListener("click", function () {
+          var menu = document.getElementById("menu");
+          menu.classList.toggle("hidden");
+          menu.classList.toggle("flex");
+          menu.classList.toggle("flex-col");
+        });
+      window.addEventListener("resize", function () {
+        var menu = document.getElementById("menu");
+        if (window.innerWidth >= 768) {
+          menu.classList.add("hidden");
+          menu.classList.remove("flex");
+          menu.classList.remove("flex-col");
+        }
+      });
+    </script>
 
     <script src="{{ url_for('static', filename='js/homepage.js') }}"></script>
   </body>
