@@ -4,13 +4,13 @@ app = Flask(__name__)
 
 classes = [
     {
-        "id": 1, 
+        "id": 1,
         "name": "Introduction to Python",
         "instructor": "Prof. John Doe",
         "is_active": True,
     },
     {
-        "id": 2,  
+        "id": 2,
         "name": "Advanced Mathematics",
         "instructor": "Dr. Jane Smith",
         "is_active": False,
@@ -39,6 +39,19 @@ def student_dashboard():
     return render_template(
         "student-dashboard.html", student_name=student_name, classes=classes
     )
+
+
+@app.route("/feedback")
+def feedback():
+    return render_template("feedback.html")
+
+@app.route("/chat")
+def chat():
+    return render_template("chat.html")
+
+@app.route("/questions")
+def questions():
+    return render_template("Question.html")
 
 
 @app.route("/class_dashboard/<int:class_id>")

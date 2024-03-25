@@ -8,7 +8,7 @@
 import os
 import sqlalchemy
 import sqlalchemy.orm
-import user as usermod
+import user as usermodpwd
 
 #-----------------------------------------------------------------------
 
@@ -36,8 +36,6 @@ class Class(Base):
     class_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     title = sqlalchemy.Column(sqlalchemy.String)
     instructor_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey('users.user_id'))
-    
-    # Define the relationship with the User table
     instructor = sqlalchemy.orm.relationship('User', back_populates='classes')
 
 # Add a classes relationship to the User class
