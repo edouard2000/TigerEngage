@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ class_name }} - Attendance</title>
+  <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+  <div class="flex flex-wrap justify-around">
+    <!-- Score Chart Container -->
+    <div class="p-4">
+      <h2 class="text-center">Score</h2>
+      <canvas id="scoreChart" width="400" height="400"></canvas>
+    </div>
+    
+    <!-- Attendance Chart Container -->
+    <div class="p-4">
+      <h2 class="text-center">Attendance</h2>
+      <canvas id="attendanceChart" width="400" height="400"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+    const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+
+    // Example data
+    const scoreData = {
+      datasets: [{
+        data: [85.7, 14.3],
+        backgroundColor: ['#4299E1', '#E2E8F0'],
+        borderWidth: 0,
+        rotation: -90,
+        circumference: 360,
+        radius: '100%',
+      }],
+    };
+
+    const attendanceData = {
+      datasets: [{
+        data: [59.4, 40.6],
+        backgroundColor: ['#4299E1', '#E2E8F0'],
+        borderWidth: 0,
+        rotation: -90,
+        circumference: 360,
+        radius: '100%',
+      }],
+    };
+
+    // Score Chart
+    new Chart(scoreCtx, {
+      type: 'doughnut',
+      data: scoreData,
+      options: {
+        cutout: '90%',
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        elements: {
+          arc: {
+            roundedCornersFor: 0
+          }
+        },
+      }
+    });
+
+    // Attendance Chart
+    new Chart(attendanceCtx, {
+      type: 'doughnut',
+      data: attendanceData,
+      options: {
+        cutout: '90%',
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        elements: {
+          arc: {
+            roundedCornersFor: 0
+          }
+        },
+      }
+    });
+  </script>
+</body>
+</html>

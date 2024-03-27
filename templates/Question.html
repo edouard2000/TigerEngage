@@ -1,23 +1,25 @@
-<div class="flex flex-col items-center justify-center h-full">
-  <div class="mb-6">
-    <h2 class="text-2xl font-bold">Questions here</h2>
-  </div>
-  <form id="answer-form" class="w-full max-w-2xl">
-    <textarea
-      id="student-answer"
-      name="student-answer"
-      rows="4"
-      class="w-full p-4 text-gray-700 border rounded shadow"
-      placeholder="Your answer here..."
-    ></textarea>
+<div class="flex flex-col items-center justify-center h-full pt-20">
+  <div class="w-full max-w-4xl px-4">
+    <h3 class="text-sky-600 text-lg font-bold mb-4 text-left">
+      Your Question:
+    </h3>
+    <form id="answer-form" class="w-full">
+      <textarea
+        id="student-answer"
+        name="student-answer"
+        rows="12"
+        class="w-full p-3 mb-4 text-gray-800 border rounded-md focus:ring-sky-500 border-sky-600 focus:border-sky-500 shadow-xl"
+        placeholder="Your answer here..."
+      ></textarea>
 
-    <div class="mt-4 flex justify-center">
-      <button
-        type="submit"
-        class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
-      >
-        Submit
-      </button>
-    </div>
-  </form>
+      <div class="flex justify-start">
+        <button
+          type="submit"
+          class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-6 rounded-md transition duration-300 ease-in-out"
+        >
+          Submit
+        </button>
+      </div>
+    </form>
+  </div>
 </div>

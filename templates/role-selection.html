@@ -1,0 +1,17 @@
+{% extends "base.html" %} {% block title %}Select Your Role - TigerEngage{%
+endblock %} {% block content %}
+<div class="text-center py-64">
+  <div class="flex justify-center gap-4">
+    <a
+      href="{{ url_for('login', next='student_dashboard') }}"
+      class="role-button bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded transition duration-300"
+      >Student</a
+    >
+    <a
+      href="{{ url_for('login', next='professor_dashboard') }}"
+      class="role-button bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded transition duration-300"
+      >Professor</a
+    >
+  </div>
+</div>
+{% endblock %}

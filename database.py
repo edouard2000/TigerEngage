@@ -27,12 +27,11 @@ class User (Base):
     user_id = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
     email = sqlalchemy.Column(sqlalchemy.String, unique=True)
     password_hash = sqlalchemy.Column(sqlalchemy.String)
-    role = sqlalchemy.Column(sqlalchemy.Enum('student', 'professor', 'preceptor', name='role'))
+    role = sqlalchemy.Column(sqlalchemy.Enum('student', 'professor', name='role'))
     name = sqlalchemy.Column(sqlalchemy.String)
 
 class Class(Base):
     __tablename__ = 'classes'
-
     class_id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     title = sqlalchemy.Column(sqlalchemy.String)
     instructor_id = sqlalchemy.Column(sqlalchemy.String, sqlalchemy.ForeignKey('users.user_id'))

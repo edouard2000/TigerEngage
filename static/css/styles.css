@@ -5,3 +5,8 @@
 main {
   overflow: auto;
 }
+
+.active {
+  background-color: #0369a1;
+  color: white;
+}
