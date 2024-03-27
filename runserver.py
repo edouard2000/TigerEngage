@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------
 
 import sys
-import tigerengage
+import app
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
         sys.exit(1)
 
     try:
-        tigerengage.app.run(host="0.0.0.0", port=port, debug=True)
+        app.app.run(host="0.0.0.0", port=port, debug=True)
     except Exception as ex:
         print(ex, file=sys.stderr)
         sys.exit(1)
