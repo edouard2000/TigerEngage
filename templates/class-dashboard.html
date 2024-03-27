@@ -8,9 +8,13 @@
       href="{{ url_for('static', filename='css/output.css') }}"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css')
-    }}/>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
   </head>
+
   <body class="bg-gray-100 text-gray-900 font-sans">
     <nav
       class="bg-sky-600 text-white p-4 flex flex-wrap justify-between items-center shadow-lg"
@@ -54,6 +58,9 @@
 
     <script src="{{ url_for('static', filename='js/learn-more.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+    <!-- script to handle the toggling of the nav links -->
+ 
     <script>
       document
         .getElementById("menu-btn")
