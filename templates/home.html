@@ -1,90 +1,52 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TigerEngage - Empower Your Educational Experience</title>
-    <link
-      href="{{ url_for('static', filename='css/output.css') }}"
-      rel="stylesheet"
-    />
-  </head>
-  <body class="flex flex-col min-h-screen bg-gray-100 text-gray-900 font-sans">
-    <nav class="flex justify-between items-center p-4 shadow-md bg-sky-600">
-      <a class="text-xl font-bold text-white" href="#">TigerEngage</a>
-    </nav>
+{% extends "base.html" %} {% block title %}TigerEngage - Empower Your
+Educational Experience{% endblock %} {% block content %}
+<div class="text-center py-20 bg-white">
+  <a
+    href="{{ url_for('role_selection') }}"
+    class="get-started-button bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+    >Get Started</a
+  >
+</div>
 
-    <div class="flex-1">
-      <div class="text-center py-16 bg-white">
-        <h1 class="text-lg font-bold text-sky-600 mb-4">
-          Empowering Educational Engagement
-        </h1>
-        <p class="text-sm mb-8">
-          Streamline communication, enhance learning with TigerEngage.
+<div class="container mx-auto px-6 bg-gray-100 text-center mt-32">
+  <div class="flex flex-wrap justify-center gap-4">
+    <div class="w-full sm:w-1/2 md:w-1/4 p-4">
+      <div
+        class="bg-sky-600 rounded shadow-lg p-6 hover:bg-sky-900 hover:text-white transition duration-300"
+      >
+        <h5 class="text-sm font-semibold text-white mb-2">Live Chat</h5>
+        <p class="text-sm text-white">
+          Facilitate real-time discussions between students and instructors.
         </p>
-        <button
-          class="bg-sky-600 hover:bg-sky-900 text-white font-bold py-2 px-4 rounded transition duration-300"
-        >
-          Get Started
-        </button>
-      </div>
-
-      <div class="container mx-auto px-6 py-12 text-center">
-        <h2 class="mb-8 text-lg text-sky-600 font-bold">Features</h2>
-        <div class="flex flex-wrap justify-center gap-4">
-          <div class="w-full sm:w-1/2 md:w-1/4 p-4">
-            <div
-              class="bg-white rounded shadow-lg p-6 hover:bg-sky-600 hover:text-white transition duration-300"
-            >
-              <h5
-                class="text-sm font-semibold text-sky-600 mb-2 hover:text-white"
-              >
-                Live Chat
-              </h5>
-              <p class="text-sm">
-                Facilitate real-time discussions between students and
-                instructors.
-              </p>
-            </div>
-          </div>
-
-          <div class="w-full sm:w-1/2 md:w-1/4 p-4">
-            <div
-              class="bg-white rounded shadow-lg p-6 hover:bg-sky-600 hover:text-white transition duration-300"
-            >
-              <h5
-                class="text-sm font-semibold text-sky-600 hover:text-white mb-2"
-              >
-                Attendance Tracking
-              </h5>
-              <p class="text-sm">
-                Automate attendance with easy check-ins and tracking.
-              </p>
-            </div>
-          </div>
-
-          <div class="w-full sm:w-1/2 md:w-1/4 p-4">
-            <div
-              class="bg-white rounded shadow-lg p-6 hover:bg-sky-600 hover:text-white transition duration-300"
-            >
-              <h5
-                class="text-sm font-semibold text-sky-600 mb-2 hover:text-white"
-              >
-                Summarization Tools
-              </h5>
-              <p class="text-sm">
-                Get concise summaries of class discussions and materials.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
-    <footer class="text-center py-5 bg-sky-600 shadow-md w-full">
-      <p class="text-sm text-white">
-        TigerEngage &copy; Your Gateway to Enhanced Learning
-      </p>
-    </footer>
-  </body>
-</html>
+    <div class="w-full sm:w-1/2 md:w-1/4 p-4">
+      <div
+        class="bg-sky-600 rounded shadow-lg p-6 hover:bg-sky-900 hover:text-white transition duration-300"
+      >
+        <h5 class="text-sm font-semibold text-white mb-2">
+          Attendance Tracking
+        </h5>
+        <p class="text-sm text-white">
+          Automate attendance with easy check-ins and tracking.
+        </p>
+      </div>
+    </div>
+
+    <div class="w-full sm:w-1/2 md:w-1/4 p-4">
+      <div
+        class="bg-sky-600 rounded shadow-lg p-6 hover:bg-sky-900 hover:text-white transition duration-300"
+      >
+        <h5 class="text-sm font-semibold text-white mb-2">
+          Summarization Tools
+        </h5>
+        <p class="text-sm text-white">
+          Get concise summaries of class discussions and materials.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ class_name }} - Attendance</title>
+  <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .aspect-ratio-box {
+      position: relative;
+      width: 100%;
+      padding-top: 100%; /* 1:1 Aspect Ratio */
+    }
+    .aspect-ratio-box canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    .chart-info {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      width: 100%;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+  <div class="flex flex-wrap justify-around">
+    <!-- Score Chart Container -->
+    <div class="p-4 w-full md:w-1/2">
+      <h2 class="text-center">Score</h2>
+      <div class="aspect-ratio-box">
+        <canvas id="scoreChart"></canvas>
+        <div class="chart-info" id="scoreInfo"></div> <!-- Percentage and score info -->
+      </div>
+      <p class="text-center" id="scoreText">Score: / Possible Score:</p> <!-- Score details -->
+    </div>
+    
+    <!-- Attendance Chart Container -->
+    <div class="p-4 w-full md:w-1/2">
+      <h2 class="text-center">Attendance</h2>
+      <div class="aspect-ratio-box">
+        <canvas id="attendanceChart"></canvas>
+        <div class="chart-info" id="attendanceInfo"></div> <!-- Attendance info -->
+      </div>
+      <p class="text-center" id="attendanceText">Attendance: %</p> <!-- Attendance details -->
+    </div>
+  </div>
+</body>
+</html>
