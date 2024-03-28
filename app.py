@@ -1,6 +1,8 @@
-from flask import Flask, render_template
-
-app = Flask(__name__)
+import flask
+import auth
+app = flask.Flask(__name__)
+import os
+app.secret_key = os.environ['APP_SECRET_KEY']
 
 classes = [
     {
@@ -20,23 +22,37 @@ classes = [
 
 @app.route("/")
 def home():
-    return render_template("home.html")
+    username = auth.authenticate()
+    print(username)
+    html_code = flask.render_template('home.html',
+    username=username,)
+    response = flask.make_response(html_code)
+    return response
+   
+# Routes for authentication.
 
+@app.route('/logoutapp', methods=['GET'])
+def logoutapp():
+    return auth.logoutapp()
+
+@app.route('/logoutcas', methods=['GET'])
+def logoutcas():
+    return auth.logoutcas()
 
 @app.route("/login")
 def login():
-    return render_template("login.html")
+    return flask.render_template("login.html")
 
 
 @app.route("/register")
 def register():
-    return render_template("register.html")
+    return flask.render_template("register.html")
 
 
 @app.route("/student_dashboard")
 def student_dashboard():
     student_name = "John Doe"
-    return render_template(
+    return flask.render_template(
         "student-dashboard.html", student_name=student_name, classes=classes
     )
 
@@ -49,22 +65,22 @@ def feedback():
         "correct_answer": "The correct answer is Paris.",
         "user_answer": "Your answer was Paris.",
     }
-    return render_template("feedback.html", **feedback_data)
+    return flask.render_template("feedback.html", **feedback_data)
 
 
 @app.route("/chat")
 def chat():
-    return render_template("chat.html")
+    return flask.render_template("chat.html")
 
 
 @app.route("/questions")
 def questions():
-    return render_template("Question.html")
+    return flask.render_template("Question.html")
 
 
 @app.route("/role-selection")
 def role_selection():
-    return render_template("role-selection.html")
+    return flask.render_template("role-selection.html")
 
 
 @app.route("/class_dashboard/<int:class_id>")
@@ -74,7 +90,7 @@ def class_dashboard(class_id):
         class_name = class_info["name"]
     else:
         class_name = "Class not found"
-    return render_template("class-dashboard.html", class_name=class_name)
+    return flask.render_template("class-dashboard.html", class_name=class_name)
 
 
 @app.route("/attendance")
@@ -90,7 +106,7 @@ def attendance(class_id):
         class_name = class_info["name"]
     else:
         class_name = "Class not found"
-    return render_template("attendance.html", class_name=class_name)
+    return flask.render_template("attendance.html", class_name=class_name)
 
 
 if __name__ == "__main__":
