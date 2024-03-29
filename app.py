@@ -21,28 +21,35 @@ classes = [
     },
 ]
 
+students = [ {"id": 7,
+            "netid": "rk4826"}]
 
-students = [
-    {
-        "id": 1,
-        "name": "Alice Johnson",
-        "score": 88,
-    },
-    {
-        "id": 2,
-        "name": "Bob Smith",
-        "score": 92,
-    },
-]
+def check_netid_exists(netid_to_check, students):
+    for student in students:
+        if student["netid"] == netid_to_check:
+            return True
+    return False 
+
+
+# students = [
+#     {
+#         "id": 1,
+#         "name": "Alice Johnson",
+#         "score": 88,
+#     },
+#     {
+#         "id": 2,
+#         "name": "Bob Smith",
+#         "score": 92,
+#     },
+# ]
 
 
 @app.route("/")
 def home():
-    username = auth.authenticate()
-    print(username)
+
     html_code = flask.render_template(
-        "home.html",
-        username=username,
+        "home.html"
     )
     response = flask.make_response(html_code)
     return response
@@ -71,10 +78,21 @@ def register():
 
 @app.route("/student_dashboard")
 def student_dashboard():
-    student_name = "John Doe"
-    return flask.render_template(
-        "student-dashboard.html", student_name=student_name, classes=classes
+    username = auth.authenticate()
+    if check_netid_exists(username, students):
+        html_code = flask.render_template(
+        "student-dashboard.html",
+        username=username,
+        classes = classes
     )
+        response = flask.make_response(html_code)
+        return response
+    else:
+        html_code = flask.render_template(
+        "denied.html",
+    )
+        response = flask.make_response(html_code)
+        return response
 
 
 @app.route("/feedback")
@@ -100,7 +118,11 @@ def questions():
 
 @app.route("/role-selection")
 def role_selection():
-    return flask.render_template("role-selection.html")
+    html_code = flask.render_template(
+        "role-selection.html"
+    )
+    response = flask.make_response(html_code)
+    return response
 
 
 @app.route("/class_dashboard/<int:class_id>")
