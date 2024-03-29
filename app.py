@@ -21,14 +21,14 @@ classes = [
     },
 ]
 
-students = [ {"id": 7,
-            "netid": "rk4826"}]
+students = [{"id": 7, "netid": "ek4249"}]
+
 
 def check_netid_exists(netid_to_check, students):
     for student in students:
         if student["netid"] == netid_to_check:
             return True
-    return False 
+    return False
 
 
 student = [
@@ -48,12 +48,9 @@ student = [
 @app.route("/")
 def home():
 
-    html_code = flask.render_template(
-        "home.html"
-    )
+    html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
-
 
 
 @app.route("/logoutapp", methods=["GET"])
@@ -81,16 +78,14 @@ def student_dashboard():
     username = auth.authenticate()
     if check_netid_exists(username, students):
         html_code = flask.render_template(
-        "student-dashboard.html",
-        username=username,
-        classes = classes
-    )
+            "student-dashboard.html", username=username, classes=classes
+        )
         response = flask.make_response(html_code)
         return response
     else:
         html_code = flask.render_template(
-        "denied.html",
-    )
+            "denied.html",
+        )
         response = flask.make_response(html_code)
         return response
 
@@ -118,9 +113,7 @@ def questions():
 
 @app.route("/role-selection")
 def role_selection():
-    html_code = flask.render_template(
-        "role-selection.html"
-    )
+    html_code = flask.render_template("role-selection.html")
     response = flask.make_response(html_code)
     return response
 
@@ -153,30 +146,47 @@ def attendance(class_id):
 
 @app.route("/userlist")
 def userlist():
-    prof_name = "Prof. John Doe"  
+    prof_name = "Prof. John Doe"
     return flask.render_template(
         "class-users.html", students=student, prof_name=prof_name
     )
 
+
 @app.route("/professor_dashboard")
 def professor_dashboard():
-    prof_name = "Prof. John Doe" 
+    prof_name = "Prof. John Doe"
     return flask.render_template("professor-dashboard.html", prof_name=prof_name)
 
-@app.route('/add-question')
+
+@app.route("/add-question")
 def add_question():
-    return flask.render_template('add-question.html')
+    return flask.render_template("add-question.html")
 
-@app.route('/edit_student/<int:student_id>')
+
+@app.route("/edit_student/<int:student_id>", methods=["GET", "POST"])
 def edit_student(student_id):
-    return flask.render_template('edit_student.html', student_id=student_id)
+    stud = next((s for s in student if s["id"] == student_id), None)
 
-@app.route('/delete_student/<int:student_id>', methods=['POST'])
+    if stud is None:
+
+        flask.flash("Student not found.", "error")
+        return flask.redirect(flask.url_for("userlist"))
+
+    if flask.request.method == "POST":
+        stud["name"] = flask.request.form.get("name", "")
+        stud["score"] = int(flask.request.form.get("score", 0))
+
+        flask.flash("Student information updated successfully.", "success")
+        return flask.redirect(flask.url_for("userlist"))
+    return flask.render_template("edit_student.html", student=stud)
+
+
+@app.route("/delete_student/<int:student_id>", methods=["POST"])
 def delete_student(student_id):
-    # Logic to delete the student by their ID
-    # For example, remove the student from your database or data structure
-    return flask.redirect(flask.url_for('userlist'))  # Redirect to the list of users after deletion
-
+    global student
+    student = [s for s in student if s["id"] != student_id]
+    flask.flash("Student successfully deleted", "success")
+    return flask.redirect(flask.url_for("userlist"))
 
 
 if __name__ == "__main__":

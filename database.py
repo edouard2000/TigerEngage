@@ -8,7 +8,7 @@
 
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Enum, ForeignKey, Float, Text, text, MetaData
+from sqlalchemy import create_engine, Column, Integer, String, Enum, ForeignKey, Float, Text
 from sqlalchemy.orm import declarative_base, Session, sessionmaker, relationship
 import user as usermod
 
