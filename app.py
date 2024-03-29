@@ -1,10 +1,28 @@
 import flask
 import auth
+from database import Base, User
+import uuid  # Import the uuid module to generate unique IDs
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.exc import IntegrityError
 
 app = flask.Flask(__name__)
 import os
 
 app.secret_key = os.environ["APP_SECRET_KEY"]
+
+app.secret_key = os.environ["APP_SECRET_KEY"]
+app.config["DATABASE_URL"] = 'postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage'
+_DATABASE_URL = app.config["DATABASE_URL"]
+_DATABASE_URL = _DATABASE_URL.replace('postgres://', 'postgresql://')
+
+# Create engine and bind it to Base
+_engine = create_engine(_DATABASE_URL)
+Base.metadata.bind = _engine
+
+# Create a sessionmaker to interact with the database
+Session = sessionmaker(bind=_engine)
+session = Session()
 
 classes = [
     {
@@ -72,6 +90,48 @@ def login():
 def register():
     return flask.render_template("register.html")
 
+# Route to handle the form submission
+@app.route('/register', methods=['POST'])
+def process_registration():
+    # Generate a unique user_id
+    user_id = str(uuid.uuid4())
+
+    # Fetch data from the form
+    first_name = flask.request.form['firstName']
+    last_name = flask.request.form['lastName']
+    email = flask.request.form['email']
+    password = flask.request.form['password']
+
+    # Do something with the data (e.g., store it in a database)
+    name = first_name + " " + last_name
+    new_user = User(user_id=user_id, email=email, password_hash=password, role='student', name=name)
+    session.add(new_user)
+
+    try:
+        # Attempt to commit the session
+        session.commit()
+        # If the registration is successful, redirect the user
+        return flask.redirect(flask.url_for('new_student_dashboard', name=name))
+    except IntegrityError as e:
+        # Rollback the session to prevent further errors
+        session.rollback()
+
+        # Handle the unique constraint violation error
+        error_message = "Email address already exists. Please choose a different email."
+        # You can log the error or display a user-friendly message
+        print(f"Error: {e}")
+        return flask.render_template('denied.html', error_message=error_message)
+
+@app.route("/new_student_dashboard1/<name>")
+def new_student_dashboard(name):
+    auth.authenticate()
+    html_code = flask.render_template(
+        "student-dashboard.html",
+        student_name=name,
+        classes = classes
+    )
+    response = flask.make_response(html_code)
+    return response
 
 @app.route("/student_dashboard")
 def student_dashboard():
