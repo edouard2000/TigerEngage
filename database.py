@@ -11,7 +11,6 @@ import os
 from sqlalchemy import create_engine, Column, Integer, String, Enum, ForeignKey, Float, Text
 from sqlalchemy.orm import declarative_base, Session, sessionmaker, relationship
 import user as usermod
-
 #-----------------------------------------------------------------------
 
 _DATABASE_URL = os.environ['DATABASE_URL']
@@ -21,6 +20,7 @@ _DATABASE_URL = _DATABASE_URL.replace('postgres://', 'postgresql://')
 
 # Create an engine to connect to database
 _engine = create_engine(_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 Base = declarative_base()
 
@@ -118,31 +118,31 @@ def get_enrollments(class_id):
 
 # For testing:
 
-def _test():
-    #user1 = User(user_id='1', email='johndoe@princeton.edu', password_hash='password123', role='student', name='John Doe')
-    #user2 = User(user_id='2', email='janedoe@princeton.edu', password_hash='password321', role='student', name='Jane Doe')
-    #user3 = User(user_id='3', email='maryjane@princeton.edu', password_hash='spiderman', role='student', name='Mary Jane')
-    Session = sessionmaker(bind=_engine)
-    session = Session()
-    #session.add(user1)
-    #session.add(user2)
-    # session.add(user3)
-    session.query(User).delete()
-    session.commit()
-    session.close()
-    print("All rows deleted successfully.")
-    #print("Printing current users:")
-    #users = get_users('student')
-    #for user in users:
-    #    print(user.get_user_id())
-    #    print(user.get_email())
-    #    print(user.get_password_hash())
-    #    print(user.get_role())
-    #    print(user.get_name())
-    #    print()
+# def _test():
+#     #user1 = User(user_id='1', email='johndoe@princeton.edu', password_hash='password123', role='student', name='John Doe')
+#     #user2 = User(user_id='2', email='janedoe@princeton.edu', password_hash='password321', role='student', name='Jane Doe')
+#     #user3 = User(user_id='3', email='maryjane@princeton.edu', password_hash='spiderman', role='student', name='Mary Jane')
+#     Session = sessionmaker(bind=_engine)
+#     session = Session()
+#     #session.add(user1)
+#     #session.add(user2)
+#     # session.add(user3)
+#     session.query(User).delete()
+#     session.commit()
+#     session.close()
+#     print("All rows deleted successfully.")
+#     #print("Printing current users:")
+#     #users = get_users('student')
+#     #for user in users:
+#     #    print(user.get_user_id())
+#     #    print(user.get_email())
+#     #    print(user.get_password_hash())
+#     #    print(user.get_role())
+#     #    print(user.get_name())
+#     #    print()
 
-if __name__ == '__main__':
-    _test()
+# if __name__ == '__main__':
+#     _test()
 
 
 

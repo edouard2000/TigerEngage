@@ -1,7 +1,12 @@
 import os
+import uuid
 import flask
 from flask import request, flash, redirect, url_for, render_template
+from psycopg2 import IntegrityError
 import auth
+from database import SessionLocal, User
+from testUsers import fetch_all_users
+
 
 app = flask.Flask(__name__)
 
@@ -73,37 +78,31 @@ def login():
 def register():
     return flask.render_template("register.html")
 
-# Route to handle the form submission
+
+
+
 @app.route('/register', methods=['POST'])
 def process_registration():
-    # Generate a unique user_id
-    user_id = str(uuid.uuid4())
+    db_session = SessionLocal()
+    
+    user_id = str(uuid.uuid4()) 
+    first_name = request.form['firstName']
+    last_name = request.form['lastName']
+    email = request.form['email']
+    password = request.form['password']
 
-    # Fetch data from the form
-    first_name = flask.request.form['firstName']
-    last_name = flask.request.form['lastName']
-    email = flask.request.form['email']
-    password = flask.request.form['password']
-
-    # Do something with the data (e.g., store it in a database)
-    name = first_name + " " + last_name
-    new_user = User(user_id=user_id, email=email, password_hash=password, role='student', name=name)
-    session.add(new_user)
-
+    new_user = User(user_id=user_id, email=email, password_hash=password, role='student', name=f"{first_name} {last_name}")
+    
     try:
-        # Attempt to commit the session
-        session.commit()
-        # If the registration is successful, redirect the user
-        return flask.redirect(flask.url_for('new_student_dashboard', name=name))
+        db_session.add(new_user)
+        db_session.commit()
+        return redirect(url_for('home'))
     except IntegrityError as e:
-        # Rollback the session to prevent further errors
-        session.rollback()
+        db_session.rollback()
+        return render_template('error_page.html', error=str(e))
+    finally:
+        db_session.close()
 
-        # Handle the unique constraint violation error
-        error_message = "Email address already exists. Please choose a different email."
-        # You can log the error or display a user-friendly message
-        print(f"Error: {e}")
-        return flask.render_template('denied.html', error_message=error_message)
 
 @app.route("/new_student_dashboard1/<name>")
 def new_student_dashboard(name):
