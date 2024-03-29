@@ -1,10 +1,15 @@
+import os
 import flask
+from flask import request, flash, redirect, url_for, render_template
 import auth
+from testUsers import fetch_all_users
+from models import User,Question, SessionLocal
+
 
 app = flask.Flask(__name__)
-import os
 
 app.secret_key = os.environ["APP_SECRET_KEY"]
+
 
 classes = [
     {
@@ -144,49 +149,79 @@ def attendance(class_id):
     return flask.render_template("attendance.html", class_name=class_name)
 
 
-@app.route("/userlist")
-def userlist():
-    prof_name = "Prof. John Doe"
-    return flask.render_template(
-        "class-users.html", students=student, prof_name=prof_name
-    )
-
-
 @app.route("/professor_dashboard")
 def professor_dashboard():
     prof_name = "Prof. John Doe"
     return flask.render_template("professor-dashboard.html", prof_name=prof_name)
 
 
+
+@app.route("/edit_student/<user_id>", methods=["GET", "POST"])
+def edit_user(user_id):
+    db_session = SessionLocal()
+    user = db_session.query(User).filter_by(user_id=user_id).first()
+
+    if user is None:
+        db_session.close()
+        flash("Student not found.", "error")
+        return redirect(url_for("userlist"))
+
+    if request.method == "POST":
+        user.name = request.form.get("name", user.name)
+        user.score = float(request.form.get("score", 0))
+        db_session.commit()
+        flash("Student information updated successfully.", "success")
+        return redirect(url_for("userlist"))
+
+    db_session.close()
+    return render_template("edit_student.html", student=user)
+
+
+
+@app.route("/delete_user/<user_id>", methods=["POST"])
+def delete_user(user_id):
+    db_session = SessionLocal()
+    user = db_session.query(User).filter_by(user_id=user_id).first()
+    if user:
+        db_session.delete(user)
+        db_session.commit()
+        flash("Student successfully deleted", "success")
+    else:
+        flash("Student not found.", "error")
+
+    db_session.close()
+    return redirect(url_for("userlist"))
+
+
+
+@app.route("/userlist")
+def userlist():
+    prof_name = "Prof. John Doe"
+    users = fetch_all_users()
+    print("Users to be displayed:", users)
+    return flask.render_template("class-users.html", users=users, prof_name=prof_name)
+
 @app.route("/add-question")
 def add_question():
     return flask.render_template("add-question.html")
 
 
-@app.route("/edit_student/<int:student_id>", methods=["GET", "POST"])
-def edit_student(student_id):
-    stud = next((s for s in student if s["id"] == student_id), None)
-
-    if stud is None:
-
-        flask.flash("Student not found.", "error")
-        return flask.redirect(flask.url_for("userlist"))
-
-    if flask.request.method == "POST":
-        stud["name"] = flask.request.form.get("name", "")
-        stud["score"] = int(flask.request.form.get("score", 0))
-
-        flask.flash("Student information updated successfully.", "success")
-        return flask.redirect(flask.url_for("userlist"))
-    return flask.render_template("edit_student.html", student=stud)
-
-
-@app.route("/delete_student/<int:student_id>", methods=["POST"])
-def delete_student(student_id):
-    global student
-    student = [s for s in student if s["id"] != student_id]
-    flask.flash("Student successfully deleted", "success")
-    return flask.redirect(flask.url_for("userlist"))
+# @app.route("/add-question")
+# def add_question():
+#     db_session = SessionLocal()
+#     question_text = request.form.get("question_text")
+#     answer_text = request.form.get("answer_text")
+    
+#     question = Question(question_text=question_text, answer_text=answer_text)
+#     db_session.add(question)
+#     try:
+#         db_session.commit()
+#         return jsonify(success=True)
+#     except Exception as e:
+#         db_session.rollback()
+#         return jsonify(success=False, error=str(e))
+#     finally:
+#         db_session.close()
 
 
 if __name__ == "__main__":
