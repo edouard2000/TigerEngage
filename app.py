@@ -55,8 +55,6 @@ def home():
     return response
 
 
-# Routes for authentication.
-
 
 @app.route("/logoutapp", methods=["GET"])
 def logoutapp():
@@ -159,6 +157,11 @@ def userlist():
     return flask.render_template(
         "class-users.html", students=students, prof_name=prof_name
     )
+
+@app.route("/professor_dashboard")
+def professor_dashboard():
+    prof_name = "Prof. John Doe" 
+    return flask.render_template("professor-dashboard.html", prof_name=prof_name)
 
 
 
