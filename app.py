@@ -2,14 +2,10 @@ import os
 import flask
 from flask import request, flash, redirect, url_for, render_template
 import auth
-from testUsers import fetch_all_users
-from models import User,Question, SessionLocal
-
 
 app = flask.Flask(__name__)
 
 app.secret_key = os.environ["APP_SECRET_KEY"]
-
 
 classes = [
     {
@@ -77,6 +73,48 @@ def login():
 def register():
     return flask.render_template("register.html")
 
+# Route to handle the form submission
+@app.route('/register', methods=['POST'])
+def process_registration():
+    # Generate a unique user_id
+    user_id = str(uuid.uuid4())
+
+    # Fetch data from the form
+    first_name = flask.request.form['firstName']
+    last_name = flask.request.form['lastName']
+    email = flask.request.form['email']
+    password = flask.request.form['password']
+
+    # Do something with the data (e.g., store it in a database)
+    name = first_name + " " + last_name
+    new_user = User(user_id=user_id, email=email, password_hash=password, role='student', name=name)
+    session.add(new_user)
+
+    try:
+        # Attempt to commit the session
+        session.commit()
+        # If the registration is successful, redirect the user
+        return flask.redirect(flask.url_for('new_student_dashboard', name=name))
+    except IntegrityError as e:
+        # Rollback the session to prevent further errors
+        session.rollback()
+
+        # Handle the unique constraint violation error
+        error_message = "Email address already exists. Please choose a different email."
+        # You can log the error or display a user-friendly message
+        print(f"Error: {e}")
+        return flask.render_template('denied.html', error_message=error_message)
+
+@app.route("/new_student_dashboard1/<name>")
+def new_student_dashboard(name):
+    auth.authenticate()
+    html_code = flask.render_template(
+        "student-dashboard.html",
+        student_name=name,
+        classes = classes
+    )
+    response = flask.make_response(html_code)
+    return response
 
 @app.route("/student_dashboard")
 def student_dashboard():
