@@ -11,10 +11,8 @@ import auth
 import flask
 from flask import request, flash, redirect, url_for, render_template
 from psycopg2 import IntegrityError
-import auth
-from database import SessionLocal, User
+from database import SessionLocal, User, Answer
 from testUsers import fetch_all_users
-
 
 app = flask.Flask(__name__)
 
@@ -171,17 +169,17 @@ def studentresponse():
     student_answer = flask.request.form['student_answer']
 
     # Store student response in database
-    new_answer = database.Answer(answer_id=answer_id, question_id=question_id, user_id=user_id, text=student_answer)
-    session.add(new_answer)
+    new_answer = Answer(answer_id=answer_id, question_id=question_id, user_id=user_id, text=student_answer)
+    SessionLocal.add(new_answer)
 
     try:
         # Attempt to commit the session
-        session.commit()
+        SessionLocal.commit()
         # If the answer is successfully submitted, display "submission received"
         return flask.redirect(flask.url_for('feedback', user_answer=student_answer))
     except IntegrityError as e:
         # Rollback the session to prevent further errors
-        session.rollback()
+        SessionLocal.rollback()
 
         # Handle the unique constraint violation error
         error_message = "Your submission was not submitted successfully"
