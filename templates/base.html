@@ -15,7 +15,7 @@
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
   </head>
-  <body class="flex flex-col min-h-screen bg-gray-100 text-gray-900 font-sans">
+  <body class="flex flex-col h-screen bg-gray-100 text-gray-900 font-sans">
     <header class="bg-sky-600 shadow-md">
       <nav class="flex justify-between items-center p-4 text-white">
         <a class="text-xl font-bold" href="{{ url_for('home') }}"
@@ -34,7 +34,7 @@
       </nav>
     </header>
 
-    <main class="flex-grow {{ main_classes | default('') }}">
+    <main class="flex-1 overflow-auto {{ main_classes | default('') }}">
       {% block content %} {% endblock %}
     </main>
 
@@ -44,6 +44,8 @@
       </p>
     </footer>
 
-    <script src="{{ url_for('static', filename='js/homepage.js') }}"></script>
+    {% block scripts %}
+    <script src="{{ url_for('static', filename='js/dashboard-interactions.js') }}"></script>
+    {% endblock %}
   </body>
 </html>

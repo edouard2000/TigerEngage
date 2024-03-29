@@ -141,6 +141,20 @@ def professor_dashboard():
     prof_name = "Prof. John Doe" 
     return flask.render_template("professor-dashboard.html", prof_name=prof_name)
 
+@app.route('/add-question')
+def add_question():
+    return flask.render_template('add-question.html')
+
+@app.route('/edit_student/<int:student_id>')
+def edit_student(student_id):
+    return flask.render_template('edit_student.html', student_id=student_id)
+
+@app.route('/delete_student/<int:student_id>', methods=['POST'])
+def delete_student(student_id):
+    # Logic to delete the student by their ID
+    # For example, remove the student from your database or data structure
+    return flask.redirect(flask.url_for('userlist'))  # Redirect to the list of users after deletion
+
 
 
 if __name__ == "__main__":

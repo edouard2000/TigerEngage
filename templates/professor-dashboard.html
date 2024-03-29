@@ -1,30 +1,31 @@
 {% extends "base.html" %}
 
-{% block title %}Professor Dashboard{% endblock %}
+{% block title %}{{ prof_name }}{% endblock %}
 
 {% block navbar %}
-<nav class="flex justify-between items-center py-4 px-6 bg-sky-600 text-white">
-  <span class="text-xl font-bold">TigerEngage</span>
-  <span>Prof. Name</span>
-</nav>
+<a href="#" class="ml-4 hover:underline">{{ prof_name }}</a>
 {% endblock %}
 
 {% block content %}
-<div class="flex">
-  <!-- Sidebar -->
-  <div class="w-2/5 bg-gray-100 h-screen">
+<style>
+  .content-area {
+    height: calc(100vh - 10rem); 
+  }
+</style>
+
+<div class="flex mt-4 content-area overflow-hidden"> 
+  <div class="w-1/5 ml-2 bg-gray-100 overflow-hidden"> 
     <ul class="flex flex-col space-y-4 p-8">
-      <li><button id="startClass" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">Start</button></li>
-      <li><button id="addQuestion" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">Add Question</button></li>
-      <li><button id="classUsers" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">Class Users</button></li>
-      <li><button id="feedback" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">Feedback</button></li>
-      <li><button id="liveChat" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">Live Chat</button></li>
+      <li><button id="startClass" class="w-full bg-green-800 text-white py-2 px-4 rounded hover:bg-green-950 transition duration-300 text-left">Start</button></li>
+      <li><button id="addQuestion" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Add Question</button></li>
+      <li><button id="classUsers" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Class Users</button></li>
+      <li><button id="feedback" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Feedback</button></li>
+      <li><button id="liveChat" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Live Chat</button></li>
     </ul>
   </div>
 
-  <!-- Content Area -->
-  <div class="w-3/5 bg-white h-screen">
-    <div id="dashboardContent" class="p-8">
+  <div class="flex-grow bg-white ml-4 mr-4 mb-4 overflow-hidden"> 
+    <div id="dashboardContent" class="m-8"> 
       <p>Select an option from the sidebar to view content here.</p>
     </div>
   </div>

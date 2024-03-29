@@ -1,0 +1,49 @@
+<div id="questionPager" class="m-4">
+    <button id="createQuestionBtn" class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">
+      Create Question
+    </button>
+  
+    <div id="questionForm" class="hidden">
+      <div class="my-4">
+        <label for="questionInput" class="block text-sm font-medium text-gray-700">Question</label>
+        <input type="text" id="questionInput" class="mt-1 p-2 w-full border rounded-md" placeholder="Enter your question here">
+      </div>
+      
+      <div class="my-4">
+        <label for="answerInput" class="block text-sm font-medium text-gray-700">Answer</label>
+        <input type="text" id="answerInput" class="mt-1 p-2 w-full border rounded-md" placeholder="Enter the answer here">
+      </div>
+  
+      <button id="addQuestionBtn" class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">
+        Add
+      </button>
+    </div>
+  
+    <div id="questionsList" class="mt-4">
+      <!-- Example Question Item (This part will be dynamically generated) -->
+      <!--
+      <div class="flex justify-between items-center my-2">
+        <div>
+          <span class="font-bold">Question:</span> What is the capital of France?
+          <span class="font-bold ml-4">Answer:</span> Paris
+        </div>
+        <div>
+          <button class="bg-blue-500 text-white py-1 px-3 rounded hover:bg-blue-600 transition duration-300">Edit</button>
+          <button class="bg-green-500 text-white py-1 px-3 rounded hover:bg-green-600 transition duration-300">Ask</button>
+        </div>
+      </div>
+      -->
+    </div>
+  </div>
+  
+  <script>
+    document.getElementById('createQuestionBtn').addEventListener('click', function() {
+      this.classList.add('hidden'); 
+      document.getElementById('questionForm').classList.remove('hidden'); 
+    });
+  
+    document.getElementById('addQuestionBtn').addEventListener('click', function() {
+      document.getElementById('createQuestionBtn').classList.remove('hidden'); 
+    });
+  </script>
+  
