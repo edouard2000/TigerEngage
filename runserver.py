@@ -10,7 +10,7 @@ import app
 
 
 def main():
-
+    print("Starting the Flask application...")
     if len(sys.argv) != 2:
         print("Usage: " + sys.argv[0] + " port", file=sys.stderr)
         sys.exit(1)
@@ -26,6 +26,7 @@ def main():
     except Exception as ex:
         print(ex, file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
