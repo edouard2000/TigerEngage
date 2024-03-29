@@ -1,13 +1,21 @@
-import flask
+#!/usr/bin/env python
+
+#-----------------------------------------------------------------------
+# auth.py
+# Authors: Alex Halderman, Scott Karlin, Brian Kernighan, Bob Dondero
+#-----------------------------------------------------------------------
+
+import os
+import uuid # Import the uuid module to generate unique IDs
 import auth
-from database import Base, User
-import uuid  # Import the uuid module to generate unique IDs
+import flask
+import database 
+from database import Base
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, sessionmaker
 
 app = flask.Flask(__name__)
-import os
 
 app.secret_key = os.environ["APP_SECRET_KEY"]
 
@@ -63,34 +71,38 @@ student = [
 ]
 
 
-@app.route("/")
+@app.route('/', methods=['GET'])
+@app.route('/home', methods=['GET'])
 def home():
-
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
 
-
-@app.route("/logoutapp", methods=["GET"])
-def logoutapp():
-    return auth.logoutapp()
-
-
-@app.route("/logoutcas", methods=["GET"])
-def logoutcas():
-    return auth.logoutcas()
-
+@app.route("/role-selection")
+def role_selection():
+    html_code = flask.render_template("role-selection.html")
+    response = flask.make_response(html_code)
+    return response
 
 @app.route("/login")
 def login():
-    return flask.render_template("login.html")
+    html_code = flask.render_template('login.html')
+    response = flask.make_response(html_code)
+    return response
 
+# @app.route("/login")
+# def caslogin_buttonslot():
+#     html_code = flask.render_template('login.html')
+#     response = flask.make_response(html_code)
+#     return response
 
 @app.route("/register")
 def register():
-    return flask.render_template("register.html")
+    html_code = flask.render_template('register.html')
+    response = flask.make_response(html_code)
+    return response
 
-# Route to handle the form submission
+# Route to handle the form submission for registration
 @app.route('/register', methods=['POST'])
 def process_registration():
     # Generate a unique user_id
@@ -104,7 +116,7 @@ def process_registration():
 
     # Do something with the data (e.g., store it in a database)
     name = first_name + " " + last_name
-    new_user = User(user_id=user_id, email=email, password_hash=password, role='student', name=name)
+    new_user = database.User(user_id=user_id, email=email, password_hash=password, role='student', name=name)
     session.add(new_user)
 
     try:
@@ -150,6 +162,54 @@ def student_dashboard():
         return response
 
 
+@app.route("/chat")
+def chat():
+    html_code = flask.render_template("chat.html")
+    response = flask.make_response(html_code)
+    return response
+
+
+@app.route("/questions")
+def questions():
+    html_code = flask.render_template("Question.html")
+    response = flask.make_response(html_code)
+    return response
+
+# Route to handle the form submission for student responses to a question
+@app.route("/questions", methods=['POST'])
+def studentresponse():
+    # Generate a unique answer_id
+    answer_id = str(uuid.uuid4())
+
+    # Fetch data from the form
+    user_id = flask.request.form['user_id']
+    answer_id = flask.request.form['answer_id']
+    question_id = flask.request.form['question_id']
+    student_answer = flask.request.form['student_answer']
+
+    # Store student response in database
+    new_answer = database.Answer(answer_id=answer_id, question_id=question_id, user_id=user_id, text=student_answer)
+    session.add(new_answer)
+
+    try:
+        # Attempt to commit the session
+        session.commit()
+        # If the answer is successfully submitted, display "submission received"
+        return flask.redirect(flask.url_for('feedback', user_answer=student_answer))
+    except IntegrityError as e:
+        # Rollback the session to prevent further errors
+        session.rollback()
+
+        # Handle the unique constraint violation error
+        error_message = "Your submission was not submitted successfully"
+        # You can log the error or display a user-friendly message
+        print(e + ": " + error_message)
+        # print(f"Error: {}")
+        # return flask.render_template('', error_message=error_message) 
+        html_code = flask.render_template("Question.html")
+        response = flask.make_response(html_code)
+        return response    
+
 @app.route("/feedback")
 def feedback():
     feedback_data = {
@@ -159,23 +219,6 @@ def feedback():
         "user_answer": "Your answer was Paris.",
     }
     return flask.render_template("feedback.html", **feedback_data)
-
-
-@app.route("/chat")
-def chat():
-    return flask.render_template("chat.html")
-
-
-@app.route("/questions")
-def questions():
-    return flask.render_template("Question.html")
-
-
-@app.route("/role-selection")
-def role_selection():
-    html_code = flask.render_template("role-selection.html")
-    response = flask.make_response(html_code)
-    return response
 
 
 @app.route("/class_dashboard/<int:class_id>")
@@ -248,6 +291,15 @@ def delete_student(student_id):
     flask.flash("Student successfully deleted", "success")
     return flask.redirect(flask.url_for("userlist"))
 
+
+@app.route("/logoutapp", methods=["GET"])
+def logoutapp():
+    return auth.logoutapp()
+
+
+@app.route("/logoutcas", methods=["GET"])
+def logoutcas():
+    return auth.logoutcas()
 
 if __name__ == "__main__":
     app.run(debug=True)
