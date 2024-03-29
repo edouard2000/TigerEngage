@@ -1,8 +1,10 @@
 import flask
 import auth
+
 app = flask.Flask(__name__)
 import os
-app.secret_key = os.environ['APP_SECRET_KEY']
+
+app.secret_key = os.environ["APP_SECRET_KEY"]
 
 classes = [
     {
@@ -20,24 +22,44 @@ classes = [
 ]
 
 
+students = [
+    {
+        "id": 1,
+        "name": "Alice Johnson",
+        "score": 88,
+    },
+    {
+        "id": 2,
+        "name": "Bob Smith",
+        "score": 92,
+    },
+]
+
+
 @app.route("/")
 def home():
     username = auth.authenticate()
     print(username)
-    html_code = flask.render_template('home.html',
-    username=username,)
+    html_code = flask.render_template(
+        "home.html",
+        username=username,
+    )
     response = flask.make_response(html_code)
     return response
-   
+
+
 # Routes for authentication.
 
-@app.route('/logoutapp', methods=['GET'])
+
+@app.route("/logoutapp", methods=["GET"])
 def logoutapp():
     return auth.logoutapp()
 
-@app.route('/logoutcas', methods=['GET'])
+
+@app.route("/logoutcas", methods=["GET"])
 def logoutcas():
     return auth.logoutcas()
+
 
 @app.route("/login")
 def login():
@@ -107,6 +129,15 @@ def attendance(class_id):
     else:
         class_name = "Class not found"
     return flask.render_template("attendance.html", class_name=class_name)
+
+
+@app.route("/userlist")
+def userlist():
+    prof_name = "Prof. John Doe"  
+    return flask.render_template(
+        "class-users.html", students=students, prof_name=prof_name
+    )
+
 
 
 if __name__ == "__main__":
