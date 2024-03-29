@@ -9,26 +9,22 @@
       rel="stylesheet"
     />
   </head>
-  <body class="bg-gray-100">
-    <div
-      class="container mx-auto p-6 max-w-2xl bg-sky-950 shadow-xl rounded-lg"
-    >
-    <h1 class="font-bold text-lg mb-2 text-white">Live Chat</h1>
-      <div class="flex flex-col bg-white shadow-lg p-0 rounded-lg">
-  
-
-        <div class="flex flex-col p-4 space-y-4 overflow-y-auto h-96">
+  <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="w-full max-w-4xl p-6 bg-sky-600 shadow-xl rounded-lg">
+      <h1 class="font-bold text-xl mb-4 text-white">Live Chat</h1>
+      <div class="flex flex-col bg-white shadow-lg p-0 rounded-lg h-[60vh]">
+        <div class="flex flex-col p-4 space-y-4 overflow-y-auto h-full">
           <div class="flex justify-start">
             <div
-              class="bg-black text-white rounded-l-lg rounded-br-lg px-4 py-2"
+              class="bg-gray-200 text-gray-800 rounded-l-lg rounded-br-lg px-4 py-2"
               style="max-width: 70%"
             >
               <p>This is a message from the sender.</p>
               <div class="flex justify-end space-x-2 mt-2">
-                <button class="text-xs text-sky-500 hover:underline">
+                <button class="text-xs text-sky-600 hover:underline">
                   Reply
                 </button>
-                <button class="text-xs text-sky-500 hover:underline">
+                <button class="text-xs text-sky-600 hover:underline">
                   Edit
                 </button>
                 <button class="text-xs text-red-500 hover:underline">
@@ -37,19 +33,17 @@
               </div>
             </div>
           </div>
-
           <div class="flex justify-end">
             <div
-              class="bg-sky-900 text-white rounded-r-lg rounded-bl-lg px-4 py-2"
+              class="bg-sky-300 text-black rounded-r-lg rounded-bl-lg px-4 py-2"
               style="max-width: 70%"
             >
-
               <p>This is a reply from the user (receiver).</p>
               <div class="flex justify-end space-x-2 mt-2">
-                <button class="text-xs text-sky-500 hover:underline">
+                <button class="text-xs text-sky-600 hover:underline">
                   Reply
                 </button>
-                <button class="text-xs text-sky-500 hover:underline">
+                <button class="text-xs text-sky-600 hover:underline">
                   Edit
                 </button>
                 <button class="text-xs text-red-500 hover:underline">
@@ -59,9 +53,8 @@
             </div>
           </div>
         </div>
-
         <div
-          class="border-t border-sky-950 px-4 py-3 bg-sky-50 flex justify-between"
+          class="border-t border-gray-300 px-4 py-3 bg-gray-50 flex justify-between"
         >
           <input
             type="text"
@@ -69,7 +62,7 @@
             placeholder="Type your message..."
           />
           <button
-            class="bg-sky-950 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-r-lg"
+            class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-r-lg"
           >
             Send
           </button>

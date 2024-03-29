@@ -31,18 +31,18 @@ def check_netid_exists(netid_to_check, students):
     return False 
 
 
-# students = [
-#     {
-#         "id": 1,
-#         "name": "Alice Johnson",
-#         "score": 88,
-#     },
-#     {
-#         "id": 2,
-#         "name": "Bob Smith",
-#         "score": 92,
-#     },
-# ]
+student = [
+    {
+        "id": 1,
+        "name": "Alice Johnson",
+        "score": 88,
+    },
+    {
+        "id": 2,
+        "name": "Bob Smith",
+        "score": 92,
+    },
+]
 
 
 @app.route("/")
@@ -155,7 +155,7 @@ def attendance(class_id):
 def userlist():
     prof_name = "Prof. John Doe"  
     return flask.render_template(
-        "class-users.html", students=students, prof_name=prof_name
+        "class-users.html", students=student, prof_name=prof_name
     )
 
 @app.route("/professor_dashboard")
