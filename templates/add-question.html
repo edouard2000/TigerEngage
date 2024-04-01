@@ -50,10 +50,11 @@
     });
   
     document.getElementById("addQuestionBtn").addEventListener("click", function () {
+      const classId = this.getAttribute('data-class-id'); // Retrieve the class_id
       const questionInput = document.getElementById("questionInput");
       const answerInput = document.getElementById("answerInput");
   
-      fetch('/add-question', {
+      fetch(`/class/${classId}/add-question`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

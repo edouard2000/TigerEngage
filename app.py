@@ -1,68 +1,42 @@
 #!/usr/bin/env python
 
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 # auth.py
 # Authors: Alex Halderman, Scott Karlin, Brian Kernighan, Bob Dondero
-#-----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
 import os
-import uuid # Import the uuid module to generate unique IDs
-import auth
+import uuid
+from zoneinfo import ZoneInfo 
+from datetime import datetime
+from flask_wtf.csrf import CSRFProtect
 import flask
-from flask import request, flash, redirect, url_for, render_template
-from psycopg2 import IntegrityError
-from database import SessionLocal, User, Answer
+from sqlalchemy.exc import SQLAlchemyError
+from flask import (
+    jsonify, request, flash, redirect, url_for, render_template
+)
+
+from auth import authenticate
+from database import ClassSession, SessionLocal, User,Class
 from testUsers import fetch_all_users
 
 app = flask.Flask(__name__)
 
 app.secret_key = os.environ["APP_SECRET_KEY"]
-
-classes = [
-    {
-        "id": 1,
-        "name": "Introduction to Python",
-        "instructor": "Prof. John Doe",
-        "is_active": True,
-    },
-    {
-        "id": 2,
-        "name": "Advanced Mathematics",
-        "instructor": "Dr. Jane Smith",
-        "is_active": False,
-    },
-]
-
-students = [{"id": 7, "netid": "ek4249"}]
+csrf = CSRFProtect(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://")
 
 
-def check_netid_exists(netid_to_check, students):
-    for student in students:
-        if student["netid"] == netid_to_check:
-            return True
-    return False
+localSession = SessionLocal()
 
 
-student = [
-    {
-        "id": 1,
-        "name": "Alice Johnson",
-        "score": 88,
-    },
-    {
-        "id": 2,
-        "name": "Bob Smith",
-        "score": 92,
-    },
-]
-
-
-@app.route('/', methods=['GET'])
-@app.route('/home', methods=['GET'])
+@app.route("/", methods=["GET"])
+@app.route("/home", methods=["GET"])
 def home():
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
+
 
 @app.route("/role-selection")
 def role_selection():
@@ -70,78 +44,17 @@ def role_selection():
     response = flask.make_response(html_code)
     return response
 
-@app.route("/login")
-def login():
-    html_code = flask.render_template('login.html')
-    response = flask.make_response(html_code)
-    return response
-
-# @app.route("/login")
-# def caslogin_buttonslot():
-#     html_code = flask.render_template('login.html')
-#     response = flask.make_response(html_code)
-#     return response
-
-@app.route("/register")
-def register():
-    html_code = flask.render_template('register.html')
-    response = flask.make_response(html_code)
-    return response
-
-# Route to handle the form submission for registration
-
-
-
-@app.route('/register', methods=['POST'])
-def process_registration():
-    db_session = SessionLocal()
-    
-    user_id = str(uuid.uuid4()) 
-    first_name = request.form['firstName']
-    last_name = request.form['lastName']
-    email = request.form['email']
-    password = request.form['password']
-
-    new_user = User(user_id=user_id, email=email, password_hash=password, role='student', name=f"{first_name} {last_name}")
-    
-    try:
-        db_session.add(new_user)
-        db_session.commit()
-        return redirect(url_for('home'))
-    except IntegrityError as e:
-        db_session.rollback()
-        return render_template('error_page.html', error=str(e))
-    finally:
-        db_session.close()
-
-
-@app.route("/new_student_dashboard1/<name>")
-def new_student_dashboard(name):
-    auth.authenticate()
-    html_code = flask.render_template(
-        "student-dashboard.html",
-        student_name=name,
-        classes = classes
-    )
-    response = flask.make_response(html_code)
-    return response
 
 @app.route("/student_dashboard")
 def student_dashboard():
-    username = auth.authenticate()
-    if check_netid_exists(username, students):
-        html_code = flask.render_template(
-            "student-dashboard.html", username=username, classes=classes
-        )
-        response = flask.make_response(html_code)
-        return response
-    else:
-        html_code = flask.render_template(
-            "denied.html",
-        )
-        response = flask.make_response(html_code)
-        return response
-
+     username = flask.session.get('username')
+     classes = get_student_classes(username)
+     html_code = flask.render_template(
+         "student-dashboard.html", student=username, classes=classes
+     )
+     response = flask.make_response(html_code)
+     return response
+     
 
 @app.route("/chat")
 def chat():
@@ -156,40 +69,7 @@ def questions():
     response = flask.make_response(html_code)
     return response
 
-# Route to handle the form submission for student responses to a question
-@app.route("/questions", methods=['POST'])
-def studentresponse():
-    # Generate a unique answer_id
-    answer_id = str(uuid.uuid4())
 
-    # Fetch data from the form
-    user_id = flask.request.form['user_id']
-    answer_id = flask.request.form['answer_id']
-    question_id = flask.request.form['question_id']
-    student_answer = flask.request.form['student_answer']
-
-    # Store student response in database
-    new_answer = Answer(answer_id=answer_id, question_id=question_id, user_id=user_id, text=student_answer)
-    SessionLocal.add(new_answer)
-
-    try:
-        # Attempt to commit the session
-        SessionLocal.commit()
-        # If the answer is successfully submitted, display "submission received"
-        return flask.redirect(flask.url_for('feedback', user_answer=student_answer))
-    except IntegrityError as e:
-        # Rollback the session to prevent further errors
-        SessionLocal.rollback()
-
-        # Handle the unique constraint violation error
-        error_message = "Your submission was not submitted successfully"
-        # You can log the error or display a user-friendly message
-        print(e + ": " + error_message)
-        # print(f"Error: {}")
-        # return flask.render_template('', error_message=error_message) 
-        html_code = flask.render_template("Question.html")
-        response = flask.make_response(html_code)
-        return response    
 
 @app.route("/feedback")
 def feedback():
@@ -202,14 +82,15 @@ def feedback():
     return flask.render_template("feedback.html", **feedback_data)
 
 
-@app.route("/class_dashboard/<int:class_id>")
+@app.route("/class_dashboard/<class_id>")
 def class_dashboard(class_id):
-    class_info = next((c for c in classes if c["id"] == class_id), None)
-    if class_info:
-        class_name = class_info["name"]
-    else:
-        class_name = "Class not found"
-    return flask.render_template("class-dashboard.html", class_name=class_name)
+    with SessionLocal() as session:
+        class_info = session.query(Class).filter(Class.class_id == class_id).first()
+        if class_info:
+            class_name = class_info.title
+        else:
+            class_name = "Class not found"
+    return render_template("class-dashboard.html", class_name=class_name)
 
 
 @app.route("/attendance")
@@ -220,19 +101,12 @@ def default_attendance():
 
 @app.route("/attendance/<int:class_id>")
 def attendance(class_id):
-    class_info = next((c for c in classes if c["id"] == class_id), None)
-    if class_info:
-        class_name = class_info["name"]
-    else:
-        class_name = "Class not found"
-    return flask.render_template("attendance.html", class_name=class_name)
-
-
+    pass
+    
 @app.route("/professor_dashboard")
 def professor_dashboard():
-    prof_name = "Prof. John Doe"
-    return flask.render_template("professor-dashboard.html", prof_name=prof_name)
-
+    username = flask.session.get('username')
+    return flask.render_template("professor-dashboard.html", prof_name=username)
 
 
 @app.route("/edit_student/<user_id>", methods=["GET", "POST"])
@@ -256,7 +130,6 @@ def edit_user(user_id):
     return render_template("edit_student.html", student=user)
 
 
-
 @app.route("/delete_user/<user_id>", methods=["POST"])
 def delete_user(user_id):
     db_session = SessionLocal()
@@ -272,45 +145,151 @@ def delete_user(user_id):
     return redirect(url_for("userlist"))
 
 
-
 @app.route("/userlist")
 def userlist():
-    prof_name = "Prof. John Doe"
     users = fetch_all_users()
     print("Users to be displayed:", users)
-    return flask.render_template("class-users.html", users=users, prof_name=prof_name)
+    return flask.render_template("class-users.html", users=users)
+
 
 @app.route("/add-question")
 def add_question():
     return flask.render_template("add-question.html")
 
 
-# @app.route("/add-question")
-# def add_question():
-#     db_session = SessionLocal()
-#     question_text = request.form.get("question_text")
-#     answer_text = request.form.get("answer_text")
+@app.route('/class/<class_id>/start_session', methods=['POST'])
+def start_class_session(class_id):
+    db = SessionLocal()
+    new_session = ClassSession(
+        class_id=class_id,
+        start_time=datetime.now(ZoneInfo("UTC")),
+        is_active=True
+    )
+    db.add(new_session)
+    db.commit()
+
+    return jsonify({'success': True, 'message': 'Class session started'})
+
+
+@app.route('/select_role', methods=['POST']) 
+def select_role():
+    role = request.json['role']
+    flask.session['role'] = role
+    return jsonify({'success': True, 'redirectUrl': url_for('authenticate_and_direct')})
+
+
+
+@app.route('/authenticate_and_direct', methods=['GET'])
+def authenticate_and_direct():
+    username = authenticate()  
+    flask.session['username'] = username
     
-#     question = Question(question_text=question_text, answer_text=answer_text)
-#     db_session.add(question)
-#     try:
-#         db_session.commit()
-#         return jsonify(success=True)
-#     except Exception as e:
-#         db_session.rollback()
-#         return jsonify(success=False, error=str(e))
-#     finally:
-#         db_session.close()
+    role = flask.session.get('role', 'student') 
+    
+    if not user_exists(username):
+        create_user(username, role)  
+    
+    dashboard_url = 'professor_dashboard' if role == 'professor' else 'student_dashboard'
+    
+    if role == "professor" and not has_classes(username):
+        print(f"{username} has no class yet")  
+        return flask.redirect(flask.url_for('create_class_form'))
+    print(f"{username} has a class already and we are directing to dashboard")
+    return flask.redirect(flask.url_for(dashboard_url))
+
+            
+
+@app.route('/create_class_form', methods=['GET'])
+def create_class_form():
+    return flask.render_template('create_class_form.html')
 
 
-@app.route("/logoutapp", methods=["GET"])
-def logoutapp():
-    return auth.logoutapp()
+@app.route('/create_class', methods=['POST'])
+def create_class():
+    class_name = request.form.get('class_name')
+    username = flask.session.get('username')
+    if create_class_for_professor(username, class_name):
+        return flask.redirect(flask.url_for('professor_dashboard'))
+    else:
+        flash("Error creating class.", "error")
+        return flask.redirect(flask.url_for('create_class_form'))
+    
+    
+
+# some helper functions
+
+def create_user(netid, role):
+    """
+    Adjusted to ensure proper session management.
+    """
+    with SessionLocal() as session:
+        email = f"{netid}@princeton.edu"
+        new_user = User(user_id=netid, email=email, role=role, netid=netid)
+        session.add(new_user)
+        try:
+            session.commit()
+            return True
+        except SQLAlchemyError as e:
+            print(f"Error adding user to database: {e}")
+            session.rollback()
+            return False
+        
+        
+def create_class_for_professor(netid, title):
+    """
+    Adjusted to ensure proper session management.
+    """
+    with SessionLocal() as session:
+        professor = session.query(User).filter_by(user_id=netid).first()
+        if not professor:
+            print(f"No professor found with netID: {netid}")
+            return False
+        
+        new_class = Class(
+            class_id=str(uuid.uuid4()), 
+            title=title,
+            instructor_id=netid,
+            total_sessions_planned=0, 
+            possible_scores=0
+        )
+        session.add(new_class)
+        try:
+            session.commit()
+            return True
+        except SQLAlchemyError as e:
+            print(f"Error adding class to database: {e}")
+            session.rollback()
+            return False
+        
+        
+
+def user_exists(user_id):
+    with SessionLocal() as session:
+        user = session.query(User).filter_by(user_id=user_id).first()
+        return user is not None
 
 
-@app.route("/logoutcas", methods=["GET"])
-def logoutcas():
-    return auth.logoutcas()
+def has_classes(username):
+    with SessionLocal() as session:
+        class_count = session.query(Class).filter_by(instructor_id=username).count()
+        return class_count > 0
+        
+
+def get_student_classes(username: str) -> list:
+    """
+    Retrieves a list of classes a student is enrolled in by their username.
+    
+    :param username: The username (user_id) of the student.
+    :return: A list of Class objects the student is enrolled in.
+    """
+    with SessionLocal() as db_session: 
+        user = db_session.query(User).filter(User.user_id == username).first()
+        if not user:
+            return [] 
+        enrolled_classes = [enrollment.class_ for enrollment in user.enrollments]
+        return enrolled_classes
+    
 
 if __name__ == "__main__":
     app.run(debug=True)
+
