@@ -235,7 +235,11 @@ def create_user(netid, role):
         
 def create_class_for_professor(netid, title):
     """
-    Adjusted to ensure proper session management.
+    Creates a new class for a professor.
+    
+    :param netid: The netid of the professor.
+    :param title: The title of the class.
+    :return: True if the class was created successfully, False otherwise.
     """
     with SessionLocal() as session:
         professor = session.query(User).filter_by(user_id=netid).first()
