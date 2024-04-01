@@ -27,8 +27,6 @@ csrf = CSRFProtect(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL').replace("postgres://", "postgresql://")
 
 
-localSession = SessionLocal()
-
 
 @app.route("/", methods=["GET"])
 @app.route("/home", methods=["GET"])
@@ -289,6 +287,11 @@ def get_student_classes(username: str) -> list:
         enrolled_classes = [enrollment.class_ for enrollment in user.enrollments]
         return enrolled_classes
     
+
+
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
