@@ -1,7 +1,7 @@
 
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
-from database import SessionLocal, Student, Professor, Class, User
+from database import SessionLocal, Student, Professor, Class
 
 def create_user(netid, role):
     """
@@ -60,7 +60,11 @@ def create_class_for_professor(netid, title):
 
 def user_exists(user_id):
     """
-    Checks if a user with the specified user_id already exists in either the Student or Professor tables in the database.
+    Checks if a user with the specified user_id already exists 
+    in either the Student or Professor tables in the database.
+    
+    Args:
+        user_id (str): The ID of the user.
     """
     with SessionLocal() as session:
         student = session.query(Student).filter_by(user_id=user_id).first()
@@ -72,10 +76,8 @@ def user_exists(user_id):
 def has_classes(professor_id):
     """
     Checks if a professor with the specified professor_id has any associated classes.
-    
     Args:
         professor_id (str): The ID of the professor.
-
     Returns:
         bool: True if the professor has one or more classes, False otherwise.
     """
@@ -87,10 +89,8 @@ def has_classes(professor_id):
 def get_student_classes(netid: str) -> list:
     """
     Retrieves a list of classes a student is enrolled in by their netID.
-    
     Args:
         netid (str): The netID of the student.
-
     Returns:
         list: A list of Class objects the student is enrolled in.
     """
@@ -100,3 +100,19 @@ def get_student_classes(netid: str) -> list:
             return []  
         enrolled_classes = [enrollment.class_ for enrollment in student.enrollments]
         return enrolled_classes
+
+
+def get_students_for_class(class_id: str) -> list:
+    """
+    Retrieves a list of students enrolled in a specific class by its class_id.
+    Args:
+        class_id (str): The unique identifier for the class.
+    Returns:
+        list: A list of Student objects enrolled in the specified class.
+    """
+    with SessionLocal() as db_session:
+        class_ = db_session.query(Class).filter(Class.class_id == class_id).first()
+        if not class_:
+            return [] 
+        students = [enrollment.student for enrollment in class_.enrollments]
+        return students

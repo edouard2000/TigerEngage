@@ -293,10 +293,6 @@ def get_student_classes(username: str) -> list:
     
 
 
-
-
-
-
 if __name__ == "__main__":
     app.run(debug=True)
 
