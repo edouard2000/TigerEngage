@@ -45,7 +45,7 @@ def student_dashboard():
     username = flask.session.get("username")
     classes = db_operations.get_student_classes(username)
     html_code = flask.render_template(
-        "student-dashboard.html", student=username, classes=classes
+        "student-dashboard.html", student_name=username, classes=classes
     )
     response = flask.make_response(html_code)
     return response
@@ -98,12 +98,15 @@ def attendance(class_id):
     pass
 
 
-@app.route("/professor_dashboard")
-def professor_dashboard():
+@app.route("/professor_dashboard/<class_id>")
+def professor_dashboard(class_id):
     username = flask.session.get("username")
     course_name = db_operations.get_professor_class(username)
     return flask.render_template(
-        "professor-dashboard.html", course_name=course_name, username=username
+        "professor-dashboard.html",
+        course_name=course_name,
+        username=username,
+        class_id=class_id,
     )
 
 
@@ -153,11 +156,6 @@ def userlist():
     return flask.render_template("class-users.html", users=users)
 
 
-@app.route("/add-question")
-def add_question():
-    return flask.render_template("add-question.html")
-
-
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
     db = SessionLocal()
@@ -178,37 +176,40 @@ def select_role():
     print("we are now redirecting")
     return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
 
+
 @app.route("/authenticate_and_direct", methods=["GET"])
 def authenticate_and_direct():
     username = authenticate()
     flask.session["username"] = username
     actual_role = db_operations.get_user_role(username)
+
     if actual_role:
         flask.session["actual_role"] = actual_role
         if actual_role != flask.session.get("role"):
             flash(f"Access denied. Your role is {actual_role}.", "error")
-            dashboard_url = (
-                "professor_dashboard"
-                if actual_role == "professor"
-                else "student_dashboard"
+            return flask.redirect(flask.url_for("home"))
+
+        if actual_role == "professor":
+            class_id = db_operations.get_professors_class_id(username)
+            if not class_id:
+                print(f"{username} has no class yet")
+                return flask.redirect(flask.url_for("create_class_form"))
+            return flask.redirect(
+                flask.url_for("professor_dashboard", class_id=class_id)
             )
-            return flask.redirect(flask.url_for(dashboard_url))
+        else:
+            return flask.redirect(flask.url_for("student_dashboard"))
     else:
         role = flask.session.get("role", "student")
         print(
             f"{username} does not exist in the database, creating one with role {role}"
         )
         db_operations.create_user(username, role)
-    dashboard_url = (
-        "professor_dashboard" if actual_role == "professor" else "student_dashboard"
-    )
+        dashboard_url = (
+            "professor_dashboard" if role == "professor" else "student_dashboard"
+        )
 
-    if actual_role == "professor" and not db_operations.has_classes(username):
-        print(f"{username} has no class yet")
-        return flask.redirect(flask.url_for("create_class_form"))
-
-    print(f"{username} is being redirected to their dashboard.")
-    return flask.redirect(flask.url_for(dashboard_url))
+        return flask.redirect(flask.url_for(dashboard_url))
 
 
 @app.route("/create_class_form", methods=["GET"])
@@ -225,6 +226,51 @@ def create_class():
     else:
         flash("Error creating class.", "error")
         return flask.redirect(flask.url_for("create_class_form"))
+
+
+@app.route("/add-question")
+def add_question():
+    return flask.render_template("add-question.html")
+
+
+@app.route("/class/<class_id>/add-question", methods=["POST"])
+def add_question_to_class_route(class_id):
+    data = request.json
+    question_text = data.get("question_text")
+    correct_answer = data.get("correct_answer")
+
+    if not question_text or not correct_answer:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Missing question text or correct answer.",
+                }
+            ),
+            400,
+        )
+    success = db_operations.add_question_to_class(
+        class_id, question_text, correct_answer
+    )
+
+    if success:
+        return jsonify({"success": True, "message": "Question successfully added."})
+    else:
+        return jsonify({"success": False, "message": "Failed to add question."}), 500
+
+
+@app.route("/class/<class_id>/questions", methods=["GET"])
+def get_questions_for_class_route(class_id):
+    results = db_operations.get_questions_for_class(class_id)
+    if results:
+        return jsonify({"success": True, "questions": results})
+    else:
+        return (
+            jsonify(
+                {"success": False, "message": "No questions found for this class."}
+            ),
+            404,
+        )
 
 
 if __name__ == "__main__":

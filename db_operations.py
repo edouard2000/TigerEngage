@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
-from database import Enrollment, SessionLocal, Student, Professor, Class, User
+from database import Enrollment, Question, SessionLocal, Student, Professor, Class, User
 
 
 def create_user(netid, role):
@@ -178,3 +178,78 @@ def get_user_role(username):
         if user:
             return user.role
         return None
+
+
+def add_question_to_class(
+    class_id: str, question_text: str, correct_answer: str
+) -> bool:
+    """
+    Adds a question and its correct answer to a class.
+
+    Args:
+        class_id (str): The unique identifier for the class.
+        question_text (str): The text of the question to be added.
+        correct_answer (str): The correct answer to the question.
+
+    Returns:
+        bool: True if the question was successfully added, False otherwise.
+    """
+    with SessionLocal() as session:
+        new_question = Question(
+            question_id=str(uuid.uuid4()),
+            class_id=class_id,
+            text=question_text,
+            correct_answer=correct_answer,
+        )
+        session.add(new_question)
+        try:
+            session.commit()
+            print(f"Question added to class {class_id}.")
+            return True
+        except SQLAlchemyError as e:
+            print(f"Failed to add question to class {class_id}: {e}")
+            session.rollback()
+            return False
+
+
+def get_professors_class_id(user_id):
+    session = SessionLocal()
+    try:
+        professor_classes = (
+            session.query(Class)
+            .join(Professor, Class.instructor_id == Professor.user_id)
+            .filter(Professor.user_id == user_id)
+            .first()
+        )
+        if professor_classes:
+            return professor_classes.class_id
+        else:
+            return None
+    except Exception as e:
+        print(f"Error fetching professor's class_id: {e}")
+        return None
+    finally:
+        session.close()
+
+
+def get_questions_for_class(class_id: str):
+    """
+    Retrieves questions for a specific class.
+
+    Args:
+        class_id (str): The unique identifier for the class.
+
+    Returns:
+        list: A list of dictionaries, each containing the question ID, text, and correct answer.
+    """
+    with SessionLocal() as session:
+        questions = session.query(Question).filter_by(class_id=class_id).all()
+        questions_data = [
+            {
+                "question_id": question.question_id,
+                "text": question.text,
+                "correct_answer": question.correct_answer,
+            }
+            for question in questions
+        ]
+        return questions_data
