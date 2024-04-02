@@ -5,16 +5,15 @@
 # Author: Jourdain Babisa
 # External Database URL: postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage
 # -----------------------------------------------------------------------
+
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from sqlalchemy import (
     create_engine, Column, String, DateTime, Integer, ForeignKey, Boolean, Text, Float
 )
-from sqlalchemy.orm import (
-    declarative_base, sessionmaker, relationship
-)
-from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+
 
 # Database URL and engine setup
 _DATABASE_URL = os.environ.get("DATABASE_URL", "your_default_database_url_here")
@@ -38,11 +37,7 @@ class User(Base):
 
 class Student(User):
     __tablename__ = "students"
-
-    @declared_attr
-    def user_id(cls):
-        return Column(String, ForeignKey('users.user_id'), primary_key=True)
-
+    user_id = Column(String, ForeignKey('users.user_id'), primary_key=True)
     enrollments = relationship("Enrollment", back_populates="student")
     attendances = relationship("Attendance", back_populates="student")
     answers = relationship("Answer", back_populates="user")
@@ -50,16 +45,15 @@ class Student(User):
     __mapper_args__ = {
         'polymorphic_identity':'student',
     }
+
 class Professor(User):
     __tablename__ = "professors"
-
-    @declared_attr
-    def user_id(cls):
-        return Column(String, ForeignKey('users.user_id'), primary_key=True)
+    user_id = Column(String, ForeignKey('users.user_id'), primary_key=True)
+    classes = relationship("Class", back_populates="instructor")
 
     __mapper_args__ = {
         'polymorphic_identity':'professor',
-}
+    }
 
 class Class(Base):
     __tablename__ = "classes"
@@ -68,7 +62,6 @@ class Class(Base):
     instructor_id = Column(String, ForeignKey('professors.user_id'))
     total_sessions_planned = Column(Integer, default=0)
     possible_scores = Column(Integer, default=0)
-    
     instructor = relationship("Professor", back_populates="classes")
     enrollments = relationship("Enrollment", back_populates="class_")
     sessions = relationship("ClassSession", back_populates="class_")
@@ -81,7 +74,6 @@ class Enrollment(Base):
     class_id = Column(String, ForeignKey('classes.class_id'))
     sessions_attended = Column(Integer, default=0)
     score = Column(Float, default=0.0)
-    
     student = relationship("Student", back_populates="enrollments")
     class_ = relationship("Class", back_populates="enrollments")
 
@@ -92,7 +84,6 @@ class ClassSession(Base):
     start_time = Column(DateTime(timezone=True), default=lambda: datetime.now(ZoneInfo("UTC")))
     end_time = Column(DateTime(timezone=True))
     is_active = Column(Boolean, default=False)
-
     class_ = relationship("Class", back_populates="sessions")
     attendances = relationship("Attendance", back_populates="class_session")
 
@@ -102,7 +93,6 @@ class Attendance(Base):
     session_id = Column(String, ForeignKey('class_sessions.session_id'))
     student_id = Column(String, ForeignKey('students.user_id'))
     timestamp = Column(DateTime, default=datetime.utcnow)
-    
     class_session = relationship("ClassSession", back_populates="attendances")
     student = relationship("Student", back_populates="attendances")
 
@@ -111,9 +101,9 @@ class Question(Base):
     question_id = Column(String, primary_key=True)
     class_id = Column(String, ForeignKey('classes.class_id'))
     text = Column(Text, nullable=False)
-    
     class_ = relationship("Class", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
+    summaries = relationship("Summary", back_populates="question")
 
 class Answer(Base):
     __tablename__ = "answers"
@@ -121,7 +111,6 @@ class Answer(Base):
     question_id = Column(String, ForeignKey('questions.question_id'))
     student_id = Column(String, ForeignKey('students.user_id'))
     text = Column(Text, nullable=False)
-    
     question = relationship("Question", back_populates="answers")
     user = relationship("Student", back_populates="answers")
 
@@ -130,9 +119,8 @@ class Summary(Base):
     summary_id = Column(String, primary_key=True)
     question_id = Column(String, ForeignKey('questions.question_id'))
     text = Column(Text, nullable=False)
-    
     question = relationship("Question", back_populates="summaries")
 
-# Create the tables in the database
 Base.metadata.create_all(_engine)
+
 

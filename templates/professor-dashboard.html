@@ -1,32 +1,74 @@
-{% extends "base.html" %}
-
-{% block title %}{{ prof_name }}{% endblock %}
-
-{% block navbar %}
-<a href="#" class="ml-4 hover:underline">{{ prof_name }}</a>
-{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}{{ course_name }}{% endblock %} {%
+block navbar %}
+<a href="#" class="ml-4 hover:underline">{{ course_name }}</a>
+{% endblock %} {% block content %}
 <style>
   .content-area {
-    height: calc(100vh - 10rem); 
+    height: calc(100vh - 15rem);
+  }
+  .welcome-message {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    padding: 2rem 0;
   }
 </style>
 
-<div class="flex mt-4 content-area overflow-hidden"> 
-  <div class="w-1/5 ml-2 bg-gray-100 overflow-hidden"> 
+<div class="welcome-message text-sky-600">Welcome {{username}} to your Dashboard.</div>
+
+<div class="flex mt-4 content-area overflow-hidden">
+  <div class="w-1/5 ml-2 bg-gray-100 overflow-hidden">
     <ul class="flex flex-col space-y-4 p-8">
-      <li><button id="startClass" data-class-id="{{ class_id }}" class="w-full bg-green-800 text-white py-2 px-4 rounded hover:bg-green-950 transition duration-300 text-left">Start</button></li>
-      <li><button id="addQuestion" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Question</button></li>
-      <li><button id="classUsers" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Users</button></li>
-      <li><button id="feedback" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Feedback</button></li>
-      <li><button id="liveChat" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left">Chat</button></li>
-      
+      <li>
+        <button
+          id="startClass"
+          data-class-id="{{ class_id }}"
+          class="w-full bg-green-800 text-white py-2 px-4 rounded hover:bg-green-950 transition duration-300 text-left"
+        >
+          Start
+        </button>
+      </li>
+      <li>
+        <button
+          id="addQuestion"
+          data-class-id="{{ class_id }}"
+          class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left"
+        >
+          Question
+        </button>
+      </li>
+      <li>
+        <button
+          id="classUsers"
+          data-class-id="{{ class_id }}"
+          class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left"
+        >
+          Users
+        </button>
+      </li>
+      <li>
+        <button
+          id="feedback"
+          data-class-id="{{ class_id }}"
+          class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left"
+        >
+          Feedback
+        </button>
+      </li>
+      <li>
+        <button
+          id="liveChat"
+          data-class-id="{{ class_id }}"
+          class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300 text-left"
+        >
+          Chat
+        </button>
+      </li>
     </ul>
   </div>
 
-  <div class="flex-grow bg-white ml-4 mr-4 mb-4 overflow-hidden"> 
-    <div id="dashboardContent" class="m-8"> 
+  <div class="flex-grow bg-white ml-4 mr-4 mb-4 overflow-hidden">
+    <div id="dashboardContent" class="m-8">
       <p>Select an option from the sidebar to view content here.</p>
     </div>
   </div>

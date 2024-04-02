@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
-from database import Enrollment, SessionLocal, Student, Professor, Class
+from database import Enrollment, SessionLocal, Student, Professor, Class, User
 
 
 def create_user(netid, role):
@@ -134,18 +134,47 @@ def get_student_score_and_possible_for_class(user_id: str, class_id: str):
         if enrollment and class_info:
             return (enrollment.score, class_info.possible_scores)
         return (None, None)
-    
-    
-def computer_precentage_score(score, posible_scores):
-    """
-    Computes the precentage score for a student based on their score and possible scores.
-    Args:
-        score (int): The student's score.
-        posible_scores (int): The possible scores for the student.
-    Returns:
-        int: The precentage score for the student.
-    """
-    if posible_scores == 0:
-        return 0 + "%"
+
+
+def computer_precentage_score(score, possible_scores):
+    """Adjusted to ensure string return with '%'."""
+    if possible_scores == 0:
+        return "0%"
     else:
-        return int(score / posible_scores * 100) + "%"
+        return str(int((score / possible_scores) * 100)) + "%"
+
+
+def get_professor_class(netid: str) -> str:
+    """
+    Retrieves the name of the class associated with a specific professor by their netID.
+    Args:
+        netid (str): The netID of the professor.
+    Returns:
+        str: The name of the class associated with the professor, or None if no class is found.
+    """
+    with SessionLocal() as session:
+        professor_class = (
+            session.query(Class.title)
+            .join(Professor, Professor.user_id == Class.instructor_id)
+            .filter(Professor.netid == netid)
+            .first()
+        )
+        if professor_class:
+            return professor_class.title
+        else:
+            return None
+
+
+def get_user_role(username):
+    """
+    Queries the database for the user's role based on their username.
+    Args:
+        username (str): The username of the user.
+    Returns:
+        str: The role of the user (e.g., 'student', 'professor') or None if not found.
+    """
+    with SessionLocal() as session:
+        user = session.query(User).filter_by(netid=username).first()
+        if user:
+            return user.role
+        return None

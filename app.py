@@ -6,18 +6,14 @@
 # -----------------------------------------------------------------------
 
 import os
-import uuid
 from zoneinfo import ZoneInfo
 from datetime import datetime
 from flask_wtf.csrf import CSRFProtect
 import flask
-from sqlalchemy.exc import SQLAlchemyError
 from flask import jsonify, request, flash, redirect, url_for, render_template
-
 from auth import authenticate
 import db_operations
 from database import ClassSession, SessionLocal, User, Class
-from testUsers import fetch_all_users
 
 
 app = flask.Flask(__name__)
@@ -105,7 +101,10 @@ def attendance(class_id):
 @app.route("/professor_dashboard")
 def professor_dashboard():
     username = flask.session.get("username")
-    return flask.render_template("professor-dashboard.html", prof_name=username)
+    course_name = db_operations.get_professor_class(username)
+    return flask.render_template(
+        "professor-dashboard.html", course_name=course_name, username=username
+    )
 
 
 @app.route("/edit_student/<user_id>", methods=["GET", "POST"])
@@ -145,15 +144,13 @@ def delete_user(user_id):
 
 @app.route("/userlist")
 def userlist():
-    username = flask.session.get("username")
     class_id = flask.session.get("class_id")
-    score, posible_score = db_operations.get_student_score_and_possible_for_class(
-        username, class_id
-    )
-    precentage = db_operations.computer_precentage_score(score, posible_score)
     users = db_operations.get_students_for_class(class_id)
-    print("Users to be displayed:", users)
-    return flask.render_template("class-users.html", precentage=precentage, users=users)
+    for user in users:
+        user["percentage"] = db_operations.computer_precentage_score(
+            user["score"], user["possible_scores"]
+        )
+    return flask.render_template("class-users.html", users=users)
 
 
 @app.route("/add-question")
@@ -176,28 +173,41 @@ def start_class_session(class_id):
 @app.route("/select_role", methods=["POST"])
 def select_role():
     role = request.json["role"]
+    print(f"we got a role: {role}")
     flask.session["role"] = role
+    print("we are now redirecting")
     return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
-
 
 @app.route("/authenticate_and_direct", methods=["GET"])
 def authenticate_and_direct():
     username = authenticate()
     flask.session["username"] = username
-
-    role = flask.session.get("role", "student")
-
-    if not db_operations.user_exists(username):
+    actual_role = db_operations.get_user_role(username)
+    if actual_role:
+        flask.session["actual_role"] = actual_role
+        if actual_role != flask.session.get("role"):
+            flash(f"Access denied. Your role is {actual_role}.", "error")
+            dashboard_url = (
+                "professor_dashboard"
+                if actual_role == "professor"
+                else "student_dashboard"
+            )
+            return flask.redirect(flask.url_for(dashboard_url))
+    else:
+        role = flask.session.get("role", "student")
+        print(
+            f"{username} does not exist in the database, creating one with role {role}"
+        )
         db_operations.create_user(username, role)
-
     dashboard_url = (
-        "professor_dashboard" if role == "professor" else "student_dashboard"
+        "professor_dashboard" if actual_role == "professor" else "student_dashboard"
     )
 
-    if role == "professor" and not db_operations.has_classes(username):
+    if actual_role == "professor" and not db_operations.has_classes(username):
         print(f"{username} has no class yet")
         return flask.redirect(flask.url_for("create_class_form"))
-    print(f"{username} has a class already and we are directing to dashboard")
+
+    print(f"{username} is being redirected to their dashboard.")
     return flask.redirect(flask.url_for(dashboard_url))
 
 
