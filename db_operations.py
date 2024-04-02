@@ -1,12 +1,11 @@
-
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
-from database import SessionLocal, Student, Professor, Class
+from database import Enrollment, SessionLocal, Student, Professor, Class
+
 
 def create_user(netid, role):
     """
-    Creates a new user with the specified netID and role. Adjusted to handle
-    separate models or roles for students and professors.
+    Creates a new user as either a Student or Professor based on the role.
     """
     with SessionLocal() as session:
         email = f"{netid}@princeton.edu"
@@ -57,12 +56,11 @@ def create_class_for_professor(netid, title):
             return False
 
 
-
 def user_exists(user_id):
     """
-    Checks if a user with the specified user_id already exists 
+    Checks if a user with the specified user_id already exists
     in either the Student or Professor tables in the database.
-    
+
     Args:
         user_id (str): The ID of the user.
     """
@@ -70,7 +68,6 @@ def user_exists(user_id):
         student = session.query(Student).filter_by(user_id=user_id).first()
         professor = session.query(Professor).filter_by(user_id=user_id).first()
         return student is not None or professor is not None
-
 
 
 def has_classes(professor_id):
@@ -97,22 +94,43 @@ def get_student_classes(netid: str) -> list:
     with SessionLocal() as db_session:
         student = db_session.query(Student).filter(Student.netid == netid).first()
         if not student:
-            return []  
+            return []
         enrolled_classes = [enrollment.class_ for enrollment in student.enrollments]
         return enrolled_classes
 
 
-def get_students_for_class(class_id: str) -> list:
+def get_students_for_class(class_id: str):
     """
-    Retrieves a list of students enrolled in a specific class by its class_id.
-    Args:
-        class_id (str): The unique identifier for the class.
-    Returns:
-        list: A list of Student objects enrolled in the specified class.
+    Retrieves all students enrolled in a specific class.
     """
-    with SessionLocal() as db_session:
-        class_ = db_session.query(Class).filter(Class.class_id == class_id).first()
-        if not class_:
-            return [] 
-        students = [enrollment.student for enrollment in class_.enrollments]
+    with SessionLocal() as session:
+        students = (
+            session.query(Student)
+            .join(Enrollment)
+            .filter(Enrollment.class_id == class_id)
+            .all()
+        )
         return students
+
+
+def get_student_score_and_possible_for_class(user_id: str, class_id: str):
+    """
+    Retrieves the score of a specific student for a specific class and the possible score for that class.
+    Args:
+        student_id (str): The student's user ID.
+        class_id (str): The class ID.
+    Returns:
+        tuple: A tuple containing the student's score and the possible score for the class.
+               Returns (None, None) if the enrollment or class doesn't exist.
+    """
+    with SessionLocal() as session:
+        enrollment = (
+            session.query(Enrollment)
+            .filter_by(user_id=user_id, class_id=class_id)
+            .first()
+        )
+        class_info = session.query(Class).filter_by(class_id=class_id).first()
+
+        if enrollment and class_info:
+            return (enrollment.score, class_info.possible_scores)
+        return (None, None)
