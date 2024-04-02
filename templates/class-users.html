@@ -6,7 +6,7 @@
     <div class="bg-sky-600 mb-4 rounded-md shadow hover:bg-sky-700 transition ease-in-out duration-150 flex justify-between items-center px-4 py-4">
       <div>
         <p class="text-lg font-bold text-white">{{ user.netid }}</p>
-        <p class="text-sm text-gray-300">Score: {{ user.score }}</p>
+        <p class="text-sm text-gray-300">Score: {{ precentage }}</p>
       </div>
       <div>
         <a href="{{ url_for('edit_user', user_id=user.user_id) }}" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150">Edit</a>

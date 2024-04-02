@@ -134,3 +134,18 @@ def get_student_score_and_possible_for_class(user_id: str, class_id: str):
         if enrollment and class_info:
             return (enrollment.score, class_info.possible_scores)
         return (None, None)
+    
+    
+def computer_precentage_score(score, posible_scores):
+    """
+    Computes the precentage score for a student based on their score and possible scores.
+    Args:
+        score (int): The student's score.
+        posible_scores (int): The possible scores for the student.
+    Returns:
+        int: The precentage score for the student.
+    """
+    if posible_scores == 0:
+        return 0 + "%"
+    else:
+        return int(score / posible_scores * 100) + "%"
