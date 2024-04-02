@@ -6,11 +6,11 @@
 # -----------------------------------------------------------------------
 
 import sys
-import tigerengage
+import app
 
 
 def main():
-
+    print("Starting the Flask application...")
     if len(sys.argv) != 2:
         print("Usage: " + sys.argv[0] + " port", file=sys.stderr)
         sys.exit(1)
@@ -22,7 +22,7 @@ def main():
         sys.exit(1)
 
     try:
-        tigerengage.app.run(host="0.0.0.0", port=port, debug=True)
+        app.app.run(host="localhost", port=port, debug=True)
     except Exception as ex:
         print(ex, file=sys.stderr)
         sys.exit(1)

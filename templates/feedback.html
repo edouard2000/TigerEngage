@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Feedback Summary</title>
+    <meta name="description" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      href="{{ url_for('static', filename='css/output.css') }}"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="mx-16 py-4">
+      <div class="mb-6 w-full">
+        <div class="bg-sky-600 text-white p-4 rounded-lg shadow-lg">
+          <h2 class="text-2xl font-bold text-start mb-2">Question:</h2>
+          <p class="text-sm">{{ question_content }}</p>
+          <h3 class="text-xl font-bold text-start mt-4 mb-2">
+            Answers Summary:
+          </h3>
+          <p class="text-sm">{{ answers_summary }}</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap md:flex-nowrap justify-start gap-4">
+        <div
+          class="bg-sky-600 text-white p-4 rounded-lg shadow-lg flex-auto md:flex-1 mb-4 md:mb-0"
+        >
+          <h3 class="text-lg font-bold mb-2">Correct Answer</h3>
+          <p class="text-sm">{{ correct_answer }}</p>
+        </div>
+
+        <div
+          class="bg-sky-600 text-white p-4 rounded-lg shadow-lg flex-auto md:flex-1"
+        >
+          <h3 class="text-lg font-bold mb-2">Your Answer</h3>
+          <p class="text-sm">{{ user_answer }}</p>
+        </div>
+      </div>
+
+      <div class="text-start my-4">
+        <button
+          id="learnMoreBtn"
+          class="bg-green-800 hover:bg-green-950 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out"
+        >
+          Learn More
+        </button>
+      </div>
+
+      <div
+        id="moreInfoContent"
+        class="bg-sky-600 text-white p-4 rounded-lg shadow-lg md:w-1/2"
+        style="display: none"
+      >
+        <p class="text-sm">
+          This is a placeholder for additional information that would be
+          provided by ChatGPT.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

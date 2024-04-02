@@ -1,0 +1,61 @@
+{% extends "base.html" %} {% block title %}{{ student_name }}'s Dashboard{%
+endblock %} {% block navbar %}
+<a href="{{ url_for('student_dashboard') }}" class="hover:underline text-white"
+  >{{ student_name }}'s Dashboard</a
+>
+{% endblock %} {% block content %}
+<div class="py-4 bg-gray-100">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-center mb-6">
+      <input
+        type="text"
+        id="class-search"
+        placeholder="Search for classes..."
+        class="w-full max-w-xs sm:max-w-md px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:border-sky-500 focus:ring-sky-500"
+      />
+    </div>
+    {% for class in classes %}
+    <div
+      class="bg-sky-600 mb-4 rounded-md shadow hover:bg-sky-700 transition ease-in-out duration-150"
+    >
+      <div
+        class="flex flex-col sm:flex-row items-center justify-between px-4 py-4 sm:px-6"
+      >
+        <div class="mb-2 sm:mb-0">
+          <p class="text-lg sm:text-xl font-bold text-white truncate">
+            {{ class.name }}
+          </p>
+          <p class="text-xs sm:text-sm text-gray-300">{{ class.instructor }}</p>
+        </div>
+        <div class="flex-shrink-0 space-x-2" style="min-width: 240px">
+          <button
+            class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150"
+          >
+            Remove
+          </button>
+          {% if class.is_active %}
+          <a
+            href="{{ url_for('class_dashboard', class_id=class.id) }}"
+            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150 inline-block"
+          >
+            Check In
+          </a>
+          {% else %}
+          <button
+            class="bg-gray-500 text-white font-bold py-2 px-4 rounded"
+            disabled
+          >
+            Not Started
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="block text-center py-10">
+      <p class="text-gray-500">No classes found. Try enrolling in a class.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
