@@ -58,4 +58,54 @@ endblock %} {% block navbar %}
     {% endfor %}
   </div>
 </div>
+
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('class-search');
+      const resultsContainer = document.createElement('div');
+      searchInput.parentNode.insertBefore(resultsContainer, searchInput.nextSibling);
+  
+      searchInput.addEventListener('input', function() {
+          const query = searchInput.value;
+          fetch(`/search_classes?search=${encodeURIComponent(query)}`)
+              .then(response => response.json())
+              .then(data => {
+                  resultsContainer.innerHTML = '';
+                  data.classes.forEach(cls => {
+                      const classDiv = document.createElement('div');
+                      classDiv.innerHTML = `
+                          <div class="bg-sky-600 mb-4 rounded-md shadow hover:bg-sky-700 transition ease-in-out duration-150 p-4">
+                              <p class="text-lg font-bold text-white">${cls.name} - ${cls.instructor}</p>
+                              <button onclick="enroll('${cls.id}', this)" class="enroll-btn bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150">
+                                  Enroll
+                              </button>
+                          </div>
+                      `;
+                      resultsContainer.appendChild(classDiv);
+                  });
+              });
+      });
+  
+      window.enroll = function(classId, btn) {
+          fetch('/enroll_in_class', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: `class_id=${classId}`
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  alert('Enrolled successfully!');
+                  btn.parentElement.style.display = 'none'; 
+              } else {
+                  alert(data.message);
+              }
+          });
+      };
+  });
+  </script>
 {% endblock %}
