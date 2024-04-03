@@ -1,3 +1,12 @@
+#!/usr/bin/env python
+
+# -----------------------------------------------------------------------
+# db_operations.py
+# Author: Jourdain Babisa
+# External Database URL: postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage
+# -----------------------------------------------------------------------
+
+
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
 from database import Enrollment, SessionLocal, Student, Professor, Class, User

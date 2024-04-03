@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-# -----------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # app.py
 # Authors: Edouard Kwizera, Roshaan Khalid, Jourdain Babisa, Wangari Karani
-# -----------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 import os
+import flask
+import db_operations
+from auth import authenticate
 from zoneinfo import ZoneInfo
 from datetime import datetime
 from flask_wtf.csrf import CSRFProtect
-import flask
 from flask import jsonify, request, flash, redirect, url_for, render_template
-from auth import authenticate
-import db_operations
 from database import ClassSession, SessionLocal, User, Class
 
 

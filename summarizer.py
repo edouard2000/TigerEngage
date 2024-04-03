@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+
+# --------------------------------------------------------------------------
+# summarizer.py
+# Authors: Wangari Karani, Roshaan Khalid, Jourdain Babisa, Edouard Kwizera
+# --------------------------------------------------------------------------
+
 import os
 from openai import OpenAI
 
