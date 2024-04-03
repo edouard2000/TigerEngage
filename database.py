@@ -144,6 +144,6 @@ class Summary(Base):
     question = relationship("Question", back_populates="summaries")
 
 
-# Base.metadata.drop_all(_engine)
+Base.metadata.drop_all(_engine)
 
 Base.metadata.create_all(_engine)

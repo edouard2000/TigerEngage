@@ -1,25 +1,61 @@
-<div id="questionPager" class="m-4">
-  <button id="createQuestionBtn" class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">
-    Create Question
-  </button>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title></title>
+    <meta name="description" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+  </head>
+  <body>
+    <div id="questionPager" class="m-4">
+      <button
+        id="createQuestionBtn"
+        class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300"
+      >
+        Create Question
+      </button>
 
-  <div id="questionForm" class="hidden">
-    <div class="my-4">
-      <label for="questionInput" class="block text-sm font-medium text-gray-700">Question</label>
-      <input type="text" id="questionInput" class="mt-1 p-2 w-full border rounded-md" placeholder="Enter your question here"/>
+      <div id="questionForm" class="hidden">
+        <div class="my-4">
+          <label
+            for="questionInput"
+            class="block text-sm font-medium text-gray-700"
+            >Question</label
+          >
+          <input
+            type="text"
+            id="questionInput"
+            class="mt-1 p-2 w-full border rounded-md"
+            placeholder="Enter your question here"
+          />
+        </div>
+
+        <div class="my-4">
+          <label
+            for="answerInput"
+            class="block text-sm font-medium text-gray-700"
+            >Answer</label
+          >
+          <input
+            type="text"
+            id="answerInput"
+            class="mt-1 p-2 w-full border rounded-md"
+            placeholder="Enter the answer here"
+          />
+        </div>
+
+        <button
+          id="addQuestionBtn"
+          class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300"
+        >
+          Add
+        </button>
+      </div>
+
+      <div id="questionsList" class="mt-4"></div>
     </div>
-
-    <div class="my-4">
-      <label for="answerInput" class="block text-sm font-medium text-gray-700">Answer</label>
-      <input type="text" id="answerInput" class="mt-1 p-2 w-full border rounded-md" placeholder="Enter the answer here"/>
-    </div>
-
-    <button id="addQuestionBtn" class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">
-      Add
-    </button>
-  </div>
-
-  <div id="questionsList" class="mt-4">
-    
-  </div>
-</div>
+    <script src="" async defer></script>
+  </body>
+</html>

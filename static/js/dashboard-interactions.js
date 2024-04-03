@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
 
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
 
   function fetchContent(endpoint) {
@@ -57,13 +56,16 @@ function initializeQuestionFormEventListeners() {
 
   const addQuestionBtn = document.getElementById("addQuestionBtn");
   if (addQuestionBtn) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    console.log("csrf token: " + csrfToken);
     addQuestionBtn.addEventListener("click", function () {
       const questionInput = document.getElementById("questionInput");
       const answerInput = document.getElementById("answerInput");
+      console.log(`/class/${classId}/add-question`);
       fetch(`/class/${classId}/add-question`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        "X-CSRF-Token": csrfToken,
+        "X-CSRFToken": csrfToken,
         body: JSON.stringify({
           question_text: questionInput.value,
           correct_answer: answerInput.value,
@@ -86,31 +88,36 @@ function initializeQuestionFormEventListeners() {
   fetchQuestionsAndDisplay(classId);
 }
 
-
-
 function fetchQuestionsAndDisplay(classId) {
   fetch(`/class/${classId}/questions`)
-  .then(response => response.json())
-  .then(data => {
-    const questionsContainer = document.getElementById("questionsList");
-    questionsContainer.innerHTML = ""; 
+    .then((response) => response.json())
+    .then((data) => {
+      const questionsContainer = document.getElementById("questionsList");
+      questionsContainer.innerHTML = "";
 
-    if (data.questions && data.questions.length > 0) {
-      data.questions.forEach(question => {
-        questionsContainer.appendChild(createQuestionElement(question));
-      });
-    } else {
-      questionsContainer.innerHTML = `<p class="text-gray-700">No questions created for this class yet.</p>`;
-    }
-  })
-  .catch(error => console.error("Error fetching questions:", error));
+      if (data.questions && data.questions.length > 0) {
+        data.questions.forEach((question) => {
+          questionsContainer.appendChild(createQuestionElement(question));
+        });
+      } else {
+        questionsContainer.innerHTML = `<p class="text-gray-700">No questions created for this class yet.</p>`;
+      }
+    })
+    .catch((error) => console.error("Error fetching questions:", error));
 }
-
-
 
 function createQuestionElement(question) {
   const element = document.createElement("div");
-  element.classList.add("flex", "justify-between", "items-center", "p-4", "border", "border-gray-300", "rounded-md", "mb-2");
+  element.classList.add(
+    "flex",
+    "justify-between",
+    "items-center",
+    "p-4",
+    "border",
+    "border-gray-300",
+    "rounded-md",
+    "mb-2"
+  );
   element.innerHTML = `
    <div class="flex">
       <div>
@@ -131,7 +138,6 @@ function createQuestionElement(question) {
 }
 
 function getClassIdFromUrl() {
-  const urlParts = window.location.pathname.split('/');
+  const urlParts = window.location.pathname.split("/");
   return urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
 }
-

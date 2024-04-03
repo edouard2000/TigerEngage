@@ -10,14 +10,10 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 from flask_wtf.csrf import CSRFProtect
 import flask
-from flask import (
-    jsonify, request, flash, redirect, session, url_for, render_template
-)
+from flask import jsonify, request, flash, redirect, session, url_for, render_template
 import db_operations
 from auth import authenticate
-from database import (
-    ClassSession, SessionLocal, User, Class, Enrollment
-    )
+from database import ClassSession, SessionLocal, User, Class, Enrollment
 
 # --------------------------------------------------------------------------
 
@@ -29,6 +25,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
 )
 
 # --------------------------------------------------------------------------
+
 
 @app.route("/", methods=["GET"])
 @app.route("/home", methods=["GET"])
@@ -235,7 +232,7 @@ def create_class():
 
 @app.route("/add-question")
 def add_question():
-    """this method will render a form wiht input to add questions
+    """this method will render a form with input to add questions
 
     Returns:
         _type_: render template
@@ -246,7 +243,7 @@ def add_question():
 
 @app.route("/class/<class_id>/add-question", methods=["POST"])
 def add_question_to_class_route(class_id):
-
+    print("hello there!")
     data = request.json
     print("Received data:", data)
     question_text = data.get("question_text")
@@ -274,8 +271,10 @@ def add_question_to_class_route(class_id):
 
 @app.route("/class/<class_id>/questions", methods=["GET"])
 def get_questions_for_class_route(class_id):
+
     print(f"getting questions for class {class_id}")
     results = db_operations.get_questions_for_class(class_id)
+    print(f"this is results: {results}")
     if results:
         return jsonify({"success": True, "questions": results})
     else:
