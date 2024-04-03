@@ -15,15 +15,16 @@ from flask_wtf.csrf import CSRFProtect
 from flask import jsonify, request, flash, redirect, url_for, render_template
 from database import ClassSession, SessionLocal, User, Class
 
+# --------------------------------------------------------------------------
 
 app = flask.Flask(__name__)
-
 app.secret_key = os.environ["APP_SECRET_KEY"]
 csrf = CSRFProtect(app)
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
     "postgres://", "postgresql://"
 )
 
+# --------------------------------------------------------------------------
 
 @app.route("/", methods=["GET"])
 @app.route("/home", methods=["GET"])

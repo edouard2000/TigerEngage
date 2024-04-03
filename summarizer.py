@@ -8,6 +8,8 @@
 import os
 from openai import OpenAI
 
+# --------------------------------------------------------------------------
+
 # Instantiate a client to ChatGPT and grab the API key from the .env file
 client = OpenAI(
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -26,6 +28,8 @@ print(completion.choices[0].message)
 # print(completion.choices[0].message.content)
 
 # client.close()
+
+# --------------------------------------------------------------------------
 
 # Write the text summarizer class
 class GenerateFeedback:
@@ -67,6 +71,8 @@ class GenerateFeedback:
 
         return summarized_answer
     
+# --------------------------------------------------------------------------
+
 gpt_summarizer = GenerateFeedback()
 
 gpt_summarizer.answers_summary([' pass in student answers '])

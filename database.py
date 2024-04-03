@@ -9,11 +9,12 @@
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy import (
     create_engine, Column, String, DateTime, Integer, ForeignKey, Boolean, Text, Float
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
+# -----------------------------------------------------------------------
 
 # Database URL and engine setup
 _DATABASE_URL = os.environ.get("DATABASE_URL", "your_default_database_url_here")
@@ -22,6 +23,8 @@ _engine = create_engine(_DATABASE_URL)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 Base = declarative_base()
+
+# -----------------------------------------------------------------------
 
 class User(Base):
     __tablename__ = "users"
@@ -122,5 +125,3 @@ class Summary(Base):
     question = relationship("Question", back_populates="summaries")
 
 Base.metadata.create_all(_engine)
-
-
