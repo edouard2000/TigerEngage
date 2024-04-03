@@ -1,50 +1,180 @@
-# from sqlalchemy.orm import sessionmaker
-# from models import engine, User, Class, Question
+import uuid
+from sqlalchemy.exc import SQLAlchemyError
+from database import Enrollment, SessionLocal, Student, Professor, Class, User
 
-# SessionLocal = sessionmaker(bind=engine)
 
-# def get_users(role):
-#     """Fetch users based on their role (professor or student)."""
-#     with SessionLocal() as session:
-#         return session.query(User).filter(User.role == role).all()
+def create_user(netid, role):
+    """
+    Creates a new user as either a Student or Professor based on the role.
+    """
+    with SessionLocal() as session:
+        email = f"{netid}@princeton.edu"
+        if role == "student":
+            new_user = Student(user_id=netid, email=email, netid=netid)
+        elif role == "professor":
+            new_user = Professor(user_id=netid, email=email, netid=netid)
+        else:
+            print(f"Invalid role: {role}")
+            return False
 
-# def add_user(user_id, email, password_hash, role, name):
-#     """Add a new user to the database."""
-#     with SessionLocal() as session:
-#         user = User(user_id=user_id, email=email, password_hash=password_hash, role=role, name=name)
-#         session.add(user)
-#         session.commit()
+        session.add(new_user)
+        try:
+            session.commit()
+            return True
+        except SQLAlchemyError as e:
+            print(f"Error adding user to database: {e}")
+            session.rollback()
+            return False
 
-# def add_question(class_id, text):
-#     """Add a new question to a class."""
-#     with SessionLocal() as session:
-#         question = Question(class_id=class_id, text=text)
-#         session.add(question)
-#         session.commit()
 
-# def delete_question(question_id):
-#     """Delete a question based on its ID."""
-#     with SessionLocal() as session:
-#         question = session.query(Question).filter(Question.question_id == question_id).first()
-#         if question:
-#             session.delete(question)
-#             session.commit()
+def create_class_for_professor(netid, title):
+    """
+    Creates a new class associated with the specified professor's netID.
+    """
+    with SessionLocal() as session:
 
-# def get_classes(instructor_id):
-#     """Fetch classes taught by a specific instructor."""
-#     with SessionLocal() as session:
-#         return session.query(Class).filter(Class.instructor_id == instructor_id).all()
+        professor = session.query(Professor).filter_by(user_id=netid).first()
+        if not professor:
+            print(f"No professor found with netID: {netid}")
+            return False
 
-# def update_user(user_id, **kwargs):
-#     """Update a user's information based on the provided keyword arguments."""
-#     with SessionLocal() as session:
-#         user = session.query(User).filter(User.user_id == user_id).first()
-#         if user:
-#             for key, value in kwargs.items():
-#                 setattr(user, key, value)
-#             session.commit()
+        new_class = Class(
+            class_id=str(uuid.uuid4()),
+            title=title,
+            instructor_id=netid,
+            total_sessions_planned=0,
+            possible_scores=0,
+        )
+        session.add(new_class)
+        try:
+            session.commit()
+            print(f"Class '{title}' successfully created by Professor {netid}.")
+            return True
+        except SQLAlchemyError as e:
+            print(f"Error adding class to database: {e}")
+            session.rollback()
+            return False
 
-# def get_questions_by_class(class_id):
-#     """Fetch all questions for a specific class."""
-#     with SessionLocal() as session:
-#         return session.query(Question).filter(Question.class_id == class_id).all()
+
+def user_exists(user_id):
+    """
+    Checks if a user with the specified user_id already exists
+    in either the Student or Professor tables in the database.
+
+    Args:
+        user_id (str): The ID of the user.
+    """
+    with SessionLocal() as session:
+        student = session.query(Student).filter_by(user_id=user_id).first()
+        professor = session.query(Professor).filter_by(user_id=user_id).first()
+        return student is not None or professor is not None
+
+
+def has_classes(professor_id):
+    """
+    Checks if a professor with the specified professor_id has any associated classes.
+    Args:
+        professor_id (str): The ID of the professor.
+    Returns:
+        bool: True if the professor has one or more classes, False otherwise.
+    """
+    with SessionLocal() as session:
+        class_count = session.query(Class).filter_by(instructor_id=professor_id).count()
+        return class_count > 0
+
+
+def get_student_classes(netid: str) -> list:
+    """
+    Retrieves a list of classes a student is enrolled in by their netID.
+    Args:
+        netid (str): The netID of the student.
+    Returns:
+        list: A list of Class objects the student is enrolled in.
+    """
+    with SessionLocal() as db_session:
+        student = db_session.query(Student).filter(Student.netid == netid).first()
+        if not student:
+            return []
+        enrolled_classes = [enrollment.class_ for enrollment in student.enrollments]
+        return enrolled_classes
+
+
+def get_students_for_class(class_id: str):
+    """
+    Retrieves all students enrolled in a specific class.
+    """
+    with SessionLocal() as session:
+        students = (
+            session.query(Student)
+            .join(Enrollment)
+            .filter(Enrollment.class_id == class_id)
+            .all()
+        )
+        return students
+
+
+def get_student_score_and_possible_for_class(user_id: str, class_id: str):
+    """
+    Retrieves the score of a specific student for a specific class and the possible score for that class.
+    Args:
+        student_id (str): The student's user ID.
+        class_id (str): The class ID.
+    Returns:
+        tuple: A tuple containing the student's score and the possible score for the class.
+               Returns (None, None) if the enrollment or class doesn't exist.
+    """
+    with SessionLocal() as session:
+        enrollment = (
+            session.query(Enrollment)
+            .filter_by(user_id=user_id, class_id=class_id)
+            .first()
+        )
+        class_info = session.query(Class).filter_by(class_id=class_id).first()
+
+        if enrollment and class_info:
+            return (enrollment.score, class_info.possible_scores)
+        return (None, None)
+
+
+def computer_precentage_score(score, possible_scores):
+    """Adjusted to ensure string return with '%'."""
+    if possible_scores == 0:
+        return "0%"
+    else:
+        return str(int((score / possible_scores) * 100)) + "%"
+
+
+def get_professor_class(netid: str) -> str:
+    """
+    Retrieves the name of the class associated with a specific professor by their netID.
+    Args:
+        netid (str): The netID of the professor.
+    Returns:
+        str: The name of the class associated with the professor, or None if no class is found.
+    """
+    with SessionLocal() as session:
+        professor_class = (
+            session.query(Class.title)
+            .join(Professor, Professor.user_id == Class.instructor_id)
+            .filter(Professor.netid == netid)
+            .first()
+        )
+        if professor_class:
+            return professor_class.title
+        else:
+            return None
+
+
+def get_user_role(username):
+    """
+    Queries the database for the user's role based on their username.
+    Args:
+        username (str): The username of the user.
+    Returns:
+        str: The role of the user (e.g., 'student', 'professor') or None if not found.
+    """
+    with SessionLocal() as session:
+        user = session.query(User).filter_by(netid=username).first()
+        if user:
+            return user.role
+        return None

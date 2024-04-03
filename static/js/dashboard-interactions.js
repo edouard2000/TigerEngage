@@ -1,14 +1,10 @@
 document.addEventListener("DOMContentLoaded", function () {
-  // Automatically fetch and display the user list when the dashboard loads
   fetchContent("/userlist");
-
-  // Bind event listeners for sidebar navigation items
   document.getElementById("addQuestion").addEventListener("click", () => fetchContent("/add-question"));
   document.getElementById("classUsers").addEventListener("click", () => fetchContent("/userlist"));
   document.getElementById("feedback").addEventListener("click", () => fetchContent("/feedback"));
   document.getElementById("liveChat").addEventListener("click", () => fetchContent("/chat"));
 
-  // Initialize the Start/End Class button toggle
   initializeStartEndToggle();
 
   function fetchContent(endpoint) {
@@ -26,7 +22,6 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
           document.getElementById("dashboardContent").innerHTML = data;
           if (endpoint === "/add-question") {
-            // Make sure to call initializeAddQuestionForm here to setup the form
             initializeAddQuestionForm();
           }
         }
@@ -39,7 +34,6 @@ document.addEventListener("DOMContentLoaded", function () {
   
   
   function displayUserList(users) {
-
     const userListHTML = users.map(user =>
       `<div class="user-item">${user.name} - ${user.role}</div>`
     ).join('');
@@ -47,21 +41,16 @@ document.addEventListener("DOMContentLoaded", function () {
   }
   
 
-  // Initialize the form for adding questions
   function initializeAddQuestionForm() {
     const createQuestionBtn = document.getElementById("createQuestionBtn");
     const questionForm = document.getElementById("questionForm");
     const addQuestionBtn = document.getElementById("addQuestionBtn");
-
-    // Show the form when the "Create Question" button is clicked
     if (createQuestionBtn) {
       createQuestionBtn.addEventListener("click", function () {
         questionForm.classList.remove("hidden");
         this.classList.add("hidden");
       });
     }
-
-    // Handle the submission of the new question
     if (addQuestionBtn) {
       addQuestionBtn.addEventListener("click", function () {
         const questionInput = document.getElementById("questionInput");
@@ -80,11 +69,8 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            // Add the new question to the list
             const questionItem = createQuestionItem(questionInput.value, answerInput.value);
             document.getElementById("questionsList").appendChild(questionItem);
-
-            // Reset the form and show the "Create Question" button
             questionForm.classList.add("hidden");
             createQuestionBtn.classList.remove("hidden");
             questionInput.value = "";
@@ -100,7 +86,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Create a DOM element for the new question
   function createQuestionItem(question, answer) {
     const questionItem = document.createElement("div");
     questionItem.classList.add("question-item");
@@ -113,7 +98,6 @@ document.addEventListener("DOMContentLoaded", function () {
     return questionItem;
   }
 
-  // Toggle functionality for the Start/End Class button
   function initializeStartEndToggle() {
     const startClassBtn = document.getElementById("startClass");
     if (startClassBtn) {

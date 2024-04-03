@@ -44,8 +44,8 @@ def logoutcas():
 @app.route('/', methods=['GET'])
 @app.route('/index', methods=['GET'])
 def index():
-
     username = auth.authenticate()
+    print(username) 
 
     html_code = flask.render_template('index.html',
         username=username,
