@@ -328,5 +328,30 @@ def enroll_in_class():
         db.close()
 
 
+
+@app.route('/remove_from_class', methods=['POST'])
+def remove_from_class():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'message': 'User not authenticated'}), 401
+
+    user_id = session['user_id']
+    class_id = request.form.get('class_id')
+    
+    db = SessionLocal()
+    try:
+        enrollment = db.query(Enrollment).filter_by(student_id=user_id, class_id=class_id).first()
+        if not enrollment:
+            return jsonify({'success': False, 'message': 'Not enrolled in this class'}), 404
+        
+        db.delete(enrollment)
+        db.commit()
+        return jsonify({'success': True, 'message': 'Successfully removed from class'})
+    except Exception as e:
+        db.rollback()
+        return jsonify({'success': False, 'message': f'Failed to remove from class: {e}'}), 500
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     app.run(debug=True)
