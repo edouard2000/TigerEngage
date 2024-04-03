@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 # -----------------------------------------------------------------------
-# auth.py
-# Authors: Alex Halderman, Scott Karlin, Brian Kernighan, Bob Dondero
+# app.py
+# Authors: Edouard Kwizera, Roshaan Khalid, Jourdain Babisa, Wangari Karani
 # -----------------------------------------------------------------------
 
 import os
