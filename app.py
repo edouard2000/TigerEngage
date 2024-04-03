@@ -6,16 +6,18 @@
 # --------------------------------------------------------------------------
 
 import os
-import flask
-import db_operations
-from auth import authenticate
 from zoneinfo import ZoneInfo
 from datetime import datetime
 from flask_wtf.csrf import CSRFProtect
+import flask
 from flask import (
     jsonify, request, flash, redirect, session, url_for, render_template
 )
-from database import ClassSession, SessionLocal, User, Class, Enrollment
+import db_operations
+from auth import authenticate
+from database import (
+    ClassSession, SessionLocal, User, Class, Enrollment
+    )
 
 # --------------------------------------------------------------------------
 
@@ -27,7 +29,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
 )
 
 # --------------------------------------------------------------------------
-
 
 @app.route("/", methods=["GET"])
 @app.route("/home", methods=["GET"])
@@ -247,7 +248,7 @@ def add_question():
 def add_question_to_class_route(class_id):
 
     data = request.json
-    print("here")
+    print("Received data:", data)
     question_text = data.get("question_text")
     correct_answer = data.get("correct_answer")
 
@@ -303,52 +304,66 @@ def search_classes():
     finally:
         db.close()
 
-@app.route('/enroll_in_class', methods=['POST'])
-def enroll_in_class():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'User not authenticated'}), 401
 
-    class_id = request.form.get('class_id')
-    user_id = session['user_id']
-    
+@app.route("/enroll_in_class", methods=["POST"])
+def enroll_in_class():
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "User not authenticated"}), 401
+
+    class_id = request.form.get("class_id")
+    user_id = session["user_id"]
+
     db = SessionLocal()
     try:
-        existing_enrollment = db.query(Enrollment).filter_by(student_id=user_id, class_id=class_id).first()
+        existing_enrollment = (
+            db.query(Enrollment)
+            .filter_by(student_id=user_id, class_id=class_id)
+            .first()
+        )
         if existing_enrollment:
-            return jsonify({'success': False, 'message': 'Already enrolled'}), 400
+            return jsonify({"success": False, "message": "Already enrolled"}), 400
 
         new_enrollment = Enrollment(student_id=user_id, class_id=class_id)
         db.add(new_enrollment)
         db.commit()
-        return jsonify({'success': True, 'message': 'Enrolled successfully'})
+        return jsonify({"success": True, "message": "Enrolled successfully"})
     except Exception as e:
         db.rollback()
-        return jsonify({'success': False, 'message': f'Enrollment failed: {e}'}), 500
+        return jsonify({"success": False, "message": f"Enrollment failed: {e}"}), 500
     finally:
         db.close()
 
 
-
-@app.route('/remove_from_class', methods=['POST'])
+@app.route("/remove_from_class", methods=["POST"])
 def remove_from_class():
-    if 'user_id' not in session:
-        return jsonify({'success': False, 'message': 'User not authenticated'}), 401
+    if "user_id" not in session:
+        return jsonify({"success": False, "message": "User not authenticated"}), 401
 
-    user_id = session['user_id']
-    class_id = request.form.get('class_id')
-    
+    user_id = session["user_id"]
+    class_id = request.form.get("class_id")
+
     db = SessionLocal()
     try:
-        enrollment = db.query(Enrollment).filter_by(student_id=user_id, class_id=class_id).first()
+        enrollment = (
+            db.query(Enrollment)
+            .filter_by(student_id=user_id, class_id=class_id)
+            .first()
+        )
         if not enrollment:
-            return jsonify({'success': False, 'message': 'Not enrolled in this class'}), 404
-        
+            return (
+                jsonify({"success": False, "message": "Not enrolled in this class"}),
+                404,
+            )
+
         db.delete(enrollment)
         db.commit()
-        return jsonify({'success': True, 'message': 'Successfully removed from class'})
+        return jsonify({"success": True, "message": "Successfully removed from class"})
     except Exception as e:
         db.rollback()
-        return jsonify({'success': False, 'message': f'Failed to remove from class: {e}'}), 500
+        return (
+            jsonify({"success": False, "message": f"Failed to remove from class: {e}"}),
+            500,
+        )
     finally:
         db.close()
 
