@@ -1292,6 +1292,15 @@ main {
   background-color: rgb(243 244 246 / var(--tw-bg-opacity));
 }
 
+<<<<<<< HEAD
+.hover\:bg-sky-700:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(3 105 161 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-sky-900:hover {
+  --tw-bg-opacity: 1;
+=======
 .hover\:bg-green-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(21 128 61 / var(--tw-bg-opacity));
@@ -1314,6 +1323,7 @@ main {
 
 .hover\:bg-sky-900:hover {
   --tw-bg-opacity: 1;
+>>>>>>> main
   background-color: rgb(12 74 110 / var(--tw-bg-opacity));
 }
 

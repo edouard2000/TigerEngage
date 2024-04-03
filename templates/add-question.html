@@ -1,95 +1,31 @@
 <div id="questionPager" class="m-4">
-  <button
-    id="createQuestionBtn"
-    class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300"
-  >
+  <button id="createQuestionBtn" class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">
     Create Question
   </button>
 
   <div id="questionForm" class="hidden">
     <div class="my-4">
-      <label for="questionInput" class="block text-sm font-medium text-gray-700"
-        >Question</label
-      >
-      <input
-        type="text"
-        id="questionInput"
-        class="mt-1 p-2 w-full border rounded-md"
-        placeholder="Enter your question here"
-      />
+      <label for="questionInput" class="block text-sm font-medium text-gray-700">Question</label>
+      <input type="text" id="questionInput" class="mt-1 p-2 w-full border rounded-md" placeholder="Enter your question here"/>
     </div>
 
     <div class="my-4">
-      <label for="answerInput" class="block text-sm font-medium text-gray-700"
-        >Answer</label
-      >
-      <input
-        type="text"
-        id="answerInput"
-        class="mt-1 p-2 w-full border rounded-md"
-        placeholder="Enter the answer here"
-      />
+      <label for="answerInput" class="block text-sm font-medium text-gray-700">Answer</label>
+      <input type="text" id="answerInput" class="mt-1 p-2 w-full border rounded-md" placeholder="Enter the answer here"/>
     </div>
 
-    <button
-      id="addQuestionBtn"
-      class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300"
-    >
+    <button id="addQuestionBtn" class="bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-700 transition duration-300">
       Add
     </button>
   </div>
 
-  <div id="questionsList" class="mt-4"></div>
+  <div id="questionsList" class="mt-4">
+    
+  </div>
 </div>
 
+
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById("createQuestionBtn").addEventListener("click", function () {
-      this.classList.add("hidden");
-      document.getElementById("questionForm").classList.remove("hidden");
-    });
   
-    document.getElementById("addQuestionBtn").addEventListener("click", function () {
-      const classId = this.getAttribute('data-class-id'); // Retrieve the class_id
-      const questionInput = document.getElementById("questionInput");
-      const answerInput = document.getElementById("answerInput");
   
-      fetch(`/class/${classId}/add-question`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          'question_text': questionInput.value,
-          'answer_text': answerInput.value
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          const questionItem = document.createElement("div");
-          questionItem.classList.add("question-item");
-          questionItem.innerHTML = `
-            <div class="question-text">
-              <span class="font-bold">Question:</span> ${questionInput.value}
-              <span class="font-bold ml-4">Answer:</span> ${answerInput.value}
-            </div>
-          `;
-          document.getElementById("questionsList").appendChild(questionItem);
-  
-          document.getElementById("questionForm").classList.add("hidden");
-          document.getElementById("createQuestionBtn").classList.remove("hidden");
-          questionInput.value = "";
-          answerInput.value = "";
-        } else {
-          alert("Failed to add the question. Please try again.");
-        }
-      })
-      .catch(error => {
-        console.error('Error adding question:', error);
-        alert("Failed to add the question due to an error. Please try again.");
-      });
-    });
-  });
-  </script>
-  
+</script>
