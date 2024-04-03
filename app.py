@@ -230,12 +230,14 @@ def create_class():
 
 @app.route("/add-question")
 def add_question():
+    print("do you go here?")
     return flask.render_template("add-question.html")
 
 
 @app.route("/class/<class_id>/add-question", methods=["POST"])
 def add_question_to_class_route(class_id):
     data = request.json
+    print("here")
     question_text = data.get("question_text")
     correct_answer = data.get("correct_answer")
 

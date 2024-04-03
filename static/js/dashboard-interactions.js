@@ -17,8 +17,6 @@ document.addEventListener("DOMContentLoaded", function () {
   fetchQuestionsAndRender(classId);
   initializeStartEndToggle();
 
-  
-
   function fetchContent(endpoint) {
     fetch(endpoint)
       .then((response) => {
@@ -45,10 +43,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 
-
-
-
-
   function displayUserList(users) {
     const userListHTML = users
       .map((user) => `<div class="user-item">${user.name} - ${user.role}</div>`)
@@ -74,6 +68,8 @@ document.addEventListener("DOMContentLoaded", function () {
       addQuestionBtn.addEventListener("click", function () {
         const questionInput = document.getElementById("questionInput");
         const answerInput = document.getElementById("answerInput");
+        console.log("about to fetch");
+        console.log(classId)
         fetch(`/class/${classId}/add-question`, {
           method: "POST",
           headers: {
