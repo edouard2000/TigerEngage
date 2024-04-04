@@ -78,12 +78,15 @@ def feedback():
     classid = flask.session.get("classes.class_id") 
     question, correct_answer = db_operations.get_questions_for_class(class_id=classid) # can we split this data so that the question and correct answer are returned separately, for different uses?
 
+    # perhaps we can get a db operation that returns this specific student's answer, as well as a list of all the student answers, each for the different uses? 
+    # it could look something like the function below
     user_id = flask.session.get("user_id")
     question_id = flask.session.get("question_id")
-    user_answer, student_answers = db_operations.get_answers(user_id, question_id) # perhaps we can get a db operation that returns this specific student's answer, as well as a list of all the student answers, each for the different uses?
+    user_answer, student_answers = db_operations.get_answers(user_id, question_id) 
+    
     summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
 
-    html_code = flask.render_template("feedback.html", question, summarized_feedback, correct_answer, your_answer=user_answer,) # pass this data somewhere into feedback.html
+    html_code = flask.render_template("feedback.html", question_content=question, answers_summary=summarized_feedback, correct_answer=correct_answer, user_answer=user_answer,)
     response = flask.make_response(html_code)
     return response
 
