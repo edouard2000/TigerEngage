@@ -2,7 +2,7 @@
 
 # -----------------------------------------------------------------------
 # db_operations.py
-# Author: Edouard KWIZERA and Jourdain Babisa
+# Author: Edouard Kwizera and Jourdain Babisa
 # External Database URL: postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage
 # -----------------------------------------------------------------------
 

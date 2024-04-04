@@ -1,30 +1,29 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 # app.py
 # Authors: Edouard Kwizera, Roshaan Khalid, Jourdain Babisa, Wangari Karani
-# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 
 import os
+import flask
+import db_operations
 from zoneinfo import ZoneInfo
 from datetime import datetime
-from flask_wtf.csrf import CSRFProtect
-import flask
-from flask import jsonify, request, flash, redirect, session, url_for, render_template
-import db_operations
 from auth import authenticate
+from flask_wtf.csrf import CSRFProtect
+from summarizer import GenerateFeedback 
+from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import ClassSession, SessionLocal, User, Class, Enrollment
 
-# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 
 app = flask.Flask(__name__)
 app.secret_key = os.environ["APP_SECRET_KEY"]
 csrf = CSRFProtect(app)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
-    "postgres://", "postgresql://"
-)
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace( "postgres://", "postgresql://")
 
-# --------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------
 
 
 @app.route("/", methods=["GET"])
@@ -46,9 +45,7 @@ def role_selection():
 def student_dashboard():
     username = flask.session.get("username")
     classes = db_operations.get_student_classes(username)
-    html_code = flask.render_template(
-        "student-dashboard.html", student_name=username, classes=classes
-    )
+    html_code = flask.render_template("student-dashboard.html", student_name=username, classes=classes)
     response = flask.make_response(html_code)
     return response
 
@@ -62,6 +59,7 @@ def chat():
 
 @app.route("/questions")
 def questions():
+    # do we have an action in question.html with method=POST, that adds this user/student's answer to the answers table?
     html_code = flask.render_template("Question.html")
     response = flask.make_response(html_code)
     return response
@@ -69,13 +67,25 @@ def questions():
 
 @app.route("/feedback")
 def feedback():
-    feedback_data = {
-        "question_content": "What is the capital of France?",
-        "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-        "correct_answer": "The correct answer is Paris.",
-        "user_answer": "Your answer was Paris.",
-    }
-    return flask.render_template("feedback.html", **feedback_data)
+    # feedback_data = {
+    #     "question_content": "What is the capital of France?",
+    #     "answers_summary": "Most students answered correctly that the capital of France is Paris.",
+    #     "correct_answer": "The correct answer is Paris.",
+    #     "user_answer": "Your answer was Paris.",
+    # }
+
+    # need to get the classid to get question data
+    classid = flask.session.get("classes.class_id") 
+    question, correct_answer = db_operations.get_questions_for_class(class_id=classid) # can we split this data so that the question and correct answer are returned separately, for different uses?
+
+    user_id = flask.session.get("user_id")
+    question_id = flask.session.get("question_id")
+    user_answer, student_answers = db_operations.get_answers(user_id, question_id) # perhaps we can get a db operation that returns this specific student's answer, as well as a list of all the student answers, each for the different uses?
+    summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
+
+    html_code = flask.render_template("feedback.html", question, summarized_feedback, correct_answer, your_answer=user_answer,) # pass this data somewhere into feedback.html
+    response = flask.make_response(html_code)
+    return response
 
 
 @app.route("/class_dashboard/<class_id>")
