@@ -66,30 +66,27 @@ def questions():
     return response
 
 
-@app.route("/feedback")
-def feedback():
-    # feedback_data = {
-    #     "question_content": "What is the capital of France?",
-    #     "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-    #     "correct_answer": "The correct answer is Paris.",
-    #     "user_answer": "Your answer was Paris.",
-    # }
+# @app.route("/feedback")
+# def feedback():
+#     # feedback_data = {
+#     #     "question_content": "What is the capital of France?",
+#     #     "answers_summary": "Most students answered correctly that the capital of France is Paris.",
+#     #     "correct_answer": "The correct answer is Paris.",
+#     #     "user_answer": "Your answer was Paris.",
+#     # }
 
-    # need to get the classid to get question data
-    classid = flask.session.get("classes.class_id") 
-    question, correct_answer = db_operations.get_questions_for_class(class_id=classid) # can we split this data so that the question and correct answer are returned separately, for different uses?
+#     # need to get the classid to get question data
+#     classid = flask.session.get("classes.class_id")
+#     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
+#     user_id = flask.session.get("user_id")
+#     question_id = flask.session.get("question_id")
+#     user_answer, student_answers = db_operations.get_answers(user_id, question_id)
 
-    # perhaps we can get a db operation that returns this specific student's answer, as well as a list of all the student answers, each for the different uses? 
-    # it could look something like the function below
-    user_id = flask.session.get("user_id")
-    question_id = flask.session.get("question_id")
-    user_answer, student_answers = db_operations.get_answers(user_id, question_id) 
-    
-    summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
+#     summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
 
-    html_code = flask.render_template("feedback.html", question_content=question, answers_summary=summarized_feedback, correct_answer=correct_answer, user_answer=user_answer,)
-    response = flask.make_response(html_code)
-    return response
+#     html_code = flask.render_template("feedback.html", question_content=question, answers_summary=summarized_feedback, correct_answer=correct_answer, user_answer=user_answer,)
+#     response = flask.make_response(html_code)
+#     return response
 
 
 @app.route("/class_dashboard/<class_id>")
@@ -171,7 +168,6 @@ def userlist():
             user["score"], user["possible_scores"]
         )
     return flask.render_template("class-users.html", users=users)
-
 
 
 @app.route("/select_role", methods=["POST"])
@@ -307,8 +303,12 @@ def search_classes():
 
     db = SessionLocal()
     try:
-        search_term = request.args.get("search", "")
-        print(f"search term: {search_term}")
+        search_term = request.args.get("search", "").lower()
+        if not search_term:
+            return (
+                jsonify({"success": False, "message": "Search term is required"}),
+                400,
+            )
         classes = db.query(Class).filter(Class.title.ilike(f"%{search_term}%")).all()
 
         classes_data = [
@@ -417,14 +417,68 @@ def start_class_session(class_id):
     if not db_operations.is_instructor_for_class(session.get("username"), class_id):
         return jsonify({"success": False, "message": "Unauthorized"}), 403
 
-    active_session = db_operations.get_active_session_for_class(class_id)
-    if active_session:
-        return jsonify({"success": False, "message": "Session already active"}), 400
-    new_session = db_operations.start_new_session(class_id)
-    if new_session:
-        return jsonify({"success": True, "message": "Class session started"}), 200
-    else:
+    db = SessionLocal()
+    try:
+        active_session = db_operations.get_active_session_for_class(class_id)
+        if active_session:
+            return jsonify({"success": False, "message": "Session already active"}), 400
+        class_ = db.query(Class).filter_by(class_id=class_id).first()
+        if class_:
+            class_.total_sessions_planned += 1
+            class_.possible_scores += 3
+            new_session = ClassSession(
+                session_id=str(uuid.uuid4()),
+                class_id=class_id, 
+                start_time=datetime.now(), 
+                is_active=True
+            )
+            db.add(new_session)
+            db.commit()
+            return jsonify({"success": True, "message": "Class session started and class updated"}), 200
+        else:
+            return jsonify({"success": False, "message": "Class not found"}), 404
+    except Exception as e:
+        db.rollback()
+        print(e)
         return jsonify({"success": False, "message": "Failed to start session"}), 500
+    finally:
+        db.close()
+
+
+
+@app.route("/class/<class_id>/check_in", methods=["POST"])
+def check_in(class_id):
+    username = session.get("username")
+    if not username:
+        return jsonify({"success": False, "message": "User not authenticated"}), 401
+    if not db_operations.is_student_enrolled_in_class(username, class_id):
+        return (
+            jsonify(
+                {"success": False, "message": "Student not enrolled in this class"}
+            ),
+            403,
+        )
+    active_session = db_operations.get_active_session_for_class(class_id)
+    if not active_session:
+        return (
+            jsonify({"success": False, "message": "No active session for this class"}),
+            404,
+        )
+    success = db_operations.record_attendance(
+        username, class_id, active_session.session_id
+    )
+    if success:
+        return jsonify(
+            {
+                "success": True,
+                "redirectUrl": url_for("class_dashboard", class_id=class_id),
+            }
+        )
+    else:
+        return (
+            jsonify({"success": False, "message": "Failed to record attendance"}),
+            500,
+        )
 
 
 if __name__ == "__main__":

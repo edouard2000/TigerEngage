@@ -6,6 +6,7 @@
 # External Database URL: postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage
 # -----------------------------------------------------------------------
 
+from datetime import datetime
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
@@ -104,11 +105,11 @@ def has_classes(professor_id):
 
 def get_student_classes(netid: str) -> list:
     """
-    Retrieves a list of classes a student is enrolled in by their netID, including the instructor data.
+    Retrieves a list of classes a student is enrolled in by their netID, including the instructor data and the active session status.
     Args:
         netid (str): The netID of the student.
     Returns:
-        list: A list of Class objects the student is enrolled in, including the instructor.
+        list: A list of Class objects the student is enrolled in, including the instructor and active session status.
     """
     with SessionLocal() as db_session:
         student = (
@@ -128,11 +129,13 @@ def get_student_classes(netid: str) -> list:
                 "id": enrollment.class_.class_id,
                 "name": enrollment.class_.title,
                 "instructor": enrollment.class_.instructor.user_id,
+                "is_active": db_session.query(ClassSession).filter_by(class_id=enrollment.class_.class_id, is_active=True).count() > 0
             }
             for enrollment in student.enrollments
             if enrollment.class_
         ]
         return enrolled_classes
+
 
 
 def get_students_for_class(class_id: str):
@@ -328,18 +331,20 @@ def get_active_session_for_class(class_id):
         return active_session
 
 
-from datetime import datetime
-
-
-# Assuming that the 'username' is the unique identifier in the 'users' table
 def start_new_session(class_id):
     with SessionLocal() as db:
         new_session = ClassSession(
-            class_id=class_id, start_time=datetime.now(), is_active=True
+            session_id=str(uuid.uuid4()),
+            class_id=class_id,
+            start_time=datetime.now(),
+            is_active=True,
         )
         db.add(new_session)
         try:
             db.commit()
+            print(
+                f"Session {new_session.session_id} for class {class_id} started at {new_session.start_time}"
+            )
             return new_session
         except Exception as e:
             db.rollback()
@@ -351,7 +356,7 @@ def has_checked_in(username, session_id):
     with SessionLocal() as db:
         user = db.query(User).filter(User.netid == username).first()
         if not user:
-            return False  
+            return False
         attendance_record = (
             db.query(Attendance)
             .filter_by(student_id=user.user_id, session_id=session_id)
@@ -379,7 +384,10 @@ def record_attendance(username, class_id, session_id):
             return False
 
         new_attendance = Attendance(
-            session_id=session_id, student_id=user.user_id, timestamp=datetime.now()
+            attendance_id=str(uuid.uuid4()), 
+            session_id=session_id, 
+            student_id=user.user_id, 
+            timestamp=datetime.now()
         )
         db.add(new_attendance)
         try:
@@ -389,6 +397,30 @@ def record_attendance(username, class_id, session_id):
             db.rollback()
             print(e)
             return False
+
+
+
+def is_student_enrolled_in_class(username, class_id):
+    """
+    Check if the student identified by the username is enrolled in the class specified by class_id.
+
+    Args:
+        username (str): The username (netID) of the student.
+        class_id (str): The ID of the class.
+
+    Returns:
+        bool: True if the student is enrolled in the class, False otherwise.
+    """
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.netid == username).first()
+        if not user:
+            return False
+        enrollment = (
+            db.query(Enrollment)
+            .filter_by(student_id=user.user_id, class_id=class_id)
+            .first()
+        )
+        return enrollment is not None
 
 
 # if __name__ == '__main__':

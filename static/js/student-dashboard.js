@@ -101,15 +101,13 @@ document.addEventListener("DOMContentLoaded", () => {
             removeButton.className = 'bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150';
             removeButton.textContent = 'Remove';
     
-            const checkInButton = document.createElement('a'); 
-            checkInButton.href = '#'; 
-            checkInButton.className = 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150 inline-block';
+        
+            const checkInButton = document.createElement('button');
+            checkInButton.setAttribute('data-class-id', cls.id); 
+            checkInButton.className = cls.is_active ? 'bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition ease-in-out duration-150' : 'bg-gray-500 text-white font-bold py-2 px-4 rounded';
             checkInButton.textContent = cls.is_active ? 'Check In' : 'Not Started';
-            if (!cls.is_active) {
-                checkInButton.classList.replace('bg-green-500', 'bg-gray-500');
-                checkInButton.classList.replace('hover:bg-green-700', 'hover:bg-gray-700');
-                checkInButton.disabled = true;
-            }
+            checkInButton.disabled = !cls.is_active; 
+            checkInButton.addEventListener('click', () => checkInToClass(cls.id));
     
             classActionsDiv.appendChild(removeButton);
             classActionsDiv.appendChild(checkInButton);
@@ -122,6 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
             enrolledClassesContainer.appendChild(classDiv);
         });
     }
+    
     
   
     window.unenrollFromClass = function (classId) {
@@ -144,3 +143,64 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   });
   
+
+
+  function checkInToClass(classId) {
+    fetch(`/class/${classId}/check_in`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ class_id: classId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        displayAlert('Check-in successful!', 'success');
+        updateCheckInButton(classId);
+      } else {
+        displayAlert(data.message, 'error');
+      }
+    })
+    .catch(error => {
+      console.error('Error checking in:', error);
+      displayAlert('An error occurred during check-in.', 'error');
+    });
+  }
+  
+  function updateCheckInButton(classId) {
+    const checkInButton = document.querySelector(`[data-class-id="${classId}"]`);
+    if (checkInButton) {
+      checkInButton.disabled = true;
+      checkInButton.textContent = 'Checked In';
+      checkInButton.classList.replace('bg-green-500', 'bg-gray-500');
+      checkInButton.classList.replace('hover:bg-green-700', 'hover:bg-gray-700');
+    }
+  }
+  
+
+
+  function displayAlert(message, type) {
+    const alertBox = document.createElement('div');
+    alertBox.textContent = message;
+    alertBox.className = `alert ${type === 'success' ? 'alert-success' : 'alert-error'}`;
+    const existingAlert = document.querySelector('.alert');
+    if (existingAlert) {
+      existingAlert.replaceWith(alertBox);
+    } else {
+      const mainContainer = document.querySelector('main');
+      mainContainer.insertBefore(alertBox, mainContainer.firstChild);
+    }
+    setTimeout(() => {
+      alertBox.remove();
+    }, 5000);
+  }
+
+ 
+  document.querySelectorAll('.check-in').forEach(button => {
+    button.addEventListener('click', () => {
+      const sessionId = button.dataset.sessionId;
+      checkInToClass(sessionId);
+    });
+  });
