@@ -6,10 +6,20 @@
 # External Database URL: postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage
 # -----------------------------------------------------------------------
 
-
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
-from database import Enrollment, Question, SessionLocal, Student, Professor, Class, User
+from sqlalchemy.orm import joinedload
+from database import (
+    Enrollment,
+    Question,
+    SessionLocal,
+    Student,
+    Professor,
+    Class,
+    User,
+    ClassSession,
+    Attendance,
+)
 
 
 def create_user(netid, role):
@@ -58,11 +68,11 @@ def create_class_for_professor(netid, title):
         try:
             session.commit()
             print(f"Class '{title}' successfully created by Professor {netid}.")
-            return True
+            return True, new_class.class_id
         except SQLAlchemyError as e:
             print(f"Error adding class to database: {e}")
             session.rollback()
-            return False
+            return False, None
 
 
 def user_exists(user_id):
@@ -94,17 +104,34 @@ def has_classes(professor_id):
 
 def get_student_classes(netid: str) -> list:
     """
-    Retrieves a list of classes a student is enrolled in by their netID.
+    Retrieves a list of classes a student is enrolled in by their netID, including the instructor data.
     Args:
         netid (str): The netID of the student.
     Returns:
-        list: A list of Class objects the student is enrolled in.
+        list: A list of Class objects the student is enrolled in, including the instructor.
     """
     with SessionLocal() as db_session:
-        student = db_session.query(Student).filter(Student.netid == netid).first()
+        student = (
+            db_session.query(Student)
+            .options(
+                joinedload(Student.enrollments)
+                .joinedload(Enrollment.class_)
+                .joinedload(Class.instructor)
+            )
+            .filter(Student.netid == netid)
+            .first()
+        )
         if not student:
             return []
-        enrolled_classes = [enrollment.class_ for enrollment in student.enrollments]
+        enrolled_classes = [
+            {
+                "id": enrollment.class_.class_id,
+                "name": enrollment.class_.title,
+                "instructor": enrollment.class_.instructor.user_id,
+            }
+            for enrollment in student.enrollments
+            if enrollment.class_
+        ]
         return enrolled_classes
 
 
@@ -264,15 +291,127 @@ def get_questions_for_class(class_id: str):
         return questions_data
 
 
-
 def enroll_student(user_id, class_id):
-  
-    new_enrollment = Enrollment(student_id=user_id, class_id=class_id)
-    db.session.add(new_enrollment)
-    try:
-        db.session.commit()
-        return True
-    except Exception as e:
-        print(f"Enrollment error: {e}")
-        db.session.rollback()
-        return False
+
+    with SessionLocal() as session:
+        new_enrollment = Enrollment(student_id=user_id, class_id=class_id)
+        session.add(new_enrollment)
+        try:
+            session.commit()
+            return True
+        except Exception as e:
+            print(f"Enrollment error: {e}")
+            session.rollback()
+            return False
+
+
+def is_instructor_for_class(username, class_id):
+    with SessionLocal() as db:
+        instructor = (
+            db.query(User)
+            .filter(User.netid == username, User.role == "professor")
+            .first()
+        )
+        class_ = db.query(Class).filter_by(class_id=class_id).first()
+
+        if instructor and class_ and class_.instructor_id == instructor.user_id:
+            return True
+        else:
+            return False
+
+
+def get_active_session_for_class(class_id):
+    with SessionLocal() as db:
+        active_session = (
+            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        )
+        return active_session
+
+
+from datetime import datetime
+
+
+# Assuming that the 'username' is the unique identifier in the 'users' table
+def start_new_session(class_id):
+    with SessionLocal() as db:
+        new_session = ClassSession(
+            class_id=class_id, start_time=datetime.now(), is_active=True
+        )
+        db.add(new_session)
+        try:
+            db.commit()
+            return new_session
+        except Exception as e:
+            db.rollback()
+            print(e)
+            return None
+
+
+def has_checked_in(username, session_id):
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.netid == username).first()
+        if not user:
+            return False  
+        attendance_record = (
+            db.query(Attendance)
+            .filter_by(student_id=user.user_id, session_id=session_id)
+            .first()
+        )
+
+        return attendance_record is not None
+
+
+def record_attendance(username, class_id, session_id):
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.netid == username).first()
+        if not user:
+            return False
+
+        class_session = (
+            db.query(ClassSession)
+            .filter_by(session_id=session_id, class_id=class_id, is_active=True)
+            .first()
+        )
+        if not class_session:
+            return False
+
+        if has_checked_in(username, session_id):
+            return False
+
+        new_attendance = Attendance(
+            session_id=session_id, student_id=user.user_id, timestamp=datetime.now()
+        )
+        db.add(new_attendance)
+        try:
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            print(e)
+            return False
+
+
+# if __name__ == '__main__':
+
+#     professors_classes = [
+#     {"netid": "prof1", "class_title": "Introduction to Computer Science"},
+#     {"netid": "prof2", "class_title": "Advanced Mathematics"},
+#     {"netid": "prof3", "class_title": "Modern Physics"},
+#     {"netid": "prof4", "class_title": "Literature 101"},
+#     {"netid": "prof5", "class_title": "World History"},
+# ]
+
+#     for professor in professors_classes:
+#         # Create professor user
+#         user_created = create_user(professor['netid'], 'professor')
+#         if user_created:
+#             print(f"Professor {professor['netid']} created successfully.")
+#         else:
+#             print(f"Failed to create professor {professor['netid']}.")
+
+#         # Create class for professor
+#         class_created, class_id = create_class_for_professor(professor['netid'], professor['class_title'])
+#         if class_created:
+#             print(f"Class '{professor['class_title']}' created for Professor {professor['netid']}. Class ID: {class_id}")
+#         else:
+#             print(f"Failed to create class '{professor['class_title']}' for Professor {professor['netid']}.")
