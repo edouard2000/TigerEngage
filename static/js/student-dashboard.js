@@ -157,8 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .then(response => response.json())
     .then(data => {
       if (data.success) {
-        displayAlert('Check-in successful!', 'success');
-        updateCheckInButton(classId);
+        window.location.href = data.redirectUrl;
       } else {
         displayAlert(data.message, 'error');
       }
@@ -179,8 +178,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   
-
-
   function displayAlert(message, type) {
     const alertBox = document.createElement('div');
     alertBox.textContent = message;
@@ -196,7 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
       alertBox.remove();
     }, 5000);
   }
-
  
   document.querySelectorAll('.check-in').forEach(button => {
     button.addEventListener('click', () => {

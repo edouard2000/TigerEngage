@@ -428,13 +428,21 @@ def start_class_session(class_id):
             class_.possible_scores += 3
             new_session = ClassSession(
                 session_id=str(uuid.uuid4()),
-                class_id=class_id, 
-                start_time=datetime.now(), 
-                is_active=True
+                class_id=class_id,
+                start_time=datetime.now(),
+                is_active=True,
             )
             db.add(new_session)
             db.commit()
-            return jsonify({"success": True, "message": "Class session started and class updated"}), 200
+            return (
+                jsonify(
+                    {
+                        "success": True,
+                        "message": "Class session started and class updated",
+                    }
+                ),
+                200,
+            )
         else:
             return jsonify({"success": False, "message": "Class not found"}), 404
     except Exception as e:
@@ -445,10 +453,9 @@ def start_class_session(class_id):
         db.close()
 
 
-
 @app.route("/class/<class_id>/check_in", methods=["POST"])
 def check_in(class_id):
-    username = session.get("username")
+    username = flask.session.get("username")
     if not username:
         return jsonify({"success": False, "message": "User not authenticated"}), 401
     if not db_operations.is_student_enrolled_in_class(username, class_id):
@@ -458,12 +465,22 @@ def check_in(class_id):
             ),
             403,
         )
+
     active_session = db_operations.get_active_session_for_class(class_id)
     if not active_session:
         return (
             jsonify({"success": False, "message": "No active session for this class"}),
             404,
         )
+    if db_operations.has_checked_in(username, active_session.session_id):
+        return jsonify(
+            {
+                "success": True,
+                "message": "Already checked in.",
+                "redirectUrl": url_for("class_dashboard", class_id=class_id),
+            }
+        )
+
     success = db_operations.record_attendance(
         username, class_id, active_session.session_id
     )
@@ -471,6 +488,7 @@ def check_in(class_id):
         return jsonify(
             {
                 "success": True,
+                "message": "Check-in successful.",
                 "redirectUrl": url_for("class_dashboard", class_id=class_id),
             }
         )
