@@ -124,58 +124,52 @@ def professor_dashboard(class_id):
     )
 
 
-@app.route("/edit_student/<user_id>", methods=["GET", "POST"])
-def edit_user(user_id):
+@app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
+def edit_user(class_id, user_id):
     db_session = SessionLocal()
     user = db_session.query(User).filter_by(user_id=user_id).first()
 
     if user is None:
         db_session.close()
         flash("Student not found.", "error")
-        return redirect(url_for("userlist"))
+        return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
         user.name = request.form.get("name", user.name)
-        user.score = float(request.form.get("score", 0))
+        user.score = float(request.form.get("score", user.score))
         db_session.commit()
         flash("Student information updated successfully.", "success")
-        return redirect(url_for("userlist"))
+        return redirect(url_for("class_userlist", class_id=class_id))
 
     db_session.close()
-    return render_template("edit_student.html", student=user)
+    return render_template("edit_student.html", student=user, class_id=class_id)
 
 
-@app.route("/delete_user/<user_id>", methods=["POST"])
-def delete_user(user_id):
+
+@app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
+def delete_user(class_id, user_id):
     db_session = SessionLocal()
     user = db_session.query(User).filter_by(user_id=user_id).first()
+
     if user:
         db_session.delete(user)
         db_session.commit()
-        flash("Student successfully deleted", "success")
+        flash("User successfully deleted", "success")
     else:
-        flash("Student not found.", "error")
+        flash("User not found.", "error")
     db_session.close()
-    return redirect(url_for("userlist"))
+
+    return redirect(url_for("class_userlist", class_id=class_id))
+
 
 
 @app.route("/class/<class_id>/userlist")
 def class_userlist(class_id):
     try:
-        users = db_operations.get_students_for_class(class_id)
-        users_data = [
-            {
-                "user_id": user.user_id,
-                "netid": user.netid,
-                "percentage": db_operations.compute_precentage_score(
-                    user.score, user.possible_scores
-                ),
-            }
-            for user in users
-        ]
+        users_data = db_operations.get_students_for_class(class_id)
         return render_template("class-users.html", users=users_data, class_id=class_id)
     except Exception as e:
-        print(e) 
+        print(e)
         return (
             jsonify({"success": False, "message": "Unable to fetch class users"}),
             500,
@@ -206,7 +200,7 @@ def authenticate_and_direct():
         if actual_role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
-                print(f"{username} has no class yet")
+                print(f"{username} has no class yet, so let create one")
                 return flask.redirect(flask.url_for("create_class_form"))
             return flask.redirect(
                 flask.url_for("professor_dashboard", class_id=class_id)

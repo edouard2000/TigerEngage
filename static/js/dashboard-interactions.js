@@ -1,16 +1,25 @@
 document.addEventListener("DOMContentLoaded", function () {
-
   // Initialize event listeners for the navigation
-  document.getElementById("addQuestion").addEventListener("click", () => fetchContent("/add-question"));
-  document.getElementById("classUsers").addEventListener("click", () => fetchContent("/class_userlist"));
-  document.getElementById("feedback").addEventListener("click", () => fetchContent("/feedback"));
-  document.getElementById("liveChat").addEventListener("click", () => fetchContent("/chat"));
+  document
+    .getElementById("addQuestion")
+    .addEventListener("click", () => fetchContent("/add-question"));
+  document.getElementById("classUsers").addEventListener("click", function () {
+    const classId = this.getAttribute("data-class-id");
+    fetchContent(`/class/${classId}/userlist`);
+  });
+  document.getElementById("feedback").addEventListener("click", function () {
+    const classId = this.getAttribute("data-class-id");
+    fetchContent(`/class/${classId}/feedback`);
+  });
+  document
+    .getElementById("liveChat")
+    .addEventListener("click", () => fetchContent("/chat"));
 
   // Fetch content for the dashboard
   function fetchContent(endpoint) {
     fetch(endpoint)
-      .then(response => response.text())
-      .then(html => {
+      .then((response) => response.text())
+      .then((html) => {
         const dashboardContent = document.getElementById("dashboardContent");
         dashboardContent.innerHTML = html;
 
@@ -18,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
           initializeQuestionFormEventListeners();
         }
       })
-      .catch(error => console.error("Error loading content:", error));
+      .catch((error) => console.error("Error loading content:", error));
   }
 
   // Initialize the toggle for Start/End class
@@ -26,7 +35,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const startClassBtn = document.getElementById("startClass");
     if (startClassBtn) {
       startClassBtn.addEventListener("click", function () {
-        this.textContent = this.textContent.includes("Start") ? "End Class" : "Start Class";
+        this.textContent = this.textContent.includes("Start")
+          ? "End Class"
+          : "Start Class";
         this.classList.toggle("bg-green-800");
         this.classList.toggle("bg-red-600");
       });
@@ -38,9 +49,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Handle question form visibility and event listeners
   function initializeQuestionFormEventListeners() {
-    let csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    let csrfToken = document
+      .querySelector('meta[name="csrf-token"]')
+      .getAttribute("content");
     const classId = getClassIdFromUrl();
-    
+
     // Toggle the visibility of the create question button and form
     const createQuestionBtn = document.getElementById("createQuestionBtn");
     const questionForm = document.getElementById("questionForm");
@@ -68,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-CSRF-Token": csrfToken
+            "X-CSRF-Token": csrfToken,
           },
           credentials: "include",
           body: JSON.stringify({
@@ -76,46 +89,47 @@ document.addEventListener("DOMContentLoaded", function () {
             correct_answer: answerInput.value,
           }),
         })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Network response was not ok. Status: ' + response.status);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (data.success) {
-            questionInput.value = "";
-            answerInput.value = "";
-            fetchQuestionsAndDisplay(classId);
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(
+                "Network response was not ok. Status: " + response.status
+              );
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              questionInput.value = "";
+              answerInput.value = "";
+              fetchQuestionsAndDisplay(classId);
+              questionForm.classList.add("hidden");
+              createQuestionBtn.classList.remove("hidden");
+            } else {
+              alert("Failed to add the question. Please try again.");
+            }
+          })
+          .catch((error) => {
+            console.error("Error adding question:", error);
+            alert("An error occurred while trying to add the question.");
             questionForm.classList.add("hidden");
             createQuestionBtn.classList.remove("hidden");
-          } else {
-            alert("Failed to add the question. Please try again.");
-          }
-        })
-        .catch(error => {
-          console.error("Error adding question:", error);
-          alert("An error occurred while trying to add the question.");
-          questionForm.classList.add("hidden");
-          createQuestionBtn.classList.remove("hidden");
-        });
+          });
       });
     }
 
-  
     fetchQuestionsAndDisplay(classId);
   }
 
   // Fetch questions and create their elements
   function fetchQuestionsAndDisplay(classId) {
     fetch(`/class/${classId}/questions`)
-      .then(response => response.json())
-      .then(data => {
+      .then((response) => response.json())
+      .then((data) => {
         const questionsContainer = document.getElementById("questionsList");
         questionsContainer.innerHTML = "";
 
         if (data.questions && data.questions.length > 0) {
-          data.questions.forEach(question => {
+          data.questions.forEach((question) => {
             const questionElement = createQuestionElement(question);
             questionsContainer.appendChild(questionElement);
           });
@@ -123,7 +137,7 @@ document.addEventListener("DOMContentLoaded", function () {
           questionsContainer.innerHTML = `<p class="text-gray-700">No questions created for this class yet.</p>`;
         }
       })
-      .catch(error => console.error("Error fetching questions:", error));
+      .catch((error) => console.error("Error fetching questions:", error));
   }
 
   // Create question elements with the ask/stop toggle
@@ -140,9 +154,8 @@ document.addEventListener("DOMContentLoaded", function () {
       "mb-2",
       "bg-sky-600",
       "hover:bg-sky-950"
-
     );
-    
+
     element.innerHTML = `
       <div class="fleflex-1 items-center">
         <div class="mr-4 text-white">
@@ -160,8 +173,8 @@ document.addEventListener("DOMContentLoaded", function () {
     `;
 
     // Add the ask/stop toggle to the Ask button
-    const askButton = element.querySelector('.ask-button');
-    askButton.addEventListener('click', function() {
+    const askButton = element.querySelector(".ask-button");
+    askButton.addEventListener("click", function () {
       this.textContent = this.textContent.includes("Ask") ? "Stop" : "Ask";
       this.classList.toggle("bg-blue-500");
       this.classList.toggle("bg-red-500");
@@ -177,8 +190,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-
-document.getElementById("classUsers").addEventListener("click", function() {
+document.getElementById("classUsers").addEventListener("click", function () {
   const classId = this.getAttribute("data-class-id");
   fetchContent(`/class/${classId}/userlist`);
 });

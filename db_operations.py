@@ -175,12 +175,12 @@ def get_student_score_and_possible_for_class(user_id: str, class_id: str):
         return (None, None)
 
 
-def compute_precentage_score(score, possible_scores):
-    """Adjusted to ensure string return with '%'."""
-    if possible_scores == 0:
-        return "0%"
+def compute_percentage_score(score, possible_scores):
+    if possible_scores > 0:
+        return "{:.2f}%".format((score / possible_scores) * 100)
     else:
-        return str(int((score / possible_scores) * 100)) + "%"
+        return "N/A"
+
 
 
 def get_professor_class(netid: str) -> str:
@@ -295,17 +295,22 @@ def get_questions_for_class(class_id: str):
 
 
 def enroll_student(user_id, class_id):
-
     with SessionLocal() as session:
-        new_enrollment = Enrollment(student_id=user_id, class_id=class_id)
+        new_enrollment = Enrollment(
+            enrollment_id=str(uuid.uuid4()), 
+            student_id=user_id, 
+            class_id=class_id
+        )
         session.add(new_enrollment)
         try:
             session.commit()
+            print(f"Student {user_id} successfully enrolled in class {class_id}.")
             return True
         except Exception as e:
             print(f"Enrollment error: {e}")
             session.rollback()
             return False
+
 
 
 def is_instructor_for_class(username, class_id):
