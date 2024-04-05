@@ -15,6 +15,7 @@ import flask
 from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import ClassSession, SessionLocal, User, Class, Enrollment
+import db_operations
 
 # -------------------------------------------
 
