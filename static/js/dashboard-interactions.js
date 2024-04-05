@@ -2,7 +2,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize event listeners for the navigation
   document.getElementById("addQuestion").addEventListener("click", () => fetchContent("/add-question"));
-  document.getElementById("classUsers").addEventListener("click", () => fetchContent("/userlist"));
+  document.getElementById("classUsers").addEventListener("click", () => fetchContent("/class_userlist"));
   document.getElementById("feedback").addEventListener("click", () => fetchContent("/feedback"));
   document.getElementById("liveChat").addEventListener("click", () => fetchContent("/chat"));
 
@@ -175,4 +175,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const urlParts = window.location.pathname.split("/");
     return urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
   }
+});
+
+
+document.getElementById("classUsers").addEventListener("click", function() {
+  const classId = this.getAttribute("data-class-id");
+  fetchContent(`/class/${classId}/userlist`);
 });

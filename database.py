@@ -21,7 +21,6 @@ from sqlalchemy import (
     Text,
     Float,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 
 # Database URL and engine setup

@@ -175,7 +175,7 @@ def get_student_score_and_possible_for_class(user_id: str, class_id: str):
         return (None, None)
 
 
-def computer_precentage_score(score, possible_scores):
+def compute_precentage_score(score, possible_scores):
     """Adjusted to ensure string return with '%'."""
     if possible_scores == 0:
         return "0%"

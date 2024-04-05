@@ -159,15 +159,27 @@ def delete_user(user_id):
     return redirect(url_for("userlist"))
 
 
-@app.route("/userlist")
-def userlist():
-    class_id = flask.session.get("class_id")
-    users = db_operations.get_students_for_class(class_id)
-    for user in users:
-        user["percentage"] = db_operations.computer_precentage_score(
-            user["score"], user["possible_scores"]
+@app.route("/class/<class_id>/userlist")
+def class_userlist(class_id):
+    try:
+        users = db_operations.get_students_for_class(class_id)
+        users_data = [
+            {
+                "user_id": user.user_id,
+                "netid": user.netid,
+                "percentage": db_operations.compute_precentage_score(
+                    user.score, user.possible_scores
+                ),
+            }
+            for user in users
+        ]
+        return render_template("class-users.html", users=users_data, class_id=class_id)
+    except Exception as e:
+        print(e) 
+        return (
+            jsonify({"success": False, "message": "Unable to fetch class users"}),
+            500,
         )
-    return flask.render_template("class-users.html", users=users)
 
 
 @app.route("/select_role", methods=["POST"])
