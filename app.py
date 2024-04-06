@@ -145,7 +145,6 @@ def edit_user(class_id, user_id):
     return render_template("edit_student.html", student=user, class_id=class_id)
 
 
-
 @app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
 def delete_user(class_id, user_id):
     db_session = SessionLocal()
@@ -160,7 +159,6 @@ def delete_user(class_id, user_id):
     db_session.close()
 
     return redirect(url_for("class_userlist", class_id=class_id))
-
 
 
 @app.route("/class/<class_id>/userlist")
@@ -504,6 +502,29 @@ def check_in(class_id):
             500,
         )
 
+
+@app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
+def ask_question(class_id, question_id):
+    data = request.json
+    is_active = data.get("active", True)
+
+    success = db_operations.update_question_status(question_id, class_id, is_active)
+    if success:
+        return jsonify({"success": True, "message": "Question status updated."})
+    else:
+        return (
+            jsonify({"success": False, "message": "Failed to update question status."}),
+            500,
+        )
+
+
+@app.route("/class/<class_id>/question/<question_id>/stop", methods=["POST"])
+def stop_question(class_id, question_id):
+    success = db_operations.update_question_status(question_id, class_id, False)
+    if success:
+        return jsonify({"success": True, "message": "Question asking stopped."})
+    else:
+        return jsonify({"success": False, "message": "Failed to stop asking question."}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)

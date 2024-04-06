@@ -426,6 +426,26 @@ def is_student_enrolled_in_class(username, class_id):
             .first()
         )
         return enrollment is not None
+    
+    
+    
+    
+def update_question_status(question_id, class_id, is_active):
+    session = SessionLocal()
+    try:
+        question = session.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
+        if question:
+            question.is_active = is_active 
+            session.commit()
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Failed to update question status: {e}")
+        session.rollback()
+        return False
+    finally:
+        session.close()
 
 
 # if __name__ == '__main__':

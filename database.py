@@ -120,6 +120,7 @@ class Question(Base):
     class_id = Column(String, ForeignKey("classes.class_id"))
     text = Column(Text, nullable=False)
     correct_answer = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=False) 
     class_ = relationship("Class", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
     summaries = relationship("Summary", back_populates="question")

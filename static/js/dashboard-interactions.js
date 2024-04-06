@@ -140,48 +140,107 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch((error) => console.error("Error fetching questions:", error));
   }
 
-  // Create question elements with the ask/stop toggle
-  function createQuestionElement(question) {
-    const element = document.createElement("div");
-    element.classList.add(
-      "flex",
-      "justify-between",
-      "items-center",
-      "p-4",
-      "border",
-      "border-gray-300",
-      "rounded-md",
-      "mb-2",
-      "bg-sky-600",
-      "hover:bg-sky-950"
-    );
+ // Simplified createQuestionElement function
+function createQuestionElement(question) {
+  const element = document.createElement("div");
+  element.className = "flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 hover:bg-sky-950";
 
-    element.innerHTML = `
-      <div class="fleflex-1 items-center">
-        <div class="mr-4 text-white">
-          <span class="font-semibold ">Q:</span> ${question.text} 
-          <span class="font-semibold">A:</span> ${question.correct_answer}
-        </div>
-      </div>
+  // HTML structure for the question element
+  element.innerHTML = `
+    <div class="flex-1 mr-4 text-white">
+      <span class="font-semibold">Q:</span> ${question.text}
+      <span class="font-semibold">A:</span> ${question.correct_answer}
+    </div>
+    <div class="flex space-x-2">
+      <button class="ask-button bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded">Ask</button>
+      <button class="edit-button bg-green-500 hover:bg-green-700 text-white py-1 px-3 rounded">Edit</button>
+      <button class="summary-button bg-yellow-500 hover:bg-yellow-700 text-white py-1 px-3 rounded">Get Summary</button>
+      <button class="delete-button bg-red-500 hover:bg-red-700 text-white py-1 px-3 rounded">Delete</button>
+    </div>
+  `;
 
-      <div class="flex">
-        <button class="ask-button bg-blue-500 hover:bg-blue-700 text-white py-1 px-3 rounded mr-2">Ask</button>
-        <button class="edit-button bg-green-500 hover:bg-green-700 text-white py-1 px-3 rounded mr-2">Edit</button>
-        <button class="summary-button bg-yellow-500 hover:bg-yellow-700 text-white py-1 px-3 rounded mr-2">Get Summary</button>
-        <button class="delete-button bg-red-500 hover:bg-red-700 text-white py-1 px-3 rounded">Delete</button>
-      </div>
-    `;
+  // Ask/Stop button functionality
+  const askButton = element.querySelector(".ask-button");
+  askButton.addEventListener("click", function () {
+    const isAsking = this.textContent === "Ask";
+    this.textContent = isAsking ? "Stop" : "Ask";
+    this.classList.toggle("bg-blue-500", !isAsking);
+    this.classList.toggle("bg-red-500", isAsking);
+    // Optionally: Call a function to handle the ask/stop action
+    handleAskStopQuestion(question.question_id, isAsking);
+  });
 
-    // Add the ask/stop toggle to the Ask button
-    const askButton = element.querySelector(".ask-button");
-    askButton.addEventListener("click", function () {
-      this.textContent = this.textContent.includes("Ask") ? "Stop" : "Ask";
-      this.classList.toggle("bg-blue-500");
-      this.classList.toggle("bg-red-500");
+    // Edit button functionality
+    const editButton = element.querySelector(".edit-button");
+    editButton.addEventListener("click", function () {
+      // Redirect to edit question page/form
+      window.location.href = `/class/${classId}/edit-question/${question.question_id}`;
+    });
+  
+    // Delete button functionality
+    const deleteButton = element.querySelector(".delete-button");
+    deleteButton.addEventListener("click", function () {
+      if (confirm("Are you sure you want to delete this question?")) {
+        fetch(`/class/${classId}/delete-question/${question.question_id}`, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+          },
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to delete question');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            element.remove(); 
+          } else {
+            console.error("Error deleting question:", data.message);
+          }
+        })
+        .catch(error => {
+          console.error("Error deleting question:", error);
+        });
+      }
     });
 
-    return element;
-  }
+  // Summary similarly
+  
+  return element;
+}
+
+
+// Function to handle the ask/stop action for a question
+function handleAskStopQuestion(questionId, isAsking) {
+  const action = isAsking ? "start" : "stop";
+  fetch(`/class/${classId}/question/${questionId}/${action}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+    },
+    body: JSON.stringify({ active: isAsking }),
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Failed to update question status');
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (!data.success) {
+      console.error("Error handling ask/stop question:", data.message);
+    }
+  })
+  .catch(error => {
+    console.error("Error handling ask/stop question:", error);
+  });
+}
+
+
 
   // Get the class ID from the URL
   function getClassIdFromUrl() {
