@@ -129,13 +129,15 @@ def get_student_classes(netid: str) -> list:
                 "id": enrollment.class_.class_id,
                 "name": enrollment.class_.title,
                 "instructor": enrollment.class_.instructor.user_id,
-                "is_active": db_session.query(ClassSession).filter_by(class_id=enrollment.class_.class_id, is_active=True).count() > 0
+                "is_active": db_session.query(ClassSession)
+                .filter_by(class_id=enrollment.class_.class_id, is_active=True)
+                .count()
+                > 0,
             }
             for enrollment in student.enrollments
             if enrollment.class_
         ]
         return enrolled_classes
-
 
 
 def get_students_for_class(class_id: str):
@@ -180,7 +182,6 @@ def compute_percentage_score(score, possible_scores):
         return "{:.2f}%".format((score / possible_scores) * 100)
     else:
         return "N/A"
-
 
 
 def get_professor_class(netid: str) -> str:
@@ -297,9 +298,7 @@ def get_questions_for_class(class_id: str):
 def enroll_student(user_id, class_id):
     with SessionLocal() as session:
         new_enrollment = Enrollment(
-            enrollment_id=str(uuid.uuid4()), 
-            student_id=user_id, 
-            class_id=class_id
+            enrollment_id=str(uuid.uuid4()), student_id=user_id, class_id=class_id
         )
         session.add(new_enrollment)
         try:
@@ -310,7 +309,6 @@ def enroll_student(user_id, class_id):
             print(f"Enrollment error: {e}")
             session.rollback()
             return False
-
 
 
 def is_instructor_for_class(username, class_id):
@@ -389,10 +387,10 @@ def record_attendance(username, class_id, session_id):
             return False
 
         new_attendance = Attendance(
-            attendance_id=str(uuid.uuid4()), 
-            session_id=session_id, 
-            student_id=user.user_id, 
-            timestamp=datetime.now()
+            attendance_id=str(uuid.uuid4()),
+            session_id=session_id,
+            student_id=user.user_id,
+            timestamp=datetime.now(),
         )
         db.add(new_attendance)
         try:
@@ -402,7 +400,6 @@ def record_attendance(username, class_id, session_id):
             db.rollback()
             print(e)
             return False
-
 
 
 def is_student_enrolled_in_class(username, class_id):
@@ -426,16 +423,18 @@ def is_student_enrolled_in_class(username, class_id):
             .first()
         )
         return enrollment is not None
-    
-    
-    
-    
+
+
 def update_question_status(question_id, class_id, is_active):
     session = SessionLocal()
     try:
-        question = session.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
+        question = (
+            session.query(Question)
+            .filter_by(question_id=question_id, class_id=class_id)
+            .first()
+        )
         if question:
-            question.is_active = is_active 
+            question.is_active = is_active
             session.commit()
             return True
         else:
@@ -446,6 +445,31 @@ def update_question_status(question_id, class_id, is_active):
         return False
     finally:
         session.close()
+
+
+def update_question(question_id, new_text, new_answer, class_id):
+    try:
+        with SessionLocal() as session:
+            question = (
+                session.query(Question)
+                .filter_by(question_id=question_id, class_id=class_id)
+                .first()
+            )
+            if not question:
+                print(f"No question found with ID {question_id} in class {class_id}")
+                return False
+            question.text = new_text
+            question.correct_answer = new_answer
+            session.commit()
+            return True
+    except Exception as e:
+        print(f"Error updating question: {e}")
+        return False
+    
+def get_active_questions_for_class(class_id):
+    with SessionLocal() as session:
+        active_questions = session.query(Question).filter_by(class_id=class_id, is_active=True).all()
+        return active_questions
 
 
 # if __name__ == '__main__':

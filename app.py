@@ -7,14 +7,14 @@
 
 import os
 import uuid
-from zoneinfo import ZoneInfo
 from datetime import datetime
 from auth import authenticate
 from flask_wtf.csrf import CSRFProtect
 import flask
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
-from database import ClassSession, SessionLocal, User, Class, Enrollment
+from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
 
 # -------------------------------------------
@@ -251,15 +251,12 @@ def add_question():
     Returns:
         _type_: render template
     """
-    print("do you go here?")
     return flask.render_template("add-question.html")
 
 
 @app.route("/class/<class_id>/add-question", methods=["POST"])
 def add_question_to_class_route(class_id):
-    print("hello there!")
     data = request.json
-    print("Received data:", data)
     question_text = data.get("question_text")
     correct_answer = data.get("correct_answer")
 
@@ -285,8 +282,6 @@ def add_question_to_class_route(class_id):
 
 @app.route("/class/<class_id>/questions", methods=["GET"])
 def get_questions_for_class_route(class_id):
-
-    print(f"getting questions for class {class_id}")
     results = db_operations.get_questions_for_class(class_id)
     print(f"this is results: {results}")
     if results:
@@ -504,27 +499,55 @@ def check_in(class_id):
 
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
-def ask_question(class_id, question_id):
+def toggle_question(class_id, question_id):
+    try:
+        data = request.get_json()
+        is_active = data.get("active", True)
+
+        with SessionLocal() as session:
+            if is_active:
+                session.query(Question).filter(
+                    Question.class_id == class_id, Question.is_active.is_(True)
+                ).update({Question.is_active: False}, synchronize_session="fetch")
+
+            question_to_update = (
+                session.query(Question)
+                .filter_by(question_id=question_id, class_id=class_id)
+                .first()
+            )
+            if question_to_update:
+                question_to_update.is_active = is_active
+                session.commit()
+                return (
+                    jsonify({"success": True, "message": "Question status updated."}),
+                    200,
+                )
+            else:
+                return (
+                    jsonify({"success": False, "message": "Question not found."}),
+                    404,
+                )
+    except SQLAlchemyError as e:
+        session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/class/<class_id>/edit-question/<question_id>", methods=["POST"])
+def edit_question(class_id, question_id):
     data = request.json
-    is_active = data.get("active", True)
+    new_text = data.get("text")
+    new_answer = data.get("correct_answer")
+    success = db_operations.update_question(
+        question_id, new_text, new_answer, class_id=class_id
+    )
 
-    success = db_operations.update_question_status(question_id, class_id, is_active)
     if success:
-        return jsonify({"success": True, "message": "Question status updated."})
+        return jsonify({"success": True, "message": "Question updated successfully."})
     else:
-        return (
-            jsonify({"success": False, "message": "Failed to update question status."}),
-            500,
-        )
+        return jsonify({"success": False, "message": "Failed to update question."}), 500
 
-
-@app.route("/class/<class_id>/question/<question_id>/stop", methods=["POST"])
-def stop_question(class_id, question_id):
-    success = db_operations.update_question_status(question_id, class_id, False)
-    if success:
-        return jsonify({"success": True, "message": "Question asking stopped."})
-    else:
-        return jsonify({"success": False, "message": "Failed to stop asking question."}), 500
 
 if __name__ == "__main__":
     app.run(debug=True)
