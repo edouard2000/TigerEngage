@@ -2,9 +2,7 @@ let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
   globalClassId = getClassIdFromUrl();
-  document
-    .getElementById("addQuestion")
-    .addEventListener("click", () => fetchContent("/add-question"));
+  document.getElementById("addQuestion").addEventListener("click", () => fetchContent("/add-question"));
   document.getElementById("classUsers").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/userlist`);
@@ -13,18 +11,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
-  document
-    .querySelector(".close-button")
-    .addEventListener("click", function () {
-      document.getElementById("editQuestionModal").style.display = "none";
-    });
-  document
-    .getElementById("liveChat")
-    .addEventListener("click", () => fetchContent("/chat"));
+  document.getElementById("liveChat").addEventListener("click", () => fetchContent("/chat"));
 
   initializeStartEndToggle();
   initializeQuestionFormEventListeners();
   fetchQuestionsAndDisplay(globalClassId);
+  document.querySelector(".edit-question-modal .close-button").addEventListener("click", function () {
+    document.getElementById("editQuestionModal").style.display = "none";
+  });
 });
 
 function showEditQuestionModal(
@@ -207,10 +201,14 @@ function createQuestionElement(question) {
       deleteQuestion(question.question_id);
     });
 
-    const editButton = element.querySelector(".edit-button");
-    editButton.addEventListener('click', function() {
-      fetchEditModalContent(question.question_id, question.text, question.correct_answer);
-    });
+  const editButton = element.querySelector(".edit-button");
+  editButton.addEventListener("click", function () {
+    showEditQuestionModal(
+      question.question_id,
+      question.text,
+      question.correct_answer
+    );
+  });
 
   return element;
 }
@@ -389,8 +387,6 @@ document
       });
   });
 
-
-
 document.getElementById("openEditModal").addEventListener("click", function () {
   fetch("/edit_question_modal")
     .then((response) => response.text())
@@ -403,43 +399,63 @@ document.getElementById("openEditModal").addEventListener("click", function () {
     });
 });
 
-
-function fetchEditModalContent(questionId, currentQuestionText, currentAnswerText) {
-  fetch('/edit-question')
-    .then(response => response.text())
-    .then(html => {
+function fetchEditModalContent(
+  questionId,
+  currentQuestionText,
+  currentAnswerText
+) {
+  fetch("/edit-question")
+    .then((response) => response.text())
+    .then((html) => {
       const modalContainer = document.getElementById("modalContainer");
       if (!modalContainer) {
-        console.error('Modal container not found in the DOM');
+        console.error("Modal container not found in the DOM");
         return;
       }
       modalContainer.innerHTML = html;
-      
+
       document.getElementById("editQuestionText").value = currentQuestionText;
       document.getElementById("editAnswerText").value = currentAnswerText;
       document.getElementById("editingQuestionId").value = questionId;
-      
-      const editModal = document.getElementById('editQuestionModal');
+
+      const editModal = document.getElementById("editQuestionModal");
       if (editModal) {
-        editModal.style.display = 'block';
+        editModal.style.display = "block";
       } else {
-        console.error('Edit modal not found in the loaded content');
+        console.error("Edit modal not found in the loaded content");
       }
-      
-      const closeButton = modalContainer.querySelector('.close-button');
+
+      const closeButton = modalContainer.querySelector(".close-button");
       if (closeButton) {
-        closeButton.addEventListener('click', function() {
-          editModal.style.display = 'none';
+        closeButton.addEventListener("click", function () {
+          editModal.style.display = "none";
         });
       } else {
-        console.error('Close button not found in the loaded content');
+        console.error("Close button not found in the loaded content");
       }
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("Error fetching the edit question modal:", error);
     });
 }
 
+function showEditQuestionModal(
+  questionId,
+  currentQuestionText,
+  currentAnswerText
+) {
+  document.getElementById("editQuestionModal").style.display = "block";
+  document.getElementById("editQuestionText").value = currentQuestionText;
+  document.getElementById("editAnswerText").value = currentAnswerText;
+  document.getElementById("editingQuestionId").value = questionId;
+}
+
+document
+  .getElementById("editQuestionForm")
+  .addEventListener("submit", function (e) {
+    e.preventDefault();
+    submitEditForm();
+  });
 
 function submitEditForm() {
   const questionId = document.getElementById("editingQuestionId").value;
@@ -447,28 +463,34 @@ function submitEditForm() {
   const answerText = document.getElementById("editAnswerText").value;
 
   fetch(`/class/${globalClassId}/question/${questionId}/edit`, {
-      method: "POST",
-      headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-      },
-      body: JSON.stringify({
-          question_text: questionText,
-          correct_answer: answerText,
-      }),
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content"),
+    },
+    body: JSON.stringify({
+      question_text: questionText,
+      correct_answer: answerText,
+    }),
   })
-  .then(response => response.json())
-  .then(data => {
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
       if (data.success) {
-          alert("Question successfully updated.");
-          document.getElementById("editQuestionModal").style.display = "none";
-          fetchQuestionsAndDisplay(globalClassId); // Refresh the questions list if necessary
+        alert("Question successfully updated.");
+        document.getElementById("editQuestionModal").style.display = "none";
+        fetchQuestionsAndDisplay(globalClassId);
       } else {
-          throw new Error("Failed to update the question.");
+        throw new Error("Failed to update the question.");
       }
-  })
-  .catch(error => {
+    })
+    .catch((error) => {
       console.error("Error updating question:", error);
       alert(`An error occurred: ${error.message}`);
-  });
+    });
 }
