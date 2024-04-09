@@ -648,12 +648,15 @@ def submit_answer(class_id):
     if not db_operations.is_student_enrolled_in_class(student_id, class_id):
         return jsonify({"success": False, "message": "Student is not enrolled in this class"}), 403
 
-    submission_successful = db_operations.submit_answer_for_question(question_id, student_id, answer_text)
+    submission_response = db_operations.submit_answer_for_question(question_id, student_id, answer_text)
     
-    if submission_successful:
-        return jsonify({"success": True, "message": "Answer submitted successfully."})
+    if submission_response == "Answer submitted successfully":
+        return jsonify({"success": True, "message": submission_response})
+    elif submission_response == "Answer already submitted":
+        return jsonify({"success": False, "message": submission_response}), 409 
     else:
-        return jsonify({"success": False, "message": "Failed to submit answer."}), 500
+        return jsonify({"success": False, "message": "Failed to submit answer.", "error": submission_response}), 500
+
 
         
 

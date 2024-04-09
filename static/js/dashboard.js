@@ -40,15 +40,15 @@ function loadContent(url) {
 function fetchActiveQuestion() {
   const classId = getClassIdFromUrl();
   fetch(`/class/${classId}/active-question`)
-    .then(response => response.json())
-    .then(data => {
+    .then((response) => response.json())
+    .then((data) => {
       if (data.success && data.question) {
         displayActiveQuestion(data.question);
       } else {
         displayNoActiveQuestion();
       }
     })
-    .catch(error => {
+    .catch((error) => {
       console.error("Error fetching active question:", error);
     });
 }
@@ -69,9 +69,6 @@ function displayNoActiveQuestion() {
   questionTextElement.textContent = "No active question at the moment.";
 }
 
-
-
-
 function submitAnswer(questionId) {
   const answerText = document.getElementById("student-answer").value.trim();
   if (answerText === "") {
@@ -79,31 +76,33 @@ function submitAnswer(questionId) {
     return;
   }
 
-
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const csrfToken = document
+    .querySelector('meta[name="csrf-token"]')
+    .getAttribute("content");
 
   const classId = getClassIdFromUrl();
   fetch(`/class/${classId}/submit-answer`, {
     method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': csrfToken
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrfToken,
     },
     body: JSON.stringify({ questionId, answerText }),
-    credentials: 'include'
+    credentials: "include",
   })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert("Answer submitted successfully.");
-      document.getElementById("student-answer").value = "";
-    } else {
-      alert("Failed to submit answer. Please try again.");
-    }
-  })
-  .catch(error => {
-    console.error("Error submitting answer:", error);
-  });
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        alert("Answer submitted successfully.");
+        document.getElementById("student-answer").value = "";
+      } else {
+        alert(data.message);
+      }
+    })
+    .catch((error) => {
+      console.error("Error submitting answer:", error);
+      alert("An error occurred while submitting your answer.");
+    });
 }
 
 function getClassIdFromUrl() {
@@ -111,4 +110,3 @@ function getClassIdFromUrl() {
   const lastIndex = urlParts.length - 1;
   return urlParts[lastIndex] || urlParts[lastIndex - 1];
 }
-

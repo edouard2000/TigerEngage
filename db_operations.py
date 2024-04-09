@@ -253,12 +253,11 @@ def add_question_to_class(class_id: str, question_text: str, correct_answer: str
         try:
             session.commit()
             print(f"Question added to class {class_id}.")
-            return new_question.question_id 
+            return new_question.question_id
         except SQLAlchemyError as e:
             print(f"Failed to add question to class {class_id}: {e}")
             session.rollback()
             return None
-
 
 
 def get_professors_class_id(user_id):
@@ -500,6 +499,14 @@ def is_question_active(question_id):
 
 def submit_answer_for_question(question_id, student_id, answer_text):
     with SessionLocal() as session:
+        existing_answer = (
+            session.query(Answer)
+            .filter_by(question_id=question_id, student_id=student_id)
+            .first()
+        )
+        if existing_answer is not None:
+            return "Answer already submitted"
+
         try:
             answer = Answer(
                 answer_id=str(uuid.uuid4()),
@@ -509,7 +516,7 @@ def submit_answer_for_question(question_id, student_id, answer_text):
             )
             session.add(answer)
             session.commit()
-            return True
-        except:
+            return "Answer submitted successfully"
+        except Exception as e:
             session.rollback()
-            return False
+            return str(e)
