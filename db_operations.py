@@ -472,27 +472,4 @@ def get_active_questions_for_class(class_id):
         return active_questions
 
 
-# if __name__ == '__main__':
 
-#     professors_classes = [
-#     {"netid": "prof1", "class_title": "Introduction to Computer Science"},
-#     {"netid": "prof2", "class_title": "Advanced Mathematics"},
-#     {"netid": "prof3", "class_title": "Modern Physics"},
-#     {"netid": "prof4", "class_title": "Literature 101"},
-#     {"netid": "prof5", "class_title": "World History"},
-# ]
-
-#     for professor in professors_classes:
-#         # Create professor user
-#         user_created = create_user(professor['netid'], 'professor')
-#         if user_created:
-#             print(f"Professor {professor['netid']} created successfully.")
-#         else:
-#             print(f"Failed to create professor {professor['netid']}.")
-
-#         # Create class for professor
-#         class_created, class_id = create_class_for_professor(professor['netid'], professor['class_title'])
-#         if class_created:
-#             print(f"Class '{professor['class_title']}' created for Professor {professor['netid']}. Class ID: {class_id}")
-#         else:
-#             print(f"Failed to create class '{professor['class_title']}' for Professor {professor['netid']}.")

@@ -147,6 +147,3 @@ class Summary(Base):
 Base.metadata.create_all(_engine)
 
 
-
-
-

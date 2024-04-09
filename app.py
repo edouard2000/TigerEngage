@@ -534,19 +534,43 @@ def toggle_question(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-@app.route("/class/<class_id>/edit-question/<question_id>", methods=["POST"])
+@app.route('/class/<int:class_id>/question/<int:question_id>/edit', methods=['POST'])
 def edit_question(class_id, question_id):
-    data = request.json
-    new_text = data.get("text")
-    new_answer = data.get("correct_answer")
-    success = db_operations.update_question(
-        question_id, new_text, new_answer, class_id=class_id
-    )
+    data = request.get_json()
+    db = SessionLocal()
+    try:
+        question = db.query(Question).filter_by(id=question_id, class_id=class_id).first()
+        if question:
+            question.text = data['question_text']
+            question.correct_answer = data['correct_answer']
+            db.commit()
+            return jsonify({"success": True, "message": "Question updated successfully."})
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    finally:
+        db.close()
+@app.route('/class/<string:class_id>/question/<string:question_id>/delete', methods=['DELETE'])
+def delete_question(class_id, question_id):
+    db = SessionLocal()
+    try:
+        question = db.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
+        if question:
+            if question.is_active:
+                return jsonify({"success": False, "message": "Question is active. Please deactivate the question before deleting."}), 400
+            db.delete(question)
+            db.commit()
+            return jsonify({"success": True, "message": "Question deleted successfully."})
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
+    
 
-    if success:
-        return jsonify({"success": True, "message": "Question updated successfully."})
-    else:
-        return jsonify({"success": False, "message": "Failed to update question."}), 500
+
+
 
 
 if __name__ == "__main__":
