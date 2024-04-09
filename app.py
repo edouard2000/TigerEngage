@@ -7,14 +7,14 @@
 
 import os
 import uuid
-from zoneinfo import ZoneInfo
 from datetime import datetime
 from auth import authenticate
 from flask_wtf.csrf import CSRFProtect
 import flask
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
-from database import ClassSession, SessionLocal, User, Class, Enrollment
+from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
 
 # -------------------------------------------
@@ -124,50 +124,54 @@ def professor_dashboard(class_id):
     )
 
 
-@app.route("/edit_student/<user_id>", methods=["GET", "POST"])
-def edit_user(user_id):
+@app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
+def edit_user(class_id, user_id):
     db_session = SessionLocal()
     user = db_session.query(User).filter_by(user_id=user_id).first()
 
     if user is None:
         db_session.close()
         flash("Student not found.", "error")
-        return redirect(url_for("userlist"))
+        return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
         user.name = request.form.get("name", user.name)
-        user.score = float(request.form.get("score", 0))
+        user.score = float(request.form.get("score", user.score))
         db_session.commit()
         flash("Student information updated successfully.", "success")
-        return redirect(url_for("userlist"))
+        return redirect(url_for("class_userlist", class_id=class_id))
 
     db_session.close()
-    return render_template("edit_student.html", student=user)
+    return render_template("edit_student.html", student=user, class_id=class_id)
 
 
-@app.route("/delete_user/<user_id>", methods=["POST"])
-def delete_user(user_id):
+@app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
+def delete_user(class_id, user_id):
     db_session = SessionLocal()
     user = db_session.query(User).filter_by(user_id=user_id).first()
+
     if user:
         db_session.delete(user)
         db_session.commit()
-        flash("Student successfully deleted", "success")
+        flash("User successfully deleted", "success")
     else:
-        flash("Student not found.", "error")
+        flash("User not found.", "error")
     db_session.close()
-    return redirect(url_for("userlist"))
+
+    return redirect(url_for("class_userlist", class_id=class_id))
 
 
-@app.route("/userlist")
-def userlist():
-    class_id = flask.session.get("class_id")
-    users = db_operations.get_students_for_class(class_id)
-    for user in users:
-        user["percentage"] = db_operations.computer_precentage_score(
-            user["score"], user["possible_scores"]
+@app.route("/class/<class_id>/userlist")
+def class_userlist(class_id):
+    try:
+        users_data = db_operations.get_students_for_class(class_id)
+        return render_template("class-users.html", users=users_data, class_id=class_id)
+    except Exception as e:
+        print(e)
+        return (
+            jsonify({"success": False, "message": "Unable to fetch class users"}),
+            500,
         )
-    return flask.render_template("class-users.html", users=users)
 
 
 @app.route("/select_role", methods=["POST"])
@@ -194,7 +198,7 @@ def authenticate_and_direct():
         if actual_role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
-                print(f"{username} has no class yet")
+                print(f"{username} has no class yet, so let create one")
                 return flask.redirect(flask.url_for("create_class_form"))
             return flask.redirect(
                 flask.url_for("professor_dashboard", class_id=class_id)
@@ -247,15 +251,12 @@ def add_question():
     Returns:
         _type_: render template
     """
-    print("do you go here?")
     return flask.render_template("add-question.html")
 
 
 @app.route("/class/<class_id>/add-question", methods=["POST"])
 def add_question_to_class_route(class_id):
-    print("hello there!")
     data = request.json
-    print("Received data:", data)
     question_text = data.get("question_text")
     correct_answer = data.get("correct_answer")
 
@@ -281,8 +282,6 @@ def add_question_to_class_route(class_id):
 
 @app.route("/class/<class_id>/questions", methods=["GET"])
 def get_questions_for_class_route(class_id):
-
-    print(f"getting questions for class {class_id}")
     results = db_operations.get_questions_for_class(class_id)
     print(f"this is results: {results}")
     if results:
@@ -414,43 +413,82 @@ def get_enrolled_classes():
 
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
-    if not db_operations.is_instructor_for_class(session.get("username"), class_id):
-        return jsonify({"success": False, "message": "Unauthorized"}), 403
-
     db = SessionLocal()
     try:
-        active_session = db_operations.get_active_session_for_class(class_id)
+        active_session = (
+            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        )
         if active_session:
             return jsonify({"success": False, "message": "Session already active"}), 400
         class_ = db.query(Class).filter_by(class_id=class_id).first()
-        if class_:
-            class_.total_sessions_planned += 1
-            class_.possible_scores += 3
-            new_session = ClassSession(
-                session_id=str(uuid.uuid4()),
-                class_id=class_id,
-                start_time=datetime.now(),
-                is_active=True,
-            )
-            db.add(new_session)
-            db.commit()
+        if not class_:
+            return jsonify({"success": False, "message": "Class not found"}), 404
+        class_.total_sessions_planned += 1
+        class_.possible_scores += 1
+        new_session = ClassSession(
+            session_id=str(uuid.uuid4()),
+            class_id=class_id,
+            start_time=datetime.now(),
+            is_active=True,
+        )
+        db.add(new_session)
+
+        db.commit()
+
+        return (
+            jsonify(
+                {"success": True, "message": "Class session started successfully."}
+            ),
+            200,
+        )
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+@app.route("/class/<class_id>/end_session", methods=["POST"])
+def end_class_session(class_id):
+    db = SessionLocal()
+    try:
+        active_session = (
+            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        )
+        if not active_session:
             return (
                 jsonify(
                     {
-                        "success": True,
-                        "message": "Class session started and class updated",
+                        "success": False,
+                        "message": "No active session found for this class",
                     }
                 ),
-                200,
+                404,
             )
-        else:
-            return jsonify({"success": False, "message": "Class not found"}), 404
+        active_session.is_active = False
+        active_session.end_time = datetime.now()
+
+        db.commit()
+
+        return (
+            jsonify({"success": True, "message": "Class session ended successfully."}),
+            200,
+        )
     except Exception as e:
         db.rollback()
-        print(e)
-        return jsonify({"success": False, "message": "Failed to start session"}), 500
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+
+@app.route("/class/<class_id>/session_status", methods=["GET"])
+def check_class_session_status(class_id):
+    with SessionLocal() as session:
+        active_session = (
+            session.query(ClassSession)
+            .filter_by(class_id=class_id, is_active=True)
+            .first()
+        )
+        return jsonify({"isActive": active_session is not None})
 
 
 @app.route("/class/<class_id>/check_in", methods=["POST"])
@@ -465,7 +503,6 @@ def check_in(class_id):
             ),
             403,
         )
-
     active_session = db_operations.get_active_session_for_class(class_id)
     if not active_session:
         return (
@@ -481,7 +518,7 @@ def check_in(class_id):
             }
         )
 
-    success = db_operations.record_attendance(
+    success, message = db_operations.record_attendance_and_update(
         username, class_id, active_session.session_id
     )
     if success:
@@ -493,10 +530,104 @@ def check_in(class_id):
             }
         )
     else:
-        return (
-            jsonify({"success": False, "message": "Failed to record attendance"}),
-            500,
+        return jsonify({"success": False, "message": message}), 500
+
+
+@app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
+def toggle_question(class_id, question_id):
+    try:
+        data = request.get_json()
+        is_active = data.get("active", True)
+
+        with SessionLocal() as session:
+            if is_active:
+                session.query(Question).filter(
+                    Question.class_id == class_id, Question.is_active.is_(True)
+                ).update({Question.is_active: False}, synchronize_session="fetch")
+
+            question_to_update = (
+                session.query(Question)
+                .filter_by(question_id=question_id, class_id=class_id)
+                .first()
+            )
+            if question_to_update:
+                question_to_update.is_active = is_active
+                session.commit()
+                return (
+                    jsonify({"success": True, "message": "Question status updated."}),
+                    200,
+                )
+            else:
+                return (
+                    jsonify({"success": False, "message": "Question not found."}),
+                    404,
+                )
+    except SQLAlchemyError as e:
+        session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route(
+    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
+)
+def edit_question(class_id, question_id):
+    data = request.get_json()
+    db = SessionLocal()
+    try:
+        question = (
+            db.query(Question)
+            .filter_by(question_id=question_id, class_id=class_id)
+            .first()
         )
+        if question:
+            question.text = data["question_text"]
+            question.correct_answer = data["correct_answer"]
+            db.commit()
+            return jsonify(
+                {"success": True, "message": "Question updated successfully."}
+            )
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    finally:
+        db.close()
+
+
+@app.route(
+    "/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"]
+)
+def delete_question(class_id, question_id):
+    db = SessionLocal()
+    try:
+        question = (
+            db.query(Question)
+            .filter_by(question_id=question_id, class_id=class_id)
+            .first()
+        )
+        if question:
+            if question.is_active:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "Question is active. Please deactivate the question before deleting.",
+                        }
+                    ),
+                    400,
+                )
+            db.delete(question)
+            db.commit()
+            return jsonify(
+                {"success": True, "message": "Question deleted successfully."}
+            )
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
 
 
 if __name__ == "__main__":

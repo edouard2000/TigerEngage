@@ -8,15 +8,13 @@ block navbar %}
   }
   .welcome-message {
     text-align: center;
-    font-size: 1.5rem;
-    font-weight: bold;
-    padding: 2rem 0;
+    padding:10px;
   }
 </style>
 
-<div class="welcome-message text-sky-600">Welcome {{username}} to your Dashboard.</div>
+<p class="welcome-message  text-sky-600">Welcome <span class="font-bold">{{username}}</span> to your Dashboard.</p>
 
-<div class="flex mt-4 content-area overflow-hidden">
+<div class="flex content-area overflow-hidden">
   <div class="w-1/5 ml-2 bg-gray-100 overflow-hidden">
     <ul class="flex flex-col space-y-4 p-8">
       <li>
@@ -67,8 +65,8 @@ block navbar %}
     </ul>
   </div>
 
-  <div class="flex-grow bg-white ml-4 mr-4 mb-4 overflow-hidden">
-    <div id="dashboardContent" class="m-8">
+  <div class="flex-grow bg-white ml-4 mr-4 mb-4 before:overflow-hidden">
+    <div id="dashboardContent" class="m-4">
       <p>Select an option from the sidebar to view content here.</p>
     </div>
   </div>

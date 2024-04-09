@@ -129,13 +129,15 @@ def get_student_classes(netid: str) -> list:
                 "id": enrollment.class_.class_id,
                 "name": enrollment.class_.title,
                 "instructor": enrollment.class_.instructor.user_id,
-                "is_active": db_session.query(ClassSession).filter_by(class_id=enrollment.class_.class_id, is_active=True).count() > 0
+                "is_active": db_session.query(ClassSession)
+                .filter_by(class_id=enrollment.class_.class_id, is_active=True)
+                .count()
+                > 0,
             }
             for enrollment in student.enrollments
             if enrollment.class_
         ]
         return enrolled_classes
-
 
 
 def get_students_for_class(class_id: str):
@@ -175,12 +177,11 @@ def get_student_score_and_possible_for_class(user_id: str, class_id: str):
         return (None, None)
 
 
-def computer_precentage_score(score, possible_scores):
-    """Adjusted to ensure string return with '%'."""
-    if possible_scores == 0:
-        return "0%"
+def compute_percentage_score(score, possible_scores):
+    if possible_scores > 0:
+        return "{:.2f}%".format((score / possible_scores) * 100)
     else:
-        return str(int((score / possible_scores) * 100)) + "%"
+        return "N/A"
 
 
 def get_professor_class(netid: str) -> str:
@@ -295,12 +296,14 @@ def get_questions_for_class(class_id: str):
 
 
 def enroll_student(user_id, class_id):
-
     with SessionLocal() as session:
-        new_enrollment = Enrollment(student_id=user_id, class_id=class_id)
+        new_enrollment = Enrollment(
+            enrollment_id=str(uuid.uuid4()), student_id=user_id, class_id=class_id
+        )
         session.add(new_enrollment)
         try:
             session.commit()
+            print(f"Student {user_id} successfully enrolled in class {class_id}.")
             return True
         except Exception as e:
             print(f"Enrollment error: {e}")
@@ -366,37 +369,28 @@ def has_checked_in(username, session_id):
         return attendance_record is not None
 
 
-def record_attendance(username, class_id, session_id):
+def record_attendance_and_update(username, class_id, session_id):
     with SessionLocal() as db:
-        user = db.query(User).filter(User.netid == username).first()
-        if not user:
-            return False
+        student = db.query(Student).filter_by(netid=username).first()
+        enrollment = db.query(Enrollment).filter_by(student_id=student.user_id, class_id=class_id).first()
+        if not student or not enrollment:
+            return False, "Student not enrolled or not found"
+        if db.query(Attendance).filter_by(student_id=student.user_id, session_id=session_id).first():
+            return False, "Student already checked in"
+        
+        attendance = Attendance(attendance_id=str(uuid.uuid4()), session_id=session_id, student_id=student.user_id, timestamp=datetime.now())
+        db.add(attendance)
 
-        class_session = (
-            db.query(ClassSession)
-            .filter_by(session_id=session_id, class_id=class_id, is_active=True)
-            .first()
-        )
-        if not class_session:
-            return False
+        enrollment.sessions_attended += 1
+        enrollment.score += 1
 
-        if has_checked_in(username, session_id):
-            return False
-
-        new_attendance = Attendance(
-            attendance_id=str(uuid.uuid4()), 
-            session_id=session_id, 
-            student_id=user.user_id, 
-            timestamp=datetime.now()
-        )
-        db.add(new_attendance)
         try:
             db.commit()
-            return True
+            return True, "Check-in and update successful"
         except Exception as e:
             db.rollback()
             print(e)
-            return False
+            return False, "Failed to record attendance and update"
 
 
 
@@ -423,27 +417,51 @@ def is_student_enrolled_in_class(username, class_id):
         return enrollment is not None
 
 
-# if __name__ == '__main__':
+def update_question_status(question_id, class_id, is_active):
+    session = SessionLocal()
+    try:
+        question = (
+            session.query(Question)
+            .filter_by(question_id=question_id, class_id=class_id)
+            .first()
+        )
+        if question:
+            question.is_active = is_active
+            session.commit()
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"Failed to update question status: {e}")
+        session.rollback()
+        return False
+    finally:
+        session.close()
 
-#     professors_classes = [
-#     {"netid": "prof1", "class_title": "Introduction to Computer Science"},
-#     {"netid": "prof2", "class_title": "Advanced Mathematics"},
-#     {"netid": "prof3", "class_title": "Modern Physics"},
-#     {"netid": "prof4", "class_title": "Literature 101"},
-#     {"netid": "prof5", "class_title": "World History"},
-# ]
 
-#     for professor in professors_classes:
-#         # Create professor user
-#         user_created = create_user(professor['netid'], 'professor')
-#         if user_created:
-#             print(f"Professor {professor['netid']} created successfully.")
-#         else:
-#             print(f"Failed to create professor {professor['netid']}.")
+def update_question(question_id, new_text, new_answer, class_id):
+    try:
+        with SessionLocal() as session:
+            question = (
+                session.query(Question)
+                .filter_by(question_id=question_id, class_id=class_id)
+                .first()
+            )
+            if not question:
+                print(f"No question found with ID {question_id} in class {class_id}")
+                return False
+            question.text = new_text
+            question.correct_answer = new_answer
+            session.commit()
+            return True
+    except Exception as e:
+        print(f"Error updating question: {e}")
+        return False
+    
+def get_active_questions_for_class(class_id):
+    with SessionLocal() as session:
+        active_questions = session.query(Question).filter_by(class_id=class_id, is_active=True).all()
+        return active_questions
 
-#         # Create class for professor
-#         class_created, class_id = create_class_for_professor(professor['netid'], professor['class_title'])
-#         if class_created:
-#             print(f"Class '{professor['class_title']}' created for Professor {professor['netid']}. Class ID: {class_id}")
-#         else:
-#             print(f"Failed to create class '{professor['class_title']}' for Professor {professor['netid']}.")
+
+

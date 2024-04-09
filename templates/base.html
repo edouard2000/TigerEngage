@@ -38,7 +38,24 @@
       {% block content %} {% endblock %}
     </main>
 
-    <footer class="py-4 bg-sky-600 text-white w-full mt-auto">
+    <div id="editQuestionModal" class="edit-question-modal hidden">
+      <div class="edit-question-modal-content">
+          <span class="close-button">&times;</span>
+          <form id="editQuestionForm">
+              <label for="editQuestionText">Question:</label>
+              <input type="text" id="editQuestionText" name="question" required />
+
+              <label for="editAnswerText">Correct Answer:</label>
+              <input type="text" id="editAnswerText" name="answer" required />
+
+              <input type="hidden" id="editingQuestionId" />
+
+              <button type="submit" class="submit-edit">Save Changes</button>
+          </form>
+      </div>
+  </div>
+
+    <footer class="py-2 bg-sky-600 text-white w-full mt-auto">
       <p class="text-sm text-center">
         TigerEngage &copy; Your Gateway to Enhanced Learning
       </p>

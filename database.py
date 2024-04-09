@@ -21,7 +21,6 @@ from sqlalchemy import (
     Text,
     Float,
 )
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 
 # Database URL and engine setup
@@ -121,6 +120,7 @@ class Question(Base):
     class_id = Column(String, ForeignKey("classes.class_id"))
     text = Column(Text, nullable=False)
     correct_answer = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=False) 
     class_ = relationship("Class", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
     summaries = relationship("Summary", back_populates="question")
@@ -143,9 +143,7 @@ class Summary(Base):
     text = Column(Text, nullable=False)
     question = relationship("Question", back_populates="summaries")
 
-# Base.metadata.drop_all(_engine)
+# Base.metadata.drop_all(_engine)# 
 Base.metadata.create_all(_engine)
-
-
 
 
