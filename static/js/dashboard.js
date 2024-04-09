@@ -27,6 +27,9 @@ function loadContent(url) {
     .then((response) => response.text())
     .then((html) => {
       document.getElementById("content-area").innerHTML = html;
+      if (url.endsWith("/questions")) {
+        fetchActiveQuestion();
+      }
       setupDynamicContent();
     })
     .catch((error) => {
@@ -34,96 +37,78 @@ function loadContent(url) {
     });
 }
 
-// Button to control the learn more button(leanrMore and close)
-
-function setupDynamicContent() {
-  const learnMoreBtn = document.getElementById("learnMoreBtn");
-  const moreInfoContent = document.getElementById("moreInfoContent");
-
-  if (learnMoreBtn) {
-    learnMoreBtn.onclick = null;
-    learnMoreBtn.addEventListener("click", () => {
-      if (moreInfoContent.style.display === "none") {
-        moreInfoContent.style.display = "block";
-        learnMoreBtn.textContent = "Close";
+function fetchActiveQuestion() {
+  const classId = getClassIdFromUrl();
+  fetch(`/class/${classId}/active-question`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.question) {
+        displayActiveQuestion(data.question);
       } else {
-        moreInfoContent.style.display = "none";
-        learnMoreBtn.textContent = "Learn More";
-      }
-    });
-  }
-}
-
-
-
-function renderAttendanceCharts() {
-  const scoreCanvas = document.getElementById("scoreChart");
-  const attendanceCanvas = document.getElementById("attendanceChart");
-
-  if (scoreCanvas && attendanceCanvas) {
-    const scoreCtx = scoreCanvas.getContext("2d");
-    const attendanceCtx = attendanceCanvas.getContext("2d");
-    const scoreData = {
-      datasets: [
-        {
-          data: [85.7, 14.3],
-          backgroundColor: ["#4299E1", "#E2E8F0"],
-          borderWidth: 0,
-        },
-      ],
-    };
-    const attendanceData = {
-      datasets: [
-        {
-          data: [59.4, 40.6],
-          backgroundColor: ["#4299E1", "#E2E8F0"],
-          borderWidth: 0,
-        },
-      ],
-    };
-
-    new Chart(scoreCtx, {
-      type: "doughnut",
-      data: scoreData,
-      options: {
-        cutout: "90%",
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        maintainAspectRatio: false,
-      },
-    });
-
-    new Chart(attendanceCtx, {
-      type: "doughnut",
-      data: attendanceData,
-      options: {
-        cutout: "90%",
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        maintainAspectRatio: false,
-      },
-    });
-  }
-}
-
-function loadContent(url) {
-  fetch(url)
-    .then((response) => response.text())
-    .then((html) => {
-      document.getElementById("content-area").innerHTML = html;
-      setupDynamicContent();
-
-      if (url.includes("/attendance")) {
-        renderAttendanceCharts();
+        displayNoActiveQuestion();
       }
     })
-    .catch((error) => {
-      console.error("Error loading content:", error);
+    .catch(error => {
+      console.error("Error fetching active question:", error);
     });
 }
+
+function displayActiveQuestion(question) {
+  const questionTextElement = document.getElementById("question-text");
+  questionTextElement.textContent = question.text;
+
+  const answerForm = document.getElementById("answer-form");
+  answerForm.onsubmit = (e) => {
+    e.preventDefault();
+    submitAnswer(question.question_id);
+  };
+}
+
+function displayNoActiveQuestion() {
+  const questionTextElement = document.getElementById("question-text");
+  questionTextElement.textContent = "No active question at the moment.";
+}
+
+
+
+
+function submitAnswer(questionId) {
+  const answerText = document.getElementById("student-answer").value.trim();
+  if (answerText === "") {
+    alert("Please enter your answer before submitting.");
+    return;
+  }
+
+
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+  const classId = getClassIdFromUrl();
+  fetch(`/class/${classId}/submit-answer`, {
+    method: "POST",
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': csrfToken
+    },
+    body: JSON.stringify({ questionId, answerText }),
+    credentials: 'include'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert("Answer submitted successfully.");
+      document.getElementById("student-answer").value = "";
+    } else {
+      alert("Failed to submit answer. Please try again.");
+    }
+  })
+  .catch(error => {
+    console.error("Error submitting answer:", error);
+  });
+}
+
+function getClassIdFromUrl() {
+  const urlParts = window.location.pathname.split("/");
+  const lastIndex = urlParts.length - 1;
+  return urlParts[lastIndex] || urlParts[lastIndex - 1];
+}
+

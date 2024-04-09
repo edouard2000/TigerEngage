@@ -20,6 +20,7 @@ from database import (
     User,
     ClassSession,
     Attendance,
+    Answer,
 )
 
 
@@ -142,22 +143,36 @@ def get_student_classes(netid: str) -> list:
 
 def get_students_for_class(class_id: str):
     with SessionLocal() as session:
-        students = session.query(Student).join(Enrollment).filter(Enrollment.class_id == class_id).all()
+        students = (
+            session.query(Student)
+            .join(Enrollment)
+            .filter(Enrollment.class_id == class_id)
+            .all()
+        )
         students_data = []
         for student in students:
-            enrollment = session.query(Enrollment).filter_by(student_id=student.user_id, class_id=class_id).first()
+            enrollment = (
+                session.query(Enrollment)
+                .filter_by(student_id=student.user_id, class_id=class_id)
+                .first()
+            )
             class_info = session.query(Class).filter_by(class_id=class_id).first()
             if enrollment and class_info and class_info.possible_scores > 0:
                 percentage_score = (enrollment.score / class_info.possible_scores) * 100
             else:
                 percentage_score = None
-            students_data.append({
-                "user_id": student.user_id,
-                "netid": student.netid,
-                "percentage": f"{percentage_score:.2f}%" if percentage_score is not None else "N/A"
-            })
+            students_data.append(
+                {
+                    "user_id": student.user_id,
+                    "netid": student.netid,
+                    "percentage": (
+                        f"{percentage_score:.2f}%"
+                        if percentage_score is not None
+                        else "N/A"
+                    ),
+                }
+            )
         return students_data
-
 
 
 def get_student_score_and_possible_for_class(user_id: str, class_id: str):
@@ -226,20 +241,7 @@ def get_user_role(username):
         return None
 
 
-def add_question_to_class(
-    class_id: str, question_text: str, correct_answer: str
-) -> bool:
-    """
-    Adds a question and its correct answer to a class.
-
-    Args:
-        class_id (str): The unique identifier for the class.
-        question_text (str): The text of the question to be added.
-        correct_answer (str): The correct answer to the question.
-
-    Returns:
-        bool: True if the question was successfully added, False otherwise.
-    """
+def add_question_to_class(class_id: str, question_text: str, correct_answer: str):
     with SessionLocal() as session:
         new_question = Question(
             question_id=str(uuid.uuid4()),
@@ -251,11 +253,12 @@ def add_question_to_class(
         try:
             session.commit()
             print(f"Question added to class {class_id}.")
-            return True
+            return new_question.question_id 
         except SQLAlchemyError as e:
             print(f"Failed to add question to class {class_id}: {e}")
             session.rollback()
-            return False
+            return None
+
 
 
 def get_professors_class_id(user_id):
@@ -483,3 +486,30 @@ def get_active_questions_for_class(class_id):
             session.query(Question).filter_by(class_id=class_id, is_active=True).all()
         )
         return active_questions
+
+
+def is_question_active(question_id):
+    with SessionLocal() as session:
+        question = (
+            session.query(Question)
+            .filter_by(question_id=question_id, is_active=True)
+            .first()
+        )
+        return question is not None
+
+
+def submit_answer_for_question(question_id, student_id, answer_text):
+    with SessionLocal() as session:
+        try:
+            answer = Answer(
+                answer_id=str(uuid.uuid4()),
+                question_id=question_id,
+                student_id=student_id,
+                text=answer_text,
+            )
+            session.add(answer)
+            session.commit()
+            return True
+        except:
+            session.rollback()
+            return False

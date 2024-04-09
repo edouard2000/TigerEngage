@@ -635,5 +635,42 @@ def delete_question(class_id, question_id):
         db.close()
 
 
+@app.route("/class/<class_id>/submit-answer", methods=["POST"])
+def submit_answer(class_id):
+    data = request.get_json()
+    question_id = data.get("questionId")
+    answer_text = data.get("answerText")
+    student_id = flask.session.get("username") 
+
+    if not db_operations.is_question_active(question_id):
+        return jsonify({"success": False, "message": "Question is not active"}), 403
+
+    if not db_operations.is_student_enrolled_in_class(student_id, class_id):
+        return jsonify({"success": False, "message": "Student is not enrolled in this class"}), 403
+
+    submission_successful = db_operations.submit_answer_for_question(question_id, student_id, answer_text)
+    
+    if submission_successful:
+        return jsonify({"success": True, "message": "Answer submitted successfully."})
+    else:
+        return jsonify({"success": False, "message": "Failed to submit answer."}), 500
+
+        
+
+@app.route("/class/<class_id>/active-question", methods=["GET"])
+def get_active_question(class_id):
+    active_question = db_operations.get_active_questions_for_class(class_id)
+    if active_question:
+        question_data = {
+            "question_id": active_question[0].question_id,
+            "text": active_question[0].text,
+            "correct_answer": active_question[0].correct_answer 
+        }
+        return jsonify({"success": True, "question": question_data})
+    else:
+        return jsonify({"success": False, "question": None}), 404
+
+
+
 if __name__ == "__main__":
     app.run(debug=True)
