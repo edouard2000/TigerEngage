@@ -369,37 +369,29 @@ def has_checked_in(username, session_id):
         return attendance_record is not None
 
 
-def record_attendance(username, class_id, session_id):
+def record_attendance_and_update(username, class_id, session_id):
     with SessionLocal() as db:
-        user = db.query(User).filter(User.netid == username).first()
-        if not user:
-            return False
+        student = db.query(Student).filter_by(netid=username).first()
+        enrollment = db.query(Enrollment).filter_by(student_id=student.user_id, class_id=class_id).first()
+        if not student or not enrollment:
+            return False, "Student not enrolled or not found"
+        if db.query(Attendance).filter_by(student_id=student.user_id, session_id=session_id).first():
+            return False, "Student already checked in"
+        
+        attendance = Attendance(attendance_id=str(uuid.uuid4()), session_id=session_id, student_id=student.user_id, timestamp=datetime.now())
+        db.add(attendance)
 
-        class_session = (
-            db.query(ClassSession)
-            .filter_by(session_id=session_id, class_id=class_id, is_active=True)
-            .first()
-        )
-        if not class_session:
-            return False
+        enrollment.sessions_attended += 1
+        enrollment.score += 1
 
-        if has_checked_in(username, session_id):
-            return False
-
-        new_attendance = Attendance(
-            attendance_id=str(uuid.uuid4()),
-            session_id=session_id,
-            student_id=user.user_id,
-            timestamp=datetime.now(),
-        )
-        db.add(new_attendance)
         try:
             db.commit()
-            return True
+            return True, "Check-in and update successful"
         except Exception as e:
             db.rollback()
             print(e)
-            return False
+            return False, "Failed to record attendance and update"
+
 
 
 def is_student_enrolled_in_class(username, class_id):
