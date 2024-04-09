@@ -480,7 +480,6 @@ def end_class_session(class_id):
     finally:
         db.close()
 
-
 @app.route("/class/<class_id>/session_status", methods=["GET"])
 def check_class_session_status(class_id):
     with SessionLocal() as session:
