@@ -135,10 +135,14 @@ def edit_user(class_id, user_id):
         return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
-        user.name = request.form.get("name", user.name)
-        user.score = float(request.form.get("score", user.score))
-        db_session.commit()
-        flash("Student information updated successfully.", "success")
+        user.netid = request.form.get("name", user.netid)
+        enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
+        if enrollment:
+            enrollment.score = float(request.form.get("score", enrollment.score))
+            db_session.commit()
+            flash("Student information updated successfully.", "success")
+        else:
+            flash("Enrollment information not found.", "error")
         return redirect(url_for("class_userlist", class_id=class_id))
 
     db_session.close()
@@ -479,6 +483,7 @@ def end_class_session(class_id):
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+
 
 @app.route("/class/<class_id>/session_status", methods=["GET"])
 def check_class_session_status(class_id):
