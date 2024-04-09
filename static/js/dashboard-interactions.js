@@ -2,7 +2,9 @@ let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
   globalClassId = getClassIdFromUrl();
-  document.getElementById("addQuestion").addEventListener("click", () => fetchContent("/add-question"));
+  document
+    .getElementById("addQuestion")
+    .addEventListener("click", () => fetchContent("/add-question"));
   document.getElementById("classUsers").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/userlist`);
@@ -11,14 +13,18 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
-  document.getElementById("liveChat").addEventListener("click", () => fetchContent("/chat"));
+  document
+    .getElementById("liveChat")
+    .addEventListener("click", () => fetchContent("/chat"));
 
   initializeStartEndToggle();
   initializeQuestionFormEventListeners();
   fetchQuestionsAndDisplay(globalClassId);
-  document.querySelector(".edit-question-modal .close-button").addEventListener("click", function () {
-    document.getElementById("editQuestionModal").style.display = "none";
-  });
+  document
+    .querySelector(".edit-question-modal .close-button")
+    .addEventListener("click", function () {
+      document.getElementById("editQuestionModal").style.display = "none";
+    });
 });
 
 function showEditQuestionModal(
@@ -51,16 +57,66 @@ function fetchContent(endpoint) {
 
 function initializeStartEndToggle() {
   const startClassBtn = document.getElementById("startClass");
-  if (startClassBtn) {
-    startClassBtn.addEventListener("click", function () {
-      this.textContent = this.textContent.includes("Start")
-        ? "End Class"
-        : "Start Class";
-      this.classList.toggle("bg-green-800");
-      this.classList.toggle("bg-red-600");
-    });
-  }
+  const classId = getClassIdFromUrl();
+  checkSessionStatusAndUpdateButton(classId, startClassBtn);
+
+  startClassBtn.addEventListener("click", function () {
+    const action = this.textContent.includes("Start") ? "start" : "end";
+    toggleClassSession(classId, action, startClassBtn);
+  });
 }
+
+function toggleClassSession(classId, action, button) {
+  const endpoint = `/class/${classId}/${action}_session`;
+  fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content"),
+    },
+    credentials: "include",
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        alert(
+          `Class session ${
+            action === "start" ? "started" : "ended"
+          } successfully.`
+        );
+        checkSessionStatusAndUpdateButton(classId, button);
+      } else {
+        alert(data.message || `Failed to ${action} class session.`);
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      alert(`An error occurred while trying to ${action} the class session.`);
+    });
+}
+
+function checkSessionStatusAndUpdateButton(classId, button) {
+  fetch(`/class/${classId}/session_status`)
+  .then(response => response.json())
+  .then(data => {
+      if (data.isActive) {
+          button.textContent = "End Class";
+          button.classList.add("bg-red-600");
+          button.classList.remove("bg-green-800");
+      } else {
+          button.textContent = "Start Class";
+          button.classList.add("bg-green-800");
+          button.classList.remove("bg-red-600");
+      }
+  })
+  .catch(error => {
+      console.error("Error checking session status:", error);
+  });
+}
+
+
 
 function initializeQuestionFormEventListeners() {
   let csrfToken = document

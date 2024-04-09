@@ -481,6 +481,17 @@ def end_class_session(class_id):
         db.close()
 
 
+@app.route("/class/<class_id>/session_status", methods=["GET"])
+def check_class_session_status(class_id):
+    with SessionLocal() as session:
+        active_session = (
+            session.query(ClassSession)
+            .filter_by(class_id=class_id, is_active=True)
+            .first()
+        )
+        return jsonify({"isActive": active_session is not None})
+
+
 @app.route("/class/<class_id>/check_in", methods=["POST"])
 def check_in(class_id):
     username = flask.session.get("username")
