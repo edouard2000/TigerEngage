@@ -413,43 +413,49 @@ def get_enrolled_classes():
 
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
-    if not db_operations.is_instructor_for_class(session.get("username"), class_id):
-        return jsonify({"success": False, "message": "Unauthorized"}), 403
-
     db = SessionLocal()
     try:
-        active_session = db_operations.get_active_session_for_class(class_id)
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if active_session:
             return jsonify({"success": False, "message": "Session already active"}), 400
         class_ = db.query(Class).filter_by(class_id=class_id).first()
-        if class_:
-            class_.total_sessions_planned += 1
-            class_.possible_scores += 3
-            new_session = ClassSession(
-                session_id=str(uuid.uuid4()),
-                class_id=class_id,
-                start_time=datetime.now(),
-                is_active=True,
-            )
-            db.add(new_session)
-            db.commit()
-            return (
-                jsonify(
-                    {
-                        "success": True,
-                        "message": "Class session started and class updated",
-                    }
-                ),
-                200,
-            )
-        else:
+        if not class_:
             return jsonify({"success": False, "message": "Class not found"}), 404
+        class_.total_sessions_planned += 1
+        class_.possible_scores += 1  
+        new_session = ClassSession(session_id=str(uuid.uuid4()), class_id=class_id, start_time=datetime.now(), is_active=True)
+        db.add(new_session)
+        
+        db.commit()
+        
+        return jsonify({"success": True, "message": "Class session started successfully."}), 200
     except Exception as e:
         db.rollback()
-        print(e)
-        return jsonify({"success": False, "message": "Failed to start session"}), 500
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+        
+
+@app.route("/class/<class_id>/end_session", methods=["POST"])
+def end_class_session(class_id):
+    db = SessionLocal()
+    try:
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        if not active_session:
+            return jsonify({"success": False, "message": "No active session found for this class"}), 404
+        active_session.is_active = False
+        active_session.end_time = datetime.now()
+        
+        db.commit()
+        
+        return jsonify({"success": True, "message": "Class session ended successfully."}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
 
 
 @app.route("/class/<class_id>/check_in", methods=["POST"])
@@ -534,12 +540,12 @@ def toggle_question(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-@app.route('/class/<int:class_id>/question/<int:question_id>/edit', methods=['POST'])
+@app.route('/class/<string:class_id>/question/<string:question_id>/edit', methods=['POST'])
 def edit_question(class_id, question_id):
     data = request.get_json()
     db = SessionLocal()
     try:
-        question = db.query(Question).filter_by(id=question_id, class_id=class_id).first()
+        question = db.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
         if question:
             question.text = data['question_text']
             question.correct_answer = data['correct_answer']
