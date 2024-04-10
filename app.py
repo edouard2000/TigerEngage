@@ -28,13 +28,9 @@ database_url = os.environ.get("DATABASE_URL")
 if database_url:
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://")
 else:
-    # Handle the case where DATABASE_URL is not set
     print("The DATABASE_URL environment variable is not set.")
-    # Exit or continue with a default value or a placeholder
 
 # -------------------------------------------
-
-
 @app.route("/", methods=["GET"])
 @app.route("/home", methods=["GET"])
 def home():
@@ -678,8 +674,6 @@ def attendance(class_id):
         flask.flash('Could not retrieve attendance and scores data.', 'error')
         return flask.redirect(flask.url_for('dashboard'))
     return flask.render_template("attendance.html", data=data)
-
-
 
 
 if __name__ == "__main__":
