@@ -24,9 +24,14 @@ app = flask.Flask(__name__)
 app.secret_key = os.environ.get('APP_SECRET_KEY', '123456')
 csrf = CSRFProtect(app)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
-    "postgres://", "postgresql://"
-)
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://")
+else:
+    # Handle the case where DATABASE_URL is not set
+    print("The DATABASE_URL environment variable is not set.")
+    # Exit or continue with a default value or a placeholder
+
 # -------------------------------------------
 
 
