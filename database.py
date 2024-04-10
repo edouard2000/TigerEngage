@@ -24,7 +24,7 @@ from sqlalchemy import (
 
 
 # Database URL and engine setup
-_DATABASE_URL = os.environ.get("DATABASE_URL", "your_default_database_url_here")
+_DATABASE_URL = os.environ.get("DATABASE_URL", "postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage")
 _DATABASE_URL = _DATABASE_URL.replace("postgres://", "postgresql://")
 _engine = create_engine(_DATABASE_URL)
 
