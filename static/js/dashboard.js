@@ -18,8 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("nav-attendance").addEventListener("click", (e) => {
     e.preventDefault();
-    loadContent("/attendance");
-  });
+    const classId = getClassIdFromUrl(); 
+    loadContent(`/attendance/${classId}/`);
+});
 });
 
 function loadContent(url) {

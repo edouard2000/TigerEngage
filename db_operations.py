@@ -520,3 +520,24 @@ def submit_answer_for_question(question_id, student_id, answer_text):
         except Exception as e:
             session.rollback()
             return str(e)
+
+
+def get_attendance_and_scores(class_id, student_id):
+    with SessionLocal() as session:
+        class_info = session.query(Class).filter_by(class_id=class_id).first()
+        total_sessions_planned = class_info.total_sessions_planned if class_info else 0
+        enrollment_info = (
+            session.query(Enrollment)
+            .filter_by(student_id=student_id, class_id=class_id)
+            .first()
+        )
+        sessions_attended = enrollment_info.sessions_attended if enrollment_info else 0
+        score = enrollment_info.score if enrollment_info else 0
+        possible_scores = total_sessions_planned
+
+        return {
+            "attendance": sessions_attended,
+            "totalSessions": total_sessions_planned,
+            "score": score,
+            "possibleScore": possible_scores,
+        }

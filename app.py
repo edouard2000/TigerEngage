@@ -100,16 +100,6 @@ def class_dashboard(class_id):
     return render_template("class-dashboard.html", class_name=class_name)
 
 
-@app.route("/attendance")
-def default_attendance():
-    default_class_id = 1
-    return attendance(default_class_id)
-
-
-@app.route("/attendance/<int:class_id>")
-def attendance(class_id):
-    pass
-
 
 @app.route("/professor_dashboard/<class_id>")
 def professor_dashboard(class_id):
@@ -575,8 +565,7 @@ def toggle_question(class_id, question_id):
 
 
 @app.route(
-    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
-)
+    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
 def edit_question(class_id, question_id):
     data = request.get_json()
     db = SessionLocal()
@@ -637,6 +626,7 @@ def delete_question(class_id, question_id):
 
 @app.route("/class/<class_id>/submit-answer", methods=["POST"])
 def submit_answer(class_id):
+    print('Submitting answer')
     data = request.get_json()
     question_id = data.get("questionId")
     answer_text = data.get("answerText")
@@ -656,12 +646,11 @@ def submit_answer(class_id):
         return jsonify({"success": False, "message": submission_response}), 409 
     else:
         return jsonify({"success": False, "message": "Failed to submit answer.", "error": submission_response}), 500
-
-
-        
+   
 
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
+    print('Getting active question')
     active_question = db_operations.get_active_questions_for_class(class_id)
     if active_question:
         question_data = {
@@ -672,6 +661,17 @@ def get_active_question(class_id):
         return jsonify({"success": True, "question": question_data})
     else:
         return jsonify({"success": False, "question": None}), 404
+    
+
+@app.route("/attendance/<class_id>/")
+def attendance(class_id):
+    student_id = flask.session.get('username')
+    data = db_operations.get_attendance_and_scores(class_id, student_id)
+    if not data:
+        flask.flash('Could not retrieve attendance and scores data.', 'error')
+        return flask.redirect(flask.url_for('dashboard'))
+    return flask.render_template("attendance.html", data=data)
+
 
 
 
