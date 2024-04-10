@@ -16,13 +16,13 @@ from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
+from dotenv import load_dotenv
+load_dotenv()
 
 # -------------------------------------------
-
 app = flask.Flask(__name__)
-app.secret_key = os.environ["APP_SECRET_KEY"]
-csrf = CSRFProtect(app)
 app.secret_key = os.environ.get('APP_SECRET_KEY', '123456')
+csrf = CSRFProtect(app)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
     "postgres://", "postgresql://"
