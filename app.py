@@ -22,6 +22,8 @@ import db_operations
 app = flask.Flask(__name__)
 app.secret_key = os.environ["APP_SECRET_KEY"]
 csrf = CSRFProtect(app)
+app.secret_key = os.environ.get('APP_SECRET_KEY', '123456')
+
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
     "postgres://", "postgresql://"
 )

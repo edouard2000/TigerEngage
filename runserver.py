@@ -9,6 +9,7 @@ import sys
 import app
 
 
+
 def main():
     print("Starting the Flask application...")
     if len(sys.argv) != 2:
