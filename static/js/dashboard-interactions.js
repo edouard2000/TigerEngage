@@ -235,12 +235,18 @@ function createQuestionElement(question) {
             }">
                 Delete
             </button>
+
             <button class="ask-button py-1 px-3 rounded ${
               question.is_active ? "bg-red-600" : "bg-green-500"
             } hover:bg-green-600 transition duration-300 ml-2" data-question-id="${
     question.question_id
   }" data-is-active="${question.is_active}">
                 ${question.is_active ? "Stop" : "Ask"}
+            </button>
+            <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-600 transition duration-300 ml-2" data-question-id="${
+              question.question_id
+            }">
+                Display
             </button>
         </div>
     `;
