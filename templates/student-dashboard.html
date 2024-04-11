@@ -1,25 +1,37 @@
-{% extends "base.html" %} {% block title %} {{ student_name }}'s Dashboard {%
-endblock %} {% block navbar %}
-<div class="ml-4 hover:underline">
-  <a href="{{ url_for('student_dashboard') }}"> {{ student_name }}'s Dashboard</a>
+{% extends "base.html" %}
+
+{% block title %}
+  {{ student_name }}'s Dashboard
+{% endblock %}
+
+{% block navbar %}
+<div class="flex justify-center mt-4">
+  <a href="{{ url_for('student_dashboard') }}" class="text-blue-500 hover:underline">{{ student_name }}'s Dashboard</a>
 </div>
-{% endblock %} {% block content %}
-<div class="container mt-2 mx-auto py-6">
-  <div class="mb-6">
+{% endblock %}
+
+{% block content %}
+<div class="container mt-6 mx-auto py-6 px-4">
+  
+  <div class="flex justify-center mb-6">
     <input
       type="text"
       id="class-search"
       placeholder="Search for classes..."
-      class="w-full max-w-xl border-2 border-blue-500 rounded-md p-2 shadow-md"
+      class="w-full max-w-lg border-2 border-blue-500 rounded-md p-2 shadow-md"
     />
-    <div id="search-results" class="mt-2"></div>
   </div>
-
-  <div
-    id="enrolled-classes"
-    class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-  ></div>
+  
+  <div id="search-results" class="mt-4"></div>
+  
+  <h2 class="text-xl font-semibold text-center mb-4">Enrolled Classes</h2>
+  <div id="enrolled-classes" class="space-y-4">
+  </div>
+  
 </div>
-{% endblock %} {% block scripts %} {{ super() }}
-<script src="{{ url_for('static', filename='js/student-dashboard.js') }}"></script>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ url_for('static', filename='js/student-dashboard.js') }}"></script>
 {% endblock %}

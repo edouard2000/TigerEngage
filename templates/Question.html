@@ -1,25 +1,38 @@
-<div class="flex flex-col items-center justify-center h-full pt-20">
-  <div class="w-full max-w-4xl px-4">
-    <h3 class="text-sky-600 text-lg font-bold mb-4 text-left">
-      Your Question:
-    </h3>
-    <form id="answer-form" class="w-full">
-      <textarea
-        id="student-answer"
-        name="student-answer"
-        rows="12"
-        class="w-full p-3 mb-4 text-gray-800 border rounded-md focus:ring-sky-500 border-sky-600 focus:border-sky-500 shadow-xl"
-        placeholder="Your answer here..."
-      ></textarea>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Your Answer</title>
+    <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-      <div class="flex justify-start">
-        <button
-          type="submit"
-          class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-6 rounded-md transition duration-300 ease-in-out"
-        >
-          Submit
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+    <div class="flex flex-col items-center justify-center h-full pt-20">
+        <div class="w-full max-w-4xl px-4">
+            <p id="question-text" class="mb-4 text-gray-700">The active question will appear here when it's available.</p>
+            <form id="answer-form" class="w-full">
+                <textarea
+                    id="student-answer"
+                    name="student-answer"
+                    rows="12"
+                    class="w-full p-3 mb-4 text-gray-800 border rounded-md focus:ring-sky-500 border-sky-600 focus:border-sky-500 shadow-xl"
+                    placeholder="Your answer here..."
+                ></textarea>
+
+                <div class="flex justify-start">
+                    <button
+                        type="submit"
+                        class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-6 rounded-md transition duration-300 ease-in-out"
+                    >
+                        Submit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

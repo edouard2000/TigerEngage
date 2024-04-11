@@ -16,18 +16,21 @@ from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
+from dotenv import load_dotenv
+load_dotenv()
 
 # -------------------------------------------
-
 app = flask.Flask(__name__)
-app.secret_key = os.environ["APP_SECRET_KEY"]
+app.secret_key = os.environ.get('APP_SECRET_KEY', '123456')
 csrf = CSRFProtect(app)
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL").replace(
-    "postgres://", "postgresql://"
-)
+
+database_url = os.environ.get("DATABASE_URL")
+if database_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://")
+else:
+    print("The DATABASE_URL environment variable is not set.")
+
 # -------------------------------------------
-
-
 @app.route("/", methods=["GET"])
 @app.route("/home", methods=["GET"])
 def home():
@@ -66,27 +69,27 @@ def questions():
     return response
 
 
-# @app.route("/feedback")
-# def feedback():
-#     # feedback_data = {
-#     #     "question_content": "What is the capital of France?",
-#     #     "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-#     #     "correct_answer": "The correct answer is Paris.",
-#     #     "user_answer": "Your answer was Paris.",
-#     # }
+@app.route("/feedback")
+def feedback():
+    feedback_data = {
+        "question_content": "What is the capital of France?",
+        "answers_summary": "Most students answered correctly that the capital of France is Paris.",
+        "correct_answer": "The correct answer is Paris.",
+        "user_answer": "Your answer was Paris.",
+    }
 
-#     # need to get the classid to get question data
-#     classid = flask.session.get("classes.class_id")
-#     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
-#     user_id = flask.session.get("user_id")
-#     question_id = flask.session.get("question_id")
-#     user_answer, student_answers = db_operations.get_answers(user_id, question_id)
 
-#     summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
+    classid = flask.session.get("classes.class_id")
+    question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
+    user_id = flask.session.get("user_id")
+    question_id = flask.session.get("question_id")
+    user_answer, student_answers = db_operations.get_answers(user_id, question_id)
 
-#     html_code = flask.render_template("feedback.html", question_content=question, answers_summary=summarized_feedback, correct_answer=correct_answer, user_answer=user_answer,)
-#     response = flask.make_response(html_code)
-#     return response
+    summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
+
+    html_code = flask.render_template("feedback.html", question_content=question, answers_summary=summarized_feedback, correct_answer=correct_answer, user_answer=user_answer,)
+    response = flask.make_response(html_code)
+    return response
 
 
 @app.route("/class_dashboard/<class_id>")
@@ -99,16 +102,6 @@ def class_dashboard(class_id):
             class_name = "Class not found"
     return render_template("class-dashboard.html", class_name=class_name)
 
-
-@app.route("/attendance")
-def default_attendance():
-    default_class_id = 1
-    return attendance(default_class_id)
-
-
-@app.route("/attendance/<int:class_id>")
-def attendance(class_id):
-    pass
 
 
 @app.route("/professor_dashboard/<class_id>")
@@ -135,10 +128,14 @@ def edit_user(class_id, user_id):
         return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
-        user.name = request.form.get("name", user.name)
-        user.score = float(request.form.get("score", user.score))
-        db_session.commit()
-        flash("Student information updated successfully.", "success")
+        user.netid = request.form.get("name", user.netid)
+        enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
+        if enrollment:
+            enrollment.score = float(request.form.get("score", enrollment.score))
+            db_session.commit()
+            flash("Student information updated successfully.", "success")
+        else:
+            flash("Enrollment information not found.", "error")
         return redirect(url_for("class_userlist", class_id=class_id))
 
     db_session.close()
@@ -480,6 +477,7 @@ def end_class_session(class_id):
     finally:
         db.close()
 
+
 @app.route("/class/<class_id>/session_status", methods=["GET"])
 def check_class_session_status(class_id):
     with SessionLocal() as session:
@@ -570,8 +568,7 @@ def toggle_question(class_id, question_id):
 
 
 @app.route(
-    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
-)
+    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
 def edit_question(class_id, question_id):
     data = request.get_json()
     db = SessionLocal()
@@ -630,5 +627,54 @@ def delete_question(class_id, question_id):
         db.close()
 
 
+@app.route("/class/<class_id>/submit-answer", methods=["POST"])
+def submit_answer(class_id):
+    print('Submitting answer')
+    data = request.get_json()
+    question_id = data.get("questionId")
+    answer_text = data.get("answerText")
+    student_id = flask.session.get("username") 
+
+    if not db_operations.is_question_active(question_id):
+        return jsonify({"success": False, "message": "Question is not active"}), 403
+
+    if not db_operations.is_student_enrolled_in_class(student_id, class_id):
+        return jsonify({"success": False, "message": "Student is not enrolled in this class"}), 403
+
+    submission_response = db_operations.submit_answer_for_question(question_id, student_id, answer_text)
+    
+    if submission_response == "Answer submitted successfully":
+        return jsonify({"success": True, "message": submission_response})
+    elif submission_response == "Answer already submitted":
+        return jsonify({"success": False, "message": submission_response}), 409 
+    else:
+        return jsonify({"success": False, "message": "Failed to submit answer.", "error": submission_response}), 500
+   
+
+@app.route("/class/<class_id>/active-question", methods=["GET"])
+def get_active_question(class_id):
+    print('Getting active question')
+    active_question = db_operations.get_active_questions_for_class(class_id)
+    if active_question:
+        question_data = {
+            "question_id": active_question[0].question_id,
+            "text": active_question[0].text,
+            "correct_answer": active_question[0].correct_answer 
+        }
+        return jsonify({"success": True, "question": question_data})
+    else:
+        return jsonify({"success": False, "question": None}), 404
+    
+
+@app.route("/attendance/<class_id>/")
+def attendance(class_id):
+    student_id = flask.session.get('username')
+    data = db_operations.get_attendance_and_scores(class_id, student_id)
+    if not data:
+        flask.flash('Could not retrieve attendance and scores data.', 'error')
+        return flask.redirect(flask.url_for('dashboard'))
+    return flask.render_template("attendance.html", data=data)
+
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

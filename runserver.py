@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 # -----------------------------------------------------------------------
 # runserver.py
 # Author: Wangari Karani, Roshaan Khalid
@@ -22,7 +21,7 @@ def main():
         sys.exit(1)
 
     try:
-        app.app.run(host="localhost", port=port, debug=True)
+        app.app.run(host='localhost', port=port, debug=True)
     except Exception as ex:
         print(ex, file=sys.stderr)
         sys.exit(1)
