@@ -16,6 +16,7 @@ from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
+from req_lib import ReqLib
 
 # -------------------------------------------
 
@@ -48,6 +49,14 @@ def student_dashboard():
     username = flask.session.get("username")
     if not username:
         return flask.redirect(url_for("home"))
+    req_lib = ReqLib()
+
+    username = req_lib.getJSON(
+        req_lib.configs.USERS,
+        uid=username,
+    )
+
+    username = username[0].get('displayname')
     return flask.render_template("student-dashboard.html", student_name=username)
 
 
@@ -115,11 +124,21 @@ def attendance(class_id):
 def professor_dashboard(class_id):
     print("Professor dashboard")
     username = flask.session.get("username")
+    if not username:
+        return flask.redirect(url_for("home"))
+    req_lib = ReqLib()
+
+    display_name = req_lib.getJSON(
+        req_lib.configs.USERS,
+        uid=username,
+    )
+
+    display_name = display_name[0].get('displayname')
     course_name = db_operations.get_professor_class(username)
     return flask.render_template(
         "professor-dashboard.html",
         course_name=course_name,
-        username=username,
+        username=display_name,
         class_id=class_id,
     )
 
