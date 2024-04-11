@@ -14,21 +14,34 @@ import flask
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
-from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
+from database import (
+    ClassSession,
+    Question,
+    SessionLocal,
+    User,
+    Class,
+    Enrollment,
+    Answer,
+    Summary,
+)
 import db_operations
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # -------------------------------------------
 app = flask.Flask(__name__)
-app.secret_key = os.environ.get('APP_SECRET_KEY', '123456')
+app.secret_key = os.environ.get("APP_SECRET_KEY", "123456")
 csrf = CSRFProtect(app)
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://")
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace(
+        "postgres://", "postgresql://"
+    )
 else:
     print("The DATABASE_URL environment variable is not set.")
+
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
@@ -63,33 +76,39 @@ def chat():
 
 @app.route("/questions")
 def questions():
-    # do we have an action in question.html with method=POST, that adds this user/student's answer to the answers table?
     html_code = flask.render_template("Question.html")
     response = flask.make_response(html_code)
     return response
 
 
-@app.route("/feedback")
-def feedback():
-    feedback_data = {
-        "question_content": "What is the capital of France?",
-        "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-        "correct_answer": "The correct answer is Paris.",
-        "user_answer": "Your answer was Paris.",
-    }
+# @app.route("/feedback")
+# def feedback():
+#     feedback_data = {
+#         "question_content": "What is the capital of France?",
+#         "answers_summary": "Most students answered correctly that the capital of France is Paris.",
+#         "correct_answer": "The correct answer is Paris.",
+#         "user_answer": "Your answer was Paris.",
+#     }
 
+#     classid = flask.session.get("classes.class_id")
+#     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
+#     user_id = flask.session.get("user_id")
+#     question_id = flask.session.get("question_id")
+#     user_answer, student_answers = db_operations.get_answers(user_id, question_id)
 
-    classid = flask.session.get("classes.class_id")
-    question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
-    user_id = flask.session.get("user_id")
-    question_id = flask.session.get("question_id")
-    user_answer, student_answers = db_operations.get_answers(user_id, question_id)
+#     summarized_feedback = GenerateFeedback.answers_summary(
+#         correct_answer=correct_answer, list_of_student_answers=student_answers
+#     )
 
-    summarized_feedback = GenerateFeedback.answers_summary(correct_answer=correct_answer, list_of_student_answers=student_answers)
-
-    html_code = flask.render_template("feedback.html", question_content=question, answers_summary=summarized_feedback, correct_answer=correct_answer, user_answer=user_answer,)
-    response = flask.make_response(html_code)
-    return response
+#     html_code = flask.render_template(
+#         "feedback.html",
+#         question_content=question,
+#         answers_summary=summarized_feedback,
+#         correct_answer=correct_answer,
+#         user_answer=user_answer,
+#     )
+#     response = flask.make_response(html_code)
+#     return response
 
 
 @app.route("/class_dashboard/<class_id>")
@@ -101,7 +120,6 @@ def class_dashboard(class_id):
         else:
             class_name = "Class not found"
     return render_template("class-dashboard.html", class_name=class_name)
-
 
 
 @app.route("/professor_dashboard/<class_id>")
@@ -568,7 +586,8 @@ def toggle_question(class_id, question_id):
 
 
 @app.route(
-    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
+    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
+)
 def edit_question(class_id, question_id):
     data = request.get_json()
     db = SessionLocal()
@@ -629,51 +648,141 @@ def delete_question(class_id, question_id):
 
 @app.route("/class/<class_id>/submit-answer", methods=["POST"])
 def submit_answer(class_id):
-    print('Submitting answer')
+    print("Submitting answer")
     data = request.get_json()
     question_id = data.get("questionId")
     answer_text = data.get("answerText")
-    student_id = flask.session.get("username") 
+    student_id = flask.session.get("username")
 
     if not db_operations.is_question_active(question_id):
         return jsonify({"success": False, "message": "Question is not active"}), 403
 
     if not db_operations.is_student_enrolled_in_class(student_id, class_id):
-        return jsonify({"success": False, "message": "Student is not enrolled in this class"}), 403
+        return (
+            jsonify(
+                {"success": False, "message": "Student is not enrolled in this class"}
+            ),
+            403,
+        )
 
-    submission_response = db_operations.submit_answer_for_question(question_id, student_id, answer_text)
-    
+    submission_response = db_operations.submit_answer_for_question(
+        question_id, student_id, answer_text
+    )
+
     if submission_response == "Answer submitted successfully":
         return jsonify({"success": True, "message": submission_response})
     elif submission_response == "Answer already submitted":
-        return jsonify({"success": False, "message": submission_response}), 409 
+        return jsonify({"success": False, "message": submission_response}), 409
     else:
-        return jsonify({"success": False, "message": "Failed to submit answer.", "error": submission_response}), 500
-   
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Failed to submit answer.",
+                    "error": submission_response,
+                }
+            ),
+            500,
+        )
+
 
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
-    print('Getting active question')
+    print("Getting active question")
     active_question = db_operations.get_active_questions_for_class(class_id)
     if active_question:
         question_data = {
             "question_id": active_question[0].question_id,
             "text": active_question[0].text,
-            "correct_answer": active_question[0].correct_answer 
+            "correct_answer": active_question[0].correct_answer,
         }
         return jsonify({"success": True, "question": question_data})
     else:
         return jsonify({"success": False, "question": None}), 404
-    
+
 
 @app.route("/attendance/<class_id>/")
 def attendance(class_id):
-    student_id = flask.session.get('username')
+    student_id = flask.session.get("username")
     data = db_operations.get_attendance_and_scores(class_id, student_id)
     if not data:
-        flask.flash('Could not retrieve attendance and scores data.', 'error')
-        return flask.redirect(flask.url_for('dashboard'))
+        flask.flash("Could not retrieve attendance and scores data.", "error")
+        return flask.redirect(flask.url_for("dashboard"))
     return flask.render_template("attendance.html", data=data)
+
+
+@app.route("/class/<class_id>/feedback")
+def class_feedback(class_id):
+    db_session = SessionLocal()
+
+    logged_in_user_id = flask.session.get("username")
+    user_role = flask.session.get("role")
+
+    displayed_question = (
+        db_session.query(Question)
+        .filter_by(class_id=class_id, is_displayed=True)
+        .first()
+    )
+
+    if not displayed_question:
+        db_session.close()
+        return render_template(
+            "feedback.html",
+            question_content="No question is currently displayed.",
+            answers_summary="",
+            correct_answer="",
+            user_answer="",
+        )
+    summary = (
+        db_session.query(Summary)
+        .filter_by(question_id=displayed_question.question_id)
+        .first()
+    )
+
+    if user_role == "student":
+        user_answer = (
+            db_session.query(Answer)
+            .filter_by(
+                question_id=displayed_question.question_id, student_id=logged_in_user_id
+            )
+            .first()
+        )
+        user_answer_text = user_answer.text if user_answer else "No answer submitted."
+    else:
+        user_answer_text = "You are an instructor; you don't have a submitted answer."
+    db_session.close()
+
+    return render_template(
+        "feedback.html",
+        question_content=displayed_question.text,
+        answers_summary=summary.text if summary else "Summary not available.",
+        correct_answer=displayed_question.correct_answer,
+        user_answer=user_answer_text,
+    )
+    
+@app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
+def toggle_display(class_id, question_id):
+    db_session = SessionLocal()
+    try:
+        question = db_session.query(Question).filter_by(class_id=class_id, question_id=question_id, is_active=False).first()
+        if not question:
+            return jsonify({"error": "Question not found or is still active."}), 404
+        
+        currently_displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
+        if currently_displayed_question and currently_displayed_question.question_id != question_id:
+            currently_displayed_question.is_displayed = False
+        
+        question.is_displayed = not question.is_displayed
+        db_session.commit()
+
+        status_message = "displayed" if question.is_displayed else "undisplayed"
+        return jsonify({"message": f"Question {status_message} successfully.", "isDisplayed": question.is_displayed}), 200
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({"error": f"Failed to toggle the display status of the question: {e}"}), 500
+    finally:
+        db_session.close()
+
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@
 from datetime import datetime
 import uuid
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import joinedload
 from database import (
     Enrollment,
@@ -17,11 +18,13 @@ from database import (
     Student,
     Professor,
     Class,
+    Summary,
     User,
     ClassSession,
     Attendance,
     Answer,
 )
+from summarizer import TextSummarizer
 
 
 def create_user(netid, role):
@@ -541,3 +544,87 @@ def get_attendance_and_scores(class_id, student_id):
             "score": score,
             "possibleScore": possible_scores,
         }
+
+
+def check_question_not_active(
+    session: Session, class_id: str, question_id: str
+) -> bool:
+    question = (
+        session.query(Question)
+        .filter_by(class_id=class_id, question_id=question_id)
+        .first()
+    )
+    return question is not None and not question.is_active
+
+
+def fetch_answers_generate_summary(
+    session: Session, class_id: str, question_id: str
+) -> str:
+    question = (
+        session.query(Question)
+        .filter_by(class_id=class_id, question_id=question_id)
+        .first()
+    )
+    if not question:
+        return "Question not found."
+
+    answers = session.query(Answer).filter_by(question_id=question_id).all()
+    student_answers = [answer.text for answer in answers]
+
+    summarizer = TextSummarizer()
+    summary = summarizer.summarize_student_answers(
+        question.text, student_answers, question.correct_answer
+    )
+    return summary
+
+
+def store_summary_return_feedback(
+    session: Session, class_id: str, question_id: str, summary_text: str
+) -> dict:
+    summary = session.query(Summary).filter_by(question_id=question_id).first()
+    if not summary:
+        summary = Summary(question_id=question_id, text=summary_text)
+        session.add(summary)
+    else:
+        summary.text = summary_text
+    session.commit()
+
+    question = (
+        session.query(Question)
+        .filter_by(class_id=class_id, question_id=question_id)
+        .first()
+    )
+    feedback_data = {
+        "question_content": question.text,
+        "answers_summary": summary_text,
+        "correct_answer": question.correct_answer,
+    }
+    return feedback_data
+
+
+def fetch_user_answer(
+    session: Session, question_id: str, user_id: str, user_role: str
+) -> str:
+    """
+    Fetch a specific user's answer to a particular question, or return a message if the user is an instructor.
+
+    Args:
+    - session: The SQLAlchemy session for database operations.
+    - question_id: The ID of the question.
+    - user_id: The ID of the user whose answer is to be fetched.
+    - user_role: The role of the user (e.g., "student" or "professor").
+
+    Returns:
+    - The text of the user's answer, a message indicating no answer for instructors, or None if no answer was found for a student.
+    """
+    if user_role == "professor":
+        return "You are an instructor; you don't have a submitted answer."
+
+    if user_role == "student":
+        answer = (
+            session.query(Answer)
+            .filter_by(question_id=question_id, student_id=user_id)
+            .first()
+        )
+        return answer.text if answer else "No answer submitted."
+    return "Role not recognized."

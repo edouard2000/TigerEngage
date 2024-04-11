@@ -13,10 +13,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
+  
   document
     .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
-
+  setupDisplayButtons();
   initializeStartEndToggle();
   initializeQuestionFormEventListeners();
   fetchQuestionsAndDisplay(globalClassId);
@@ -99,24 +100,22 @@ function toggleClassSession(classId, action, button) {
 
 function checkSessionStatusAndUpdateButton(classId, button) {
   fetch(`/class/${classId}/session_status`)
-  .then(response => response.json())
-  .then(data => {
+    .then((response) => response.json())
+    .then((data) => {
       if (data.isActive) {
-          button.textContent = "End Class";
-          button.classList.add("bg-red-600");
-          button.classList.remove("bg-green-800");
+        button.textContent = "End Class";
+        button.classList.add("bg-red-600");
+        button.classList.remove("bg-green-800");
       } else {
-          button.textContent = "Start Class";
-          button.classList.add("bg-green-800");
-          button.classList.remove("bg-red-600");
+        button.textContent = "Start Class";
+        button.classList.add("bg-green-800");
+        button.classList.remove("bg-red-600");
       }
-  })
-  .catch(error => {
+    })
+    .catch((error) => {
       console.error("Error checking session status:", error);
-  });
+    });
 }
-
-
 
 function initializeQuestionFormEventListeners() {
   let csrfToken = document
@@ -203,6 +202,7 @@ function fetchQuestionsAndDisplay(classId) {
         });
         initializeQuestionEventListeners();
         updateButtonsStateBasedOnActivity();
+        setupDisplayButtons();
       } else {
         questionsContainer.innerHTML =
           "<p>No questions found for this class.</p>";
@@ -378,7 +378,6 @@ function deleteQuestion(questionId) {
   const csrfToken = document
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
-  console.log("CSRF Token:", csrfToken);
 
   fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
     method: "DELETE",
@@ -406,6 +405,44 @@ function deleteQuestion(questionId) {
       alert(error.message);
     });
 }
+
+function setupDisplayButtons() {
+  document.querySelectorAll(".display-button").forEach((button) => {
+      button.addEventListener("click", function () {
+          const questionId = this.getAttribute("data-question-id");
+          if (!confirm("Do you want to change the display status of this question?")) return;
+
+          const csrfToken = document
+              .querySelector('meta[name="csrf-token"]')
+              .getAttribute("content");
+
+          fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRF-Token": csrfToken,
+              },
+              credentials: "include",
+          })
+          .then((response) => response.json())
+          .then((data) => {
+              alert(data.message);
+
+              if (data.isDisplayed) {
+                  button.textContent = "UnDisplay";
+              } else {
+                  button.textContent = "Display";
+              }
+              fetchQuestionsAndDisplay(globalClassId);
+          })
+          .catch((error) => {
+              console.error("Error:", error);
+              alert("There was an issue toggling the display status of the question.");
+          });
+      });
+  });
+}
+
 
 document
   .getElementById("editQuestionForm")
@@ -555,4 +592,39 @@ function submitEditForm() {
       console.error("Error updating question:", error);
       alert(`An error occurred: ${error.message}`);
     });
+}
+
+function setupDisplayButtons() {
+  document.querySelectorAll(".display-button").forEach((button) => {
+    button.addEventListener("click", function () {
+      const questionId = button.getAttribute("data-question-id");
+
+      fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document
+            .querySelector('meta[name="csrf-token"]')
+            .getAttribute("content"),
+        },
+        credentials: "include",
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          alert(data.message);
+
+          if (data.isDisplayed) {
+            button.textContent = "UnDisplay";
+          } else {
+            button.textContent = "Display";
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          alert(
+            "There was an issue toggling the display status of the question."
+          );
+        });
+    });
+  });
 }

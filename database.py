@@ -113,14 +113,14 @@ class Attendance(Base):
     class_session = relationship("ClassSession", back_populates="attendances")
     student = relationship("Student", back_populates="attendances")
 
-
 class Question(Base):
     __tablename__ = "questions"
     question_id = Column(String, primary_key=True)
     class_id = Column(String, ForeignKey("classes.class_id"))
     text = Column(Text, nullable=False)
     correct_answer = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=False) 
+    is_active = Column(Boolean, default=False)
+    is_displayed = Column(Boolean, default=False, nullable=False)  
     class_ = relationship("Class", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
     summaries = relationship("Summary", back_populates="question")
