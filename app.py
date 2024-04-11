@@ -16,12 +16,9 @@ from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
-<<<<<<< HEAD
 from req_lib import ReqLib
-=======
 from dotenv import load_dotenv
 load_dotenv()
->>>>>>> 96bbcf943605ce499e674319d42efd11bde143d4
 
 # -------------------------------------------
 app = flask.Flask(__name__)
