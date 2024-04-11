@@ -26,11 +26,11 @@ document.addEventListener("DOMContentLoaded", () => {
       searchResults.innerHTML = "";
       classes.forEach((cls) => {
         const classDiv = document.createElement("div");
-        classDiv.className = "p-4 border-b border-gray-200";
+        classDiv.className = "flex justify-center items-center p-4 border-b border-gray-200";
         classDiv.innerHTML = `<span class="font-semibold">${cls.name}</span> - <span>${cls.instructor}</span>`;
   
         const enrollButton = document.createElement("button");
-        enrollButton.className = "ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded";
+        enrollButton.className = "ml-2 bg-sky-950 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded";
         enrollButton.textContent = "Enroll";
         enrollButton.addEventListener("click", () => enrollInClass(cls.id));
   
@@ -83,7 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
             classDiv.className = 'bg-sky-600 mb-4 rounded-md shadow hover:bg-sky-700 transition ease-in-out duration-150';
             
             const classContentDiv = document.createElement('div');
-            classContentDiv.className = 'flex flex-col sm:flex-row items-center justify-between px-4 py-4 sm:px-6';
+            classContentDiv.className = 'flex flex-col sm:flex-row items-center justify-center sm:justify-between px-4 py-4 sm:px-6 w-full';
+
     
             const classInfoDiv = document.createElement('div');
             classInfoDiv.className = 'mb-2 sm:mb-0';

@@ -20,6 +20,7 @@ from database import (
     User,
     ClassSession,
     Attendance,
+    Answer,
 )
 
 
@@ -141,9 +142,6 @@ def get_student_classes(netid: str) -> list:
 
 
 def get_students_for_class(class_id: str):
-    """
-    Retrieves all students enrolled in a specific class.
-    """
     with SessionLocal() as session:
         students = (
             session.query(Student)
@@ -151,7 +149,30 @@ def get_students_for_class(class_id: str):
             .filter(Enrollment.class_id == class_id)
             .all()
         )
-        return students
+        students_data = []
+        for student in students:
+            enrollment = (
+                session.query(Enrollment)
+                .filter_by(student_id=student.user_id, class_id=class_id)
+                .first()
+            )
+            class_info = session.query(Class).filter_by(class_id=class_id).first()
+            if enrollment and class_info and class_info.possible_scores > 0:
+                percentage_score = (enrollment.score / class_info.possible_scores) * 100
+            else:
+                percentage_score = None
+            students_data.append(
+                {
+                    "user_id": student.user_id,
+                    "netid": student.netid,
+                    "percentage": (
+                        f"{percentage_score:.2f}%"
+                        if percentage_score is not None
+                        else "N/A"
+                    ),
+                }
+            )
+        return students_data
 
 
 def get_student_score_and_possible_for_class(user_id: str, class_id: str):
@@ -220,20 +241,7 @@ def get_user_role(username):
         return None
 
 
-def add_question_to_class(
-    class_id: str, question_text: str, correct_answer: str
-) -> bool:
-    """
-    Adds a question and its correct answer to a class.
-
-    Args:
-        class_id (str): The unique identifier for the class.
-        question_text (str): The text of the question to be added.
-        correct_answer (str): The correct answer to the question.
-
-    Returns:
-        bool: True if the question was successfully added, False otherwise.
-    """
+def add_question_to_class(class_id: str, question_text: str, correct_answer: str):
     with SessionLocal() as session:
         new_question = Question(
             question_id=str(uuid.uuid4()),
@@ -245,11 +253,11 @@ def add_question_to_class(
         try:
             session.commit()
             print(f"Question added to class {class_id}.")
-            return True
+            return new_question.question_id
         except SQLAlchemyError as e:
             print(f"Failed to add question to class {class_id}: {e}")
             session.rollback()
-            return False
+            return None
 
 
 def get_professors_class_id(user_id):
@@ -336,23 +344,23 @@ def get_active_session_for_class(class_id):
 
 def start_new_session(class_id):
     with SessionLocal() as db:
-        new_session = ClassSession(
-            session_id=str(uuid.uuid4()),
-            class_id=class_id,
-            start_time=datetime.now(),
-            is_active=True,
-        )
-        db.add(new_session)
         try:
+            new_session = ClassSession(
+                session_id=str(uuid.uuid4()),
+                class_id=class_id,
+                start_time=datetime.now(),
+                is_active=True,
+            )
+            db.add(new_session)
             db.commit()
             print(
                 f"Session {new_session.session_id} for class {class_id} started at {new_session.start_time}"
             )
-            return new_session
+            return True, new_session.session_id
         except Exception as e:
             db.rollback()
             print(e)
-            return None
+            return False, None
 
 
 def has_checked_in(username, session_id):
@@ -372,13 +380,26 @@ def has_checked_in(username, session_id):
 def record_attendance_and_update(username, class_id, session_id):
     with SessionLocal() as db:
         student = db.query(Student).filter_by(netid=username).first()
-        enrollment = db.query(Enrollment).filter_by(student_id=student.user_id, class_id=class_id).first()
+        enrollment = (
+            db.query(Enrollment)
+            .filter_by(student_id=student.user_id, class_id=class_id)
+            .first()
+        )
         if not student or not enrollment:
             return False, "Student not enrolled or not found"
-        if db.query(Attendance).filter_by(student_id=student.user_id, session_id=session_id).first():
+        if (
+            db.query(Attendance)
+            .filter_by(student_id=student.user_id, session_id=session_id)
+            .first()
+        ):
             return False, "Student already checked in"
-        
-        attendance = Attendance(attendance_id=str(uuid.uuid4()), session_id=session_id, student_id=student.user_id, timestamp=datetime.now())
+
+        attendance = Attendance(
+            attendance_id=str(uuid.uuid4()),
+            session_id=session_id,
+            student_id=student.user_id,
+            timestamp=datetime.now(),
+        )
         db.add(attendance)
 
         enrollment.sessions_attended += 1
@@ -391,7 +412,6 @@ def record_attendance_and_update(username, class_id, session_id):
             db.rollback()
             print(e)
             return False, "Failed to record attendance and update"
-
 
 
 def is_student_enrolled_in_class(username, class_id):
@@ -457,11 +477,67 @@ def update_question(question_id, new_text, new_answer, class_id):
     except Exception as e:
         print(f"Error updating question: {e}")
         return False
-    
+
+
 def get_active_questions_for_class(class_id):
     with SessionLocal() as session:
-        active_questions = session.query(Question).filter_by(class_id=class_id, is_active=True).all()
+        active_questions = (
+            session.query(Question).filter_by(class_id=class_id, is_active=True).all()
+        )
         return active_questions
 
 
+def is_question_active(question_id):
+    with SessionLocal() as session:
+        question = (
+            session.query(Question)
+            .filter_by(question_id=question_id, is_active=True)
+            .first()
+        )
+        return question is not None
 
+
+def submit_answer_for_question(question_id, student_id, answer_text):
+    with SessionLocal() as session:
+        existing_answer = (
+            session.query(Answer)
+            .filter_by(question_id=question_id, student_id=student_id)
+            .first()
+        )
+        if existing_answer is not None:
+            return "Answer already submitted"
+
+        try:
+            answer = Answer(
+                answer_id=str(uuid.uuid4()),
+                question_id=question_id,
+                student_id=student_id,
+                text=answer_text,
+            )
+            session.add(answer)
+            session.commit()
+            return "Answer submitted successfully"
+        except Exception as e:
+            session.rollback()
+            return str(e)
+
+
+def get_attendance_and_scores(class_id, student_id):
+    with SessionLocal() as session:
+        class_info = session.query(Class).filter_by(class_id=class_id).first()
+        total_sessions_planned = class_info.total_sessions_planned if class_info else 0
+        enrollment_info = (
+            session.query(Enrollment)
+            .filter_by(student_id=student_id, class_id=class_id)
+            .first()
+        )
+        sessions_attended = enrollment_info.sessions_attended if enrollment_info else 0
+        score = enrollment_info.score if enrollment_info else 0
+        possible_scores = total_sessions_planned
+
+        return {
+            "attendance": sessions_attended,
+            "totalSessions": total_sessions_planned,
+            "score": score,
+            "possibleScore": possible_scores,
+        }
