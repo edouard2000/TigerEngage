@@ -243,7 +243,7 @@ function createQuestionElement(question) {
   }" data-is-active="${question.is_active}">
                 ${question.is_active ? "Stop" : "Ask"}
             </button>
-            <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-600 transition duration-300 ml-2" data-question-id="${
+            <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${
               question.question_id
             }">
                 Display
@@ -342,6 +342,7 @@ function handleAskStopQuestion(questionId, isAsking, buttonElement) {
       buttonElement.disabled = false;
     });
 }
+
 
 function disableAllOtherAskButtons(excludeButton) {
   document.querySelectorAll(".ask-button").forEach((btn) => {

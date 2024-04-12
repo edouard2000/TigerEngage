@@ -578,28 +578,30 @@ def fetch_answers_generate_summary(
     return summary
 
 
-def store_summary_return_feedback(
-    session: Session, class_id: str, question_id: str, summary_text: str
-) -> dict:
+def store_summary(session: Session, question_id: str, summary_text: str):
     summary = session.query(Summary).filter_by(question_id=question_id).first()
     if not summary:
-        summary = Summary(question_id=question_id, text=summary_text)
+        summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, text=summary_text)
         session.add(summary)
     else:
         summary.text = summary_text
     session.commit()
+    
 
-    question = (
-        session.query(Question)
-        .filter_by(class_id=class_id, question_id=question_id)
-        .first()
-    )
-    feedback_data = {
-        "question_content": question.text,
-        "answers_summary": summary_text,
-        "correct_answer": question.correct_answer,
-    }
-    return feedback_data
+def get_feedback_data(session: Session, class_id: str, question_id: str) -> dict:
+    question = session.query(Question).filter_by(class_id=class_id, question_id=question_id).first()
+    summary = session.query(Summary).filter_by(question_id=question_id).first()
+
+    if question and summary:
+        feedback_data = {
+            "question_content": question.text,
+            "answers_summary": summary.text,
+            "correct_answer": question.correct_answer, 
+        }
+        return feedback_data
+    else:
+        return None 
+
 
 
 def fetch_user_answer(

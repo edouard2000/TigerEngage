@@ -25,6 +25,7 @@ from database import (
     Summary,
 )
 import db_operations
+from req_lib import ReqLib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -64,6 +65,14 @@ def student_dashboard():
     username = flask.session.get("username")
     if not username:
         return flask.redirect(url_for("home"))
+    req_lib = ReqLib()
+
+    username = req_lib.getJSON(
+        req_lib.configs.USERS,
+        uid=username,
+    )
+
+    username = username[0].get('displayname')
     return flask.render_template("student-dashboard.html", student_name=username)
 
 
@@ -126,11 +135,21 @@ def class_dashboard(class_id):
 def professor_dashboard(class_id):
     print("Professor dashboard")
     username = flask.session.get("username")
+    if not username:
+        return flask.redirect(url_for("home"))
+    req_lib = ReqLib()
+
+    display_name = req_lib.getJSON(
+        req_lib.configs.USERS,
+        uid=username,
+    )
+
+    display_name = display_name[0].get('displayname')
     course_name = db_operations.get_professor_class(username)
     return flask.render_template(
         "professor-dashboard.html",
         course_name=course_name,
-        username=username,
+        username=display_name,
         class_id=class_id,
     )
 
@@ -566,9 +585,14 @@ def toggle_question(class_id, question_id):
                 .filter_by(question_id=question_id, class_id=class_id)
                 .first()
             )
+
             if question_to_update:
                 question_to_update.is_active = is_active
                 session.commit()
+
+                if not is_active:
+                    summary_text = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
+                    db_operations.store_summary(session, question_id, summary_text)
                 return (
                     jsonify({"success": True, "message": "Question status updated."}),
                     200,
@@ -583,6 +607,7 @@ def toggle_question(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+
 
 
 @app.route(
@@ -611,8 +636,7 @@ def edit_question(class_id, question_id):
 
 
 @app.route(
-    "/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"]
-)
+    "/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
 def delete_question(class_id, question_id):
     db = SessionLocal()
     try:
@@ -711,55 +735,37 @@ def attendance(class_id):
     return flask.render_template("attendance.html", data=data)
 
 
+
 @app.route("/class/<class_id>/feedback")
 def class_feedback(class_id):
-    db_session = SessionLocal()
+    db_session = SessionLocal()  
+    try:
+        logged_in_user_id = flask.session.get("username")
+        user_role = flask.session.get("role")
 
-    logged_in_user_id = flask.session.get("username")
-    user_role = flask.session.get("role")
+        displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
+        if not displayed_question:
+            return render_template("feedback.html", error="No question is currently displayed.")
 
-    displayed_question = (
-        db_session.query(Question)
-        .filter_by(class_id=class_id, is_displayed=True)
-        .first()
-    )
+        feedback_data = db_operations.get_feedback_data(db_session, class_id, displayed_question.question_id)
+        if not feedback_data:
+            return render_template("feedback.html", error="Feedback data not available.")
 
-    if not displayed_question:
-        db_session.close()
-        return render_template(
-            "feedback.html",
-            question_content="No question is currently displayed.",
-            answers_summary="",
-            correct_answer="",
-            user_answer="",
-        )
-    summary = (
-        db_session.query(Summary)
-        .filter_by(question_id=displayed_question.question_id)
-        .first()
-    )
-
-    if user_role == "student":
-        user_answer = (
-            db_session.query(Answer)
-            .filter_by(
-                question_id=displayed_question.question_id, student_id=logged_in_user_id
-            )
-            .first()
-        )
-        user_answer_text = user_answer.text if user_answer else "No answer submitted."
-    else:
         user_answer_text = "You are an instructor; you don't have a submitted answer."
-    db_session.close()
+        if user_role == "student":
+            user_answer = (
+                db_session.query(Answer)
+                .filter_by(question_id=displayed_question.question_id, student_id=logged_in_user_id)
+                .first()
+            )
+            user_answer_text = user_answer.text if user_answer else "No answer submitted."
+        feedback_data.update({"user_answer": user_answer_text})
 
-    return render_template(
-        "feedback.html",
-        question_content=displayed_question.text,
-        answers_summary=summary.text if summary else "Summary not available.",
-        correct_answer=displayed_question.correct_answer,
-        user_answer=user_answer_text,
-    )
-    
+        return render_template("feedback.html", **feedback_data)
+    finally:
+        db_session.close()
+
+ 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
     db_session = SessionLocal()
