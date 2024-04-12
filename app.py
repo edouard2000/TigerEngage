@@ -42,7 +42,7 @@ if database_url:
 else:
     print("The DATABASE_URL environment variable is not set.")
 
-socketio = SocketIO(app, cors_allowed_origins="*")
+
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
@@ -76,11 +76,6 @@ def student_dashboard():
     return flask.render_template("student-dashboard.html", student_name=username)
 
 
-@socketio.on('message')
-def handle_message(message):
-    print("Received message: " + message)
-    if message != "User connected!":
-        send(message, broadcast=True)
 
 
 @app.route("/chat")
