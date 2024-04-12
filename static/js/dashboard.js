@@ -13,7 +13,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("nav-feedback").addEventListener("click", (e) => {
     e.preventDefault();
-    loadContent("/feedback");
+    const classId = getClassIdFromUrl(); 
+    loadContent(`/class/${classId}/feedback`);
   });
 
   document.getElementById("nav-attendance").addEventListener("click", (e) => {
