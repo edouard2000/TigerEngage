@@ -22,11 +22,9 @@ from database import (
     Class,
     Enrollment,
     Answer,
-    Summary,
 )
 import db_operations
 from req_lib import ReqLib
-from flask_socketio import SocketIO, send
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -803,4 +801,4 @@ def toggle_display(class_id, question_id):
 
 if __name__ == "__main__":
     app.run(debug=False)
-    socketio.run(app, host="localhost")
+    
