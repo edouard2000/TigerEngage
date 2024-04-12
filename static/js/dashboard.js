@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("nav-feedback").addEventListener("click", (e) => {
     e.preventDefault();
+    const classId = getClassIdFromUrl(); 
     loadContent(`/class/${classId}/feedback`);
   });
 
