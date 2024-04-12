@@ -98,7 +98,7 @@ def questions():
 #         "correct_answer": "The correct answer is Paris.",
 #         "user_answer": "Your answer was Paris.",
 #     }
-
+#
 #     classid = flask.session.get("classes.class_id")
 #     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
 #     user_id = flask.session.get("user_id")
