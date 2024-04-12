@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("nav-feedback").addEventListener("click", (e) => {
     e.preventDefault();
     const classId = getClassIdFromUrl(); 
-    loadContent(`/class/${classId}/feedback`)
+    loadContent(`/class/${classId}/feedback`);
   });
 
   document.getElementById("nav-attendance").addEventListener("click", (e) => {
