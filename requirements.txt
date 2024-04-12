@@ -6,3 +6,4 @@ Flask-WTF
 python-dotenv
 openai
 requests
+SocketIO
