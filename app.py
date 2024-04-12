@@ -17,6 +17,7 @@ from flask import jsonify, request, flash, redirect, session, url_for, render_te
 from database import ClassSession, Question, SessionLocal, User, Class, Enrollment
 import db_operations
 from req_lib import ReqLib
+from flask_socketio import SocketIO, send
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -30,6 +31,8 @@ if database_url:
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://")
 else:
     print("The DATABASE_URL environment variable is not set.")
+
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
@@ -63,12 +66,18 @@ def student_dashboard():
     return flask.render_template("student-dashboard.html", student_name=username)
 
 
+@socketio.on('message')
+def handle_message(message):
+    print("Received message: " + message)
+    if message != "User connected!":
+        send(message, broadcast=True)
+
+
 @app.route("/chat")
 def chat():
     html_code = flask.render_template("chat.html")
     response = flask.make_response(html_code)
     return response
-
 
 @app.route("/questions")
 def questions():
@@ -698,3 +707,4 @@ def attendance(class_id):
 
 if __name__ == "__main__":
     app.run(debug=False)
+    socketio.run(app, host="localhost")
