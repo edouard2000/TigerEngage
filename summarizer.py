@@ -19,7 +19,7 @@ class TextSummarizer:
     def average_sentences(self, list_of_sentences):
         openai.api_key = self.api_key
 
-        prompt = "These are answers provided by the students from the question they were asked, please provide a general summary of their answers.:\n\n" + "\n".join(list_of_sentences)
+        prompt = "These are answers provided by the students from the question they were asked, please provide a general summary of their answers. Do not give your own input, just summarize their answers:\n\n" + "\n".join(list_of_sentences)
         
         try:
             completion = openai.chat.completions.create(
