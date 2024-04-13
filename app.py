@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime
 from auth import authenticate
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect # type: ignore
 import flask
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.exc import NoResultFound
@@ -46,8 +46,14 @@ else:
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
+#def index():
+#    if 'username' in session:
+#        return redirect(url_for("authenticate_and_direct"))
+#    return redirect(url_for("home"))
+
 @app.route("/home", methods=["GET"])
 def home():
+    username = authenticate()
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
@@ -166,7 +172,11 @@ def edit_user(class_id, user_id):
         return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
-        user.netid = request.form.get("name", user.netid)
+        req_lib = ReqLib()
+        display_name = req_lib.getJSON(req_lib.configs.USERS, uid=user_id,)
+        print(len(display_name))
+        display_name = display_name[0].get('displayname')
+        user.display_name = request.form.get("display_name", display_name)
         enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
             enrollment.score = float(request.form.get("score", enrollment.score))

@@ -39,7 +39,7 @@ class User(Base):
     __tablename__ = "users"
     user_id = Column(String, primary_key=True)
     email = Column(String, unique=True, nullable=False)
-    netid = Column(String, nullable=False)
+    name = Column(String, nullable=False)
     role = Column(String(50))
 
     __mapper_args__ = {"polymorphic_identity": "user", "polymorphic_on": role}
@@ -143,7 +143,7 @@ class Summary(Base):
     text = Column(Text, nullable=False)
     question = relationship("Question", back_populates="summaries")
 
-# Base.metadata.drop_all(_engine)# # 
+Base.metadata.drop_all(_engine)
 Base.metadata.create_all(_engine)
 
 
