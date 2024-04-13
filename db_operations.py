@@ -150,7 +150,6 @@ def get_student_classes(netid: str) -> list:
 
 def get_students_for_class(class_id: str):
     with SessionLocal() as session:
-        req_lib = ReqLib()
         students = (
             session.query(Student)
             .join(Enrollment)
@@ -169,8 +168,7 @@ def get_students_for_class(class_id: str):
                 percentage_score = (enrollment.score / class_info.possible_scores) * 100
             else:
                 percentage_score = None
-            display_name = req_lib.getJSON(req_lib.configs.USERS, uid=student.user_id,)
-            display_name = display_name[0].get('displayname')
+            display_name = student.name
             students_data.append(
                 {
                     "user_id": student.user_id,

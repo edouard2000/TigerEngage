@@ -172,11 +172,6 @@ def edit_user(class_id, user_id):
         return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
-        req_lib = ReqLib()
-        display_name = req_lib.getJSON(req_lib.configs.USERS, uid=user_id,)
-        print(len(display_name))
-        display_name = display_name[0].get('displayname')
-        user.display_name = request.form.get("display_name", display_name)
         enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
             enrollment.score = float(request.form.get("score", enrollment.score))
@@ -184,7 +179,7 @@ def edit_user(class_id, user_id):
             flash("Student information updated successfully.", "success")
         else:
             flash("Enrollment information not found.", "error")
-        return redirect(url_for("class_userlist", class_id=class_id))
+        return redirect(url_for("professor_dashboard", class_id=class_id))
 
     db_session.close()
     return render_template("edit_student.html", student=user, class_id=class_id)
@@ -205,7 +200,7 @@ def delete_user(class_id, user_id):
         flash("User not found.", "error")
     db_session.close()
 
-    return redirect(url_for("class_userlist", class_id=class_id))
+    return redirect(url_for("professor_dashboard", class_id=class_id))
 
 
 @app.route("/class/<class_id>/userlist")
