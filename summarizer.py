@@ -41,8 +41,7 @@ class TextSummarizer:
 
         prompt = f"Question: {question}\n\nStudent answers:\n" + "\n".join([f"- {ans}" for ans in student_answers]) + \
                  f"\n\nCorrect answer: {correct_answer}\n\n" + \
-                 "Summarize what students understand about the question, compare their understanding with the correct answer, " + \
-                 "and provide additional explanations to help students who didn't fully grasp the concept."
+                 "Summarize what students understand about the question, compare their understanding with the correct answer"
 
         try:
             completion = openai.chat.completions.create(
