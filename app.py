@@ -42,7 +42,7 @@ if database_url:
 else:
     print("The DATABASE_URL environment variable is not set.")
 
-socketio = SocketIO(app)
+
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
@@ -61,16 +61,16 @@ def home():
 
 @app.route("/role-selection")
 def role_selection():
-    html_code = render_template("role-selection.html")
+    html_code = flask.render_template("role-selection.html")
     response = flask.make_response(html_code)
     return response
 
 
 @app.route("/student_dashboard")
 def student_dashboard():
-    username = session.get("username")
+    username = flask.session.get("username")
     if not username:
-        return redirect(url_for("home"))
+        return flask.redirect(url_for("home"))
     req_lib = ReqLib()
 
     username = req_lib.getJSON(
@@ -79,74 +79,16 @@ def student_dashboard():
     )
 
     username = username[0].get('displayname')
-    return render_template("student-dashboard.html", student_name=username)
+    return flask.render_template("student-dashboard.html", student_name=username)
 
 
-@socketio.on('message')
-def handle_message(message):
 
-    content = {
-        "name": session.get("username"),
-        "message": message["data"],
-        "timestamp": datetime.time()
-    }
-
-    send(content)
-    chat["messages"].append(content)
-
-    print(f"{session.get('username')} said: {message['data']}")
-    username = session.get("username")
-    if not username:
-        return redirect(url_for("home"))
-    req_lib = ReqLib()
-
-    username = req_lib.getJSON(
-        req_lib.configs.USERS,
-        uid=username,
-    )
-
-    username = username[0].get('displayname')
-
-    send({"name": username, "message": message}, broadcast=True)
-
-    print("Received message: " + message)
-    if message != "User connected!":
-        send(message, broadcast=True)
-
-
-@socketio.on('connect')
-def connect(auth):
-    username = session.get("username")
-    if not username:
-        return redirect(url_for("home"))
-    req_lib = ReqLib()
-
-    username = req_lib.getJSON(
-        req_lib.configs.USERS,
-        uid=username,
-    )
-
-    username = username[0].get('displayname')
 
 @app.route("/chat")
 def chat():
-    username = session.get("username")
-    if not username:
-        return redirect(url_for("home"))
-    req_lib = ReqLib()
-
-    username = req_lib.getJSON(
-        req_lib.configs.USERS,
-        uid=username,
-    )
-
-    username = username[0].get('displayname')
-
-
-    html_code = flask.render_template("chat.html" messages=["messages"])
+    html_code = flask.render_template("chat.html")
     response = flask.make_response(html_code)
     return response
-
 
 @app.route("/questions")
 def questions():
@@ -859,4 +801,4 @@ def toggle_display(class_id, question_id):
 
 if __name__ == "__main__":
     app.run(debug=False)
-    socketio.run(app, host="localhost", debug=True)
+    
