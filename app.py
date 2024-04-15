@@ -9,7 +9,7 @@ import os
 import uuid
 from datetime import datetime
 from auth import authenticate
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect # type: ignore
 import flask
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.exc import NoResultFound
@@ -22,11 +22,9 @@ from database import (
     Class,
     Enrollment,
     Answer,
-    Summary,
 )
 import db_operations
 from req_lib import ReqLib
-from flask_socketio import SocketIO, send
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -48,9 +46,15 @@ socketio = SocketIO(app)
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
+#def index():
+#    if 'username' in session:
+#        return redirect(url_for("authenticate_and_direct"))
+#    return redirect(url_for("home"))
+
 @app.route("/home", methods=["GET"])
 def home():
-    html_code = render_template("home.html")
+    username = authenticate()
+    html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
 
@@ -226,7 +230,6 @@ def edit_user(class_id, user_id):
         return redirect(url_for("class_userlist", class_id=class_id))
 
     if request.method == "POST":
-        user.netid = request.form.get("name", user.netid)
         enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
             enrollment.score = float(request.form.get("score", enrollment.score))
@@ -234,7 +237,7 @@ def edit_user(class_id, user_id):
             flash("Student information updated successfully.", "success")
         else:
             flash("Enrollment information not found.", "error")
-        return redirect(url_for("class_userlist", class_id=class_id))
+        return redirect(url_for("professor_dashboard", class_id=class_id))
 
     db_session.close()
     return render_template("edit_student.html", student=user, class_id=class_id)
@@ -255,7 +258,7 @@ def delete_user(class_id, user_id):
         flash("User not found.", "error")
     db_session.close()
 
-    return redirect(url_for("class_userlist", class_id=class_id))
+    return redirect(url_for("professor_dashboard", class_id=class_id))
 
 
 @app.route("/class/<class_id>/userlist")
