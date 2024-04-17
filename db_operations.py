@@ -25,6 +25,7 @@ from database import (
     Answer,
 )
 from summarizer import TextSummarizer
+from req_lib import ReqLib
 
 
 def create_user(netid, role):
@@ -33,10 +34,13 @@ def create_user(netid, role):
     """
     with SessionLocal() as session:
         email = f"{netid}@princeton.edu"
+        req_lib = ReqLib()
+        name = req_lib.getJSON(req_lib.configs.USERS, uid=netid,)
+        name = name[0].get('displayname')
         if role == "student":
-            new_user = Student(user_id=netid, email=email, netid=netid)
+            new_user = Student(user_id=netid, email=email, name=name)
         elif role == "professor":
-            new_user = Professor(user_id=netid, email=email, netid=netid)
+            new_user = Professor(user_id=netid, email=email, name=name)
         else:
             print(f"Invalid role: {role}")
             return False
@@ -123,7 +127,7 @@ def get_student_classes(netid: str) -> list:
                 .joinedload(Enrollment.class_)
                 .joinedload(Class.instructor)
             )
-            .filter(Student.netid == netid)
+            .filter(Student.user_id == netid)
             .first()
         )
         if not student:
@@ -164,10 +168,12 @@ def get_students_for_class(class_id: str):
                 percentage_score = (enrollment.score / class_info.possible_scores) * 100
             else:
                 percentage_score = None
+            display_name = student.name
             students_data.append(
                 {
                     "user_id": student.user_id,
-                    "netid": student.netid,
+                    "display_name": display_name,
+                    "netid": student.user_id,
                     "percentage": (
                         f"{percentage_score:.2f}%"
                         if percentage_score is not None
@@ -220,7 +226,7 @@ def get_professor_class(netid: str) -> str:
         professor_class = (
             session.query(Class.title)
             .join(Professor, Professor.user_id == Class.instructor_id)
-            .filter(Professor.netid == netid)
+            .filter(Professor.user_id == netid)
             .first()
         )
         if professor_class:
@@ -238,7 +244,7 @@ def get_user_role(username):
         str: The role of the user (e.g., 'student', 'professor') or None if not found.
     """
     with SessionLocal() as session:
-        user = session.query(User).filter_by(netid=username).first()
+        user = session.query(User).filter_by(user_id=username).first()
         if user:
             return user.role
         return None
@@ -326,7 +332,7 @@ def is_instructor_for_class(username, class_id):
     with SessionLocal() as db:
         instructor = (
             db.query(User)
-            .filter(User.netid == username, User.role == "professor")
+            .filter(User.user_id == username, User.role == "professor")
             .first()
         )
         class_ = db.query(Class).filter_by(class_id=class_id).first()
@@ -368,7 +374,7 @@ def start_new_session(class_id):
 
 def has_checked_in(username, session_id):
     with SessionLocal() as db:
-        user = db.query(User).filter(User.netid == username).first()
+        user = db.query(User).filter(User.user_id == username).first()
         if not user:
             return False
         attendance_record = (
@@ -382,7 +388,7 @@ def has_checked_in(username, session_id):
 
 def record_attendance_and_update(username, class_id, session_id):
     with SessionLocal() as db:
-        student = db.query(Student).filter_by(netid=username).first()
+        student = db.query(Student).filter_by(user_id=username).first()
         enrollment = (
             db.query(Enrollment)
             .filter_by(student_id=student.user_id, class_id=class_id)
@@ -429,7 +435,7 @@ def is_student_enrolled_in_class(username, class_id):
         bool: True if the student is enrolled in the class, False otherwise.
     """
     with SessionLocal() as db:
-        user = db.query(User).filter(User.netid == username).first()
+        user = db.query(User).filter(User.user_id == username).first()
         if not user:
             return False
         enrollment = (

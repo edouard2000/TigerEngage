@@ -13,6 +13,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
+  const userListButton = document.getElementById("classUsers");
+    if (userListButton) {
+        userListButton.click(); // Simulate click event
+    }
   
   document
     .getElementById("liveChat")
