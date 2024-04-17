@@ -90,37 +90,6 @@ def questions():
     response = flask.make_response(html_code)
     return response
 
-
-# @app.route("/feedback")
-# def feedback():
-#     feedback_data = {
-#         "question_content": "What is the capital of France?",
-#         "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-#         "correct_answer": "The correct answer is Paris.",
-#         "user_answer": "Your answer was Paris.",
-#     }
-#
-#     classid = flask.session.get("classes.class_id")
-#     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
-#     user_id = flask.session.get("user_id")
-#     question_id = flask.session.get("question_id")
-#     user_answer, student_answers = db_operations.get_answers(user_id, question_id)
-
-#     summarized_feedback = GenerateFeedback.answers_summary(
-#         correct_answer=correct_answer, list_of_student_answers=student_answers
-#     )
-
-#     html_code = flask.render_template(
-#         "feedback.html",
-#         question_content=question,
-#         answers_summary=summarized_feedback,
-#         correct_answer=correct_answer,
-#         user_answer=user_answer,
-#     )
-#     response = flask.make_response(html_code)
-#     return response
-
-
 @app.route("/class_dashboard/<class_id>")
 def class_dashboard(class_id):
     with SessionLocal() as session:
