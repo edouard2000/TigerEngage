@@ -686,7 +686,6 @@ def submit_answer(class_id):
             500,
         )
 
-
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
     print("Getting active question")
@@ -741,30 +740,48 @@ def class_feedback(class_id):
         return render_template("feedback.html", **feedback_data)
     finally:
         db_session.close()
+        
+        
+        
 
- 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
     db_session = SessionLocal()
     try:
-        question = db_session.query(Question).filter_by(class_id=class_id, question_id=question_id, is_active=False).first()
+        question = db_session.query(Question).filter_by(
+            class_id=class_id,
+            question_id=question_id
+        ).first()
         if not question:
-            return jsonify({"error": "Question not found or is still active."}), 404
+            return jsonify({"success": False, "message": "Question not found."}), 404
         
-        currently_displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
-        if currently_displayed_question and currently_displayed_question.question_id != question_id:
+        currently_displayed_question = db_session.query(Question).filter(
+            Question.class_id == class_id,
+            Question.is_displayed,  
+            Question.question_id != question_id
+        ).first()
+        
+        if currently_displayed_question:
             currently_displayed_question.is_displayed = False
-        
+
         question.is_displayed = not question.is_displayed
         db_session.commit()
-
         status_message = "displayed" if question.is_displayed else "undisplayed"
-        return jsonify({"message": f"Question {status_message} successfully.", "isDisplayed": question.is_displayed}), 200
+        return jsonify({
+            "success": True,
+            "message": f"Question {status_message} successfully.",
+            "isDisplayed": question.is_displayed
+        }), 200
+
     except Exception as e:
         db_session.rollback()
-        return jsonify({"error": f"Failed to toggle the display status of the question: {e}"}), 500
+        return jsonify({
+            "success": False,
+            "message": f"Failed to toggle the display status of the question: {e}"
+        }), 500
     finally:
         db_session.close()
+
 
 
 

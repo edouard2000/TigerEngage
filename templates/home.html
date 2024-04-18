@@ -1,5 +1,10 @@
-{% extends "base.html" %} {% block title %}TigerEngage - Empower Your
-Educational Experience{% endblock %} {% block content %}
+{% extends "base.html" %}
+
+{% block title %}
+TigerEngage - Empower Your Educational Experience
+{% endblock %}
+
+{% block content %}
 <div class="text-center py-20 bg-white">
   <a
     href="{{ url_for('role_selection') }}"
@@ -8,7 +13,7 @@ Educational Experience{% endblock %} {% block content %}
   >
 </div>
 
-<div class="container mx-auto px-6  bg-gray-100 text-center mt-32">
+<div class="container mx-auto px-6 bg-gray-100 text-center mt-48">
   <div class="flex flex-wrap justify-center gap-4">
     <div class="w-full sm:w-1/2 md:w-1/4 p-4">
       <div
@@ -25,9 +30,7 @@ Educational Experience{% endblock %} {% block content %}
       <div
         class="bg-sky-600 rounded shadow-lg p-6 hover:bg-sky-900 hover:text-white transition duration-300"
       >
-        <h5 class="text-sm font-semibold text-white mb-2">
-          Attendance Tracking
-        </h5>
+        <h5 class="text-sm font-semibold text-white mb-2">Attendance Tracking</h5>
         <p class="text-sm text-white">
           Automate attendance with easy check-ins and tracking.
         </p>
@@ -38,9 +41,7 @@ Educational Experience{% endblock %} {% block content %}
       <div
         class="bg-sky-600 rounded shadow-lg p-6 hover:bg-sky-900 hover:text-white transition duration-300"
       >
-        <h5 class="text-sm font-semibold text-white mb-2">
-          Summarization Tools
-        </h5>
+        <h5 class="text-sm font-semibold text-white mb-2">Summarization Tools</h5>
         <p class="text-sm text-white">
           Get concise summaries of class discussions and materials.
         </p>
