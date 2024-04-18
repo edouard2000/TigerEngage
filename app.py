@@ -755,15 +755,21 @@ def toggle_display(class_id, question_id):
         if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
         
+        # Check if there's another question currently displayed
         currently_displayed_question = db_session.query(Question).filter(
             Question.class_id == class_id,
-            Question.is_displayed,  
+            Question.is_displayed == True,  
             Question.question_id != question_id
         ).first()
         
         if currently_displayed_question:
-            currently_displayed_question.is_displayed = False
+            return jsonify({
+                "success": False,
+                "message": "Another question is currently displayed. Please undisplay it first.",
+                "displayedQuestionId": currently_displayed_question.question_id
+            }), 200
 
+        # If no other question is displayed, toggle the display state of the requested question
         question.is_displayed = not question.is_displayed
         db_session.commit()
         status_message = "displayed" if question.is_displayed else "undisplayed"
@@ -781,6 +787,7 @@ def toggle_display(class_id, question_id):
         }), 500
     finally:
         db_session.close()
+
 
 
 

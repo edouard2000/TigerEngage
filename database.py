@@ -142,6 +142,23 @@ class Summary(Base):
     question_id = Column(String, ForeignKey("questions.question_id"))
     text = Column(Text, nullable=False)
     question = relationship("Question", back_populates="summaries")
+    
+class AfterClassInputs(Base):
+    __tablename__ = "after_class_inputs"
+    input_id = Column(String, primary_key=True)
+    class_session_id = Column(String, ForeignKey("class_sessions.session_id"))
+    class_id = Column(String, ForeignKey("classes.class_id")) 
+    student_id = Column(String, ForeignKey("students.user_id"))
+    response_category = Column(String, nullable=False)  
+    comment = Column(Text, nullable=True)
+    class_session = relationship("ClassSession", back_populates="feedbacks")
+    class_ = relationship("Class", back_populates="feedbacks") 
+    student = relationship("Student", back_populates="feedbacks")
+
+ClassSession.feedbacks = relationship("AfterClassInputs", back_populates="class_session")
+Class.feedbacks = relationship("AfterClassInputs", back_populates="class_") 
+Student.feedbacks = relationship("AfterClassInputs", back_populates="student")
+
 
 # Base.metadata.drop_all(_engine)
 Base.metadata.create_all(_engine)

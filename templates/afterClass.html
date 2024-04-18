@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Feedback Form</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.0.0/dist/tailwind.min.css">
+</head>
+<body>
+    <div class="container mx-auto px-4 mt-10">
+        <h2 class="text-2xl font-semibold mb-5">Class Feedback</h2>
+        <form id="feedbackForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="responseCategory">
+                    How would you rate today's class?
+                </label>
+                <select id="responseCategory" name="responseCategory" class="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    <option value="Excellent">Excellent</option>
+                    <option value="Satisfactory">Satisfactory</option>
+                    <option value="Average">Average</option>
+                    <option value="Poor">Poor</option>
+                    <option value="Terrible">Terrible</option>
+                </select>
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="comment">
+                    Comments (optional):
+                </label>
+                <textarea id="comment" name="comment" rows="3" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+            </div>
+            <div class="flex items-center justify-between">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Submit Feedback
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('feedbackForm').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+            const responseCategory = document.getElementById('responseCategory').value;
+            const comment = document.getElementById('comment').value;
+            console.log('Submitting feedback:', responseCategory, comment);
+            
+        });
+    </script>
+</body>
+</html>

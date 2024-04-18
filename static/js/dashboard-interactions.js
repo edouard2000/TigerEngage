@@ -565,12 +565,14 @@ function submitEditForm() {
 
 function setupDisplayButtons() {
   const buttons = document.querySelectorAll(".display-button");
-  buttons.forEach((button) => {
+  buttons.forEach(button => {
     const questionId = button.getAttribute("data-question-id");
     const isDisplayed = localStorage.getItem(`displayState-${questionId}`) === "true";
     button.textContent = isDisplayed ? "UnDisplay" : "Display";
-    button.removeEventListener("click", handleDisplayClick);
-    button.addEventListener("click", handleDisplayClick);
+    button.addEventListener("click", function() {
+      const shouldDisplay = !isDisplayed; 
+      toggleDisplay(questionId, shouldDisplay, button);
+    });
   });
 }
 
@@ -589,41 +591,58 @@ function handleDisplayClick() {
 }
 
 
-
-function toggleDisplay(questionId, shouldDisplay, button) {
+async function toggleDisplay(questionId) {
+  const button = document.querySelector(`[data-question-id="${questionId}"].display-button`);
   const endpoint = `/class/${globalClassId}/question/${questionId}/toggle_display`;
-  button.disabled = true;
+  const shouldDisplay = !button.classList.contains('active');
 
-  fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-    },
-    credentials: "include",
-    body: JSON.stringify({ displayed: shouldDisplay })
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+      },
+      credentials: "include",
+      body: JSON.stringify({ displayed: shouldDisplay })
+    });
+
+    const data = await response.json();
+
     if (data.success) {
-      localStorage.setItem(`displayState-${questionId}`, shouldDisplay.toString());
-      button.textContent = shouldDisplay ? "UnDisplay" : "Display"; 
-      alert(data.message); 
+      updateDisplayState(questionId, data.isDisplayed);
+      alert(data.message);
     } else {
-      throw new Error(data.message || "Failed to toggle display status.");
+      alert(data.message); 
+      if (data.displayedQuestionId) {
+        highlightDisplayedQuestion(data.displayedQuestionId);
+      }
     }
-  })
-  .catch(error => {
+  } catch (error) {
     console.error("Error:", error);
     alert(`An error occurred: ${error.message}`);
-  })
-  .finally(() => {
-    button.disabled = false;
+  }
+}
+
+function highlightDisplayedQuestion(displayedQuestionId) {
+  document.querySelectorAll('.display-button').forEach(button => {
+    if (button.getAttribute('data-question-id') === displayedQuestionId) {
+      button.classList.add('highlighted'); 
+    } else {
+      button.classList.remove('highlighted');
+    }
   });
+}
+
+
+function updateDisplayState(questionId, isDisplayed) {
+  const buttons = document.querySelectorAll(".display-button");
+  buttons.forEach(btn => {
+    btn.disabled = false; 
+  });
+
+  const targetButton = document.querySelector(`[data-question-id="${questionId}"].display-button`);
+  targetButton.classList.toggle('active', isDisplayed);
+  targetButton.textContent = isDisplayed ? "UnDisplay" : "Display";
 }
 
