@@ -37,13 +37,34 @@
     </div>
 
     <script>
-        document.getElementById('feedbackForm').addEventListener('submit', function(event) {
-            event.preventDefault(); 
+        document.getElementById('feedbackForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
             const responseCategory = document.getElementById('responseCategory').value;
             const comment = document.getElementById('comment').value;
-            console.log('Submitting feedback:', responseCategory, comment);
-            
+        
+            try {
+                const response = await fetch('/api/submit-feedback', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        responseCategory,
+                        comment
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Feedback submitted successfully!');
+                } else {
+                    alert('Failed to submit feedback.');
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                alert('An error occurred while submitting feedback.');
+            }
         });
+        
     </script>
 </body>
 </html>

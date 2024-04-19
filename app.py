@@ -8,10 +8,11 @@
 import os
 import uuid
 from datetime import datetime
-from auth import authenticate
+from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect # type: ignore
 import flask
 from sqlalchemy.exc import SQLAlchemyError
+import sqlalchemy.exc as db_exc
 from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import (
@@ -22,10 +23,12 @@ from database import (
     Class,
     Enrollment,
     Answer,
+    AfterClassInputs
 )
 import db_operations
+from auth import authenticate
 from req_lib import ReqLib
-from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -53,7 +56,6 @@ else:
 
 @app.route("/home", methods=["GET"])
 def home():
-    username = authenticate()
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
@@ -422,41 +424,44 @@ def get_enrolled_classes():
     return jsonify({"success": True, "classes": classes_data})
 
 
+
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
     db = SessionLocal()
     try:
-        active_session = (
-            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
-        )
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if active_session:
             return jsonify({"success": False, "message": "Session already active"}), 400
+
         class_ = db.query(Class).filter_by(class_id=class_id).first()
         if not class_:
             return jsonify({"success": False, "message": "Class not found"}), 404
         class_.total_sessions_planned += 1
         class_.possible_scores += 1
+
         new_session = ClassSession(
             session_id=str(uuid.uuid4()),
             class_id=class_id,
             start_time=datetime.now(),
             is_active=True,
         )
-        db.add(new_session)
 
+        db.add(new_session)
         db.commit()
 
-        return (
-            jsonify(
-                {"success": True, "message": "Class session started successfully."}
-            ),
-            200,
-        )
+        session['class_session_id'] = new_session.session_id 
+
+        return jsonify({"success": True, "message": "Class session started successfully.", "session_id": new_session.session_id}), 200
+
+    except db_exc.SQLAlchemyError as e:
+        db.rollback()
+        return jsonify({"success": False, "message": "Database error: " + str(e)}), 500
     except Exception as e:
         db.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": "Error: " + str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/class/<class_id>/end_session", methods=["POST"])
@@ -754,8 +759,6 @@ def toggle_display(class_id, question_id):
         ).first()
         if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
-        
-        # Check if there's another question currently displayed
         currently_displayed_question = db_session.query(Question).filter(
             Question.class_id == class_id,
             Question.is_displayed == True,  
@@ -769,7 +772,6 @@ def toggle_display(class_id, question_id):
                 "displayedQuestionId": currently_displayed_question.question_id
             }), 200
 
-        # If no other question is displayed, toggle the display state of the requested question
         question.is_displayed = not question.is_displayed
         db_session.commit()
         status_message = "displayed" if question.is_displayed else "undisplayed"
@@ -790,8 +792,41 @@ def toggle_display(class_id, question_id):
 
 
 
+@app.route('/api/submit-feedback', methods=['POST'])
+def submit_feedback():
+    db_session = SessionLocal()
+
+    try:
+        data = request.get_json()
+        response_category = data['responseCategory']
+        comment = data.get('comment', '') 
+
+        class_session_id = session.get('class_session_id')  
+        student_id = session.get('username') 
+
+        if not class_session_id or not student_id:
+            return jsonify({'success': False, 'message': 'Session or user ID not found.'}), 400
+
+        new_feedback = AfterClassInputs(
+            input_id=str(uuid.uuid4()),
+            class_session_id=class_session_id,
+            student_id=student_id,
+            response_category=response_category,
+            comment=comment
+        )
+
+        db_session.add(new_feedback)
+        db_session.commit()
+
+        return jsonify({'success': True, 'message': 'Feedback submitted successfully!'})
+
+    except Exception as e:
+        db_session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+    finally:
+        db_session.close()
 
 
 if __name__ == "__main__":
     app.run(debug=False)
-    
