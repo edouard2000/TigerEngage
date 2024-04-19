@@ -7,5 +7,4 @@ python-dotenv
 openai
 requests
 SocketIO
-reportlab.pdfgen
-reportlab.lib.pagesizes
+reportlab
