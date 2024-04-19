@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', function() {
     submit_btn.addEventListener('click', function() {
         const transcript = transcriptArea.value;
         if (transcript) {
-            fetch('https://tigerengage.com/process_transcript', {
+            fetch('/process_transcript', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
