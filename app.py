@@ -46,15 +46,37 @@ else:
 
 # -------------------------------------------
 @app.route("/", methods=["GET"])
-#def index():
-#    if 'username' in session:
-#        return redirect(url_for("authenticate_and_direct"))
-#    return redirect(url_for("home"))
+def index():
+    if 'visited' in session:
+        return redirect(url_for("authenticate_and_direct"))
+    return redirect(url_for("get_started"))
+
+@app.route("/get-started", methods=["GET"])
+def get_started():
+    username = authenticate()
+    html_code = flask.render_template("home.html")
+    response = flask.make_response(html_code)
+    return response
 
 @app.route("/home", methods=["GET"])
 def home():
-    username = authenticate()
+    if 'role' in session:
+        role = flask.session['role']
+        if role == 'student':
+            return redirect(url_for("student_dashboard"))
+        elif role == 'professor':
+            username = flask.session['username']
+            class_id = db_operations.get_professors_class_id(username)
+            return redirect(url_for("professor_dashboard", class_id=class_id))
     html_code = flask.render_template("home.html")
+    response = flask.make_response(html_code)
+    return response
+
+@app.route("/logout", methods=["GET"])
+def logout():
+    # Log out of the application.
+    flask.session.clear()
+    html_code = flask.render_template('home.html')
     response = flask.make_response(html_code)
     return response
 
@@ -175,6 +197,7 @@ def edit_user(class_id, user_id):
         enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
             enrollment.score = float(request.form.get("score", enrollment.score))
+            # enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
             db_session.commit()
             flash("Student information updated successfully.", "success")
         else:
@@ -235,8 +258,9 @@ def authenticate_and_direct():
         flask.session["actual_role"] = actual_role
         if actual_role != flask.session.get("role"):
             flash(f"Access denied. Your role is {actual_role}.", "error")
-            return flask.redirect(flask.url_for("home"))
+            return flask.redirect(flask.url_for("get_started"))
 
+        flask.session['visited'] = True
         if actual_role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
@@ -253,6 +277,7 @@ def authenticate_and_direct():
             f"{username} does not exist in the database, creating one with role {role}"
         )
         db_operations.create_user(username, role)
+        flask.session['visited'] = True
         if role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
