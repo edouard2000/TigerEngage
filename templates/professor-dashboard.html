@@ -64,21 +64,27 @@ block navbar %}
           Chat
         </button>
       </li>
-
       <li>
-        <button
-          id="reviews"
-          data-class-id="{{ class_id }}"
-          class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-950 transition duration-300 text-left"
-        >
-          Reviews
+        <button class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-950 transition duration-300 text-left" id="mic">
+          Start Recording
+        </button>
+        <span class="recording-dot"></span>
+        <audio class="playback" controls style="width: 100%;"></audio>
+        <button class="w-full bg-sky-600 text-white py-2 px-4 rounded hover:bg-sky-950 transition duration-300 text-left" id="submitTranscript">
+        Convert to Concise Notes
         </button>
       </li>
-
-
+      <p>Speech Text:</p>
+      <textarea id="transcriptArea" rows="10" cols="50"></textarea>
     </ul>
   </div>
+<body>
+<audio id="recordingAlert" src="/static/recording.mp3" hidden></audio>
+<audio id="recordingStopAlert" src="/static/yo.mp3" hidden></audio>
 
+
+<script src="/static/main.js"></script>
+</body>
   <div class="flex-grow bg-white ml-4 mr-4 mb-4 before:overflow-hidden">
     <div id="dashboardContent" class="m-4">
       <p>Select an option from the sidebar to view content here.</p>

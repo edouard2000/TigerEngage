@@ -28,7 +28,14 @@ from database import (
 import db_operations
 from auth import authenticate
 from req_lib import ReqLib
-from summarizer import TextSummarizer
+from dotenv import load_dotenv
+from conciseNotes import LectureNoteSummarizer
+from reportlab.pdfgen import canvas
+import io
+from flask import send_file
+from reportlab.lib.pagesizes import letter
+
+
 
 
 load_dotenv()
@@ -309,6 +316,40 @@ def get_questions_for_class_route(class_id):
         )
 
 
+@app.route('/process_transcript', methods=['POST'])
+@csrf.exempt
+def process_transcript():
+    data = request.get_json()
+    transcript = data.get('transcript')
+    if not transcript:
+        return jsonify({'error': 'No transcript provided'}), 400
+
+    summarizer = LectureNoteSummarizer()
+    notes = summarizer.create_concise_notes(transcript)
+    if not notes:
+        return jsonify({'error': 'Failed to generate notes'}), 500
+
+    
+    pdf_buffer = io.BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=letter)
+    width, height = letter
+
+    textobject = p.beginText(72, height - 100)  
+    textobject.setFont("Helvetica", 12)  
+    lines = notes.split('\n')  
+    for line in lines:
+        textobject.textLine(line)  
+    p.drawText(textobject)  
+    p.showPage()
+    p.save()
+    pdf_buffer.seek(0)
+
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        mimetype='application/pdf',
+        download_name='notes.pdf'
+    )
 @app.route("/search_classes", methods=["GET"])
 def search_classes():
     if "username" not in session:
