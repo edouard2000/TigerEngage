@@ -100,6 +100,7 @@ class ClassSession(Base):
     )
     end_time = Column(DateTime(timezone=True))
     is_active = Column(Boolean, default=False)
+    ended = Column(Boolean, default=False)
     class_ = relationship("Class", back_populates="sessions")
     attendances = relationship("Attendance", back_populates="class_session")
 

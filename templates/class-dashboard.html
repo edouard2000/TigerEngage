@@ -54,12 +54,39 @@
         >
       </div>
     </nav>
-    <div id="content-area" class="pt-20"></div>
+       <!-- Feedback Modal -->
+<div id="feedbackModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+  <div class="modal-content bg-white rounded-lg shadow-lg p-6 max-w-lg w-full">
+      <div class="flex justify-between items-center pb-3">
+          <p class="text-2xl font-bold">Class Feedback</p>
+          <button class="modal-close text-gray-900 font-semibold">
+              &times;
+          </button>
+      </div>
+      <form id="feedbackForm">
+          <label for="rating" class="block text-gray-700 text-sm font-bold mb-2">Rating:</label>
+          <select id="rating" name="rating" required class="bg-gray-100 border border-gray-300 p-2 mb-4 rounded w-full">
+              <option value="Excellent">Excellent</option>
+              <option value="Good">Good</option>
+              <option value="Average">Average</option>
+              <option value="Bad">Bad</option>
+              <option value="Very Poor">Very Poor</option>
+          </select>
+          <label for="comment" class="block text-gray-700 text-sm font-bold mb-2">Comments:</label>
+          <textarea id="comment" name="comment" rows="4" placeholder="Additional comments (optional)" class="bg-gray-100 border border-gray-300 p-2 mb-4 rounded w-full"></textarea>
+          <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">Submit Feedback</button>
+      </form>
+  </div>
+</div>
 
+    <div id="content-area" class="pt-20"></div>
+    <script type="text/javascript">
+      var studentId = "{{ session.get('username', 'default_user_id') }}";
+  </script>
+    <script src="{{ url_for('static', filename='js/reviews.js') }}"></script>
     <script src="{{ url_for('static', filename='js/learn-more.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
- 
     <script>
       document
         .getElementById("menu-btn")

@@ -13,6 +13,10 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
+  document.getElementById("reviews").addEventListener("click", function () {
+    const classId = this.getAttribute("data-class-id");
+    fetchContent(`/class/${classId}/reviews`);
+  });
   const userListButton = document.getElementById("classUsers");
     if (userListButton) {
         userListButton.click(); 
