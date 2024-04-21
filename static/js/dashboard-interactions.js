@@ -2,35 +2,50 @@ let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
   globalClassId = getClassIdFromUrl();
-  document
-    .getElementById("addQuestion")
-    .addEventListener("click", () => fetchContent("/add-question"));
+  
+  document.getElementById("addQuestion")
+  .addEventListener("click", () => fetchContent("/add-question"));
+
   document.getElementById("classUsers").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/userlist`);
   });
+
+  const userListButton = document.getElementById("classUsers");
+  if (userListButton) {
+      userListButton.click(); 
+  }
+
   document.getElementById("feedback").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
-  document.getElementById("reviews").addEventListener("click", function () {
-    const classId = this.getAttribute("data-class-id");
-    fetchContent(`/class/${classId}/reviews`);
-  });
-  const userListButton = document.getElementById("classUsers");
-    if (userListButton) {
-        userListButton.click(); 
-    }
+
+  // document.getElementById("reviews").addEventListener("click", function () {
+  //   const classId = this.getAttribute("data-class-id");
+  //   fetchContent(`/class/${classId}/reviews`);
+  // });
   
-  document
-    .getElementById("liveChat")
+  document.getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
   initializeStartEndToggle();
-  document
-    .querySelector(".edit-question-modal .close-button")
+
+  document.querySelector(".edit-question-modal .close-button")
     .addEventListener("click", function () {
       document.getElementById("editQuestionModal").style.display = "none";
     });
+  
+  // document.getElementById("openEditModal").addEventListener("click", function () {
+  //   fetch("/edit_question_modal")
+  //     .then((response) => response.text())
+  //     .then((html) => {
+  //       document.getElementById("modalContainer").innerHTML = html;
+  //       document.getElementById("editQuestionModal").style.display = "block";
+  //     })
+  //     .catch((error) => {
+  //       console.error("Error fetching the edit question modal:", error);
+  //     });
+  // });
 });
 
 function showEditQuestionModal(
@@ -458,18 +473,6 @@ document
         alert(`An error occurred: ${error.message}`);
       });
   });
-
-document.getElementById("openEditModal").addEventListener("click", function () {
-  fetch("/edit_question_modal")
-    .then((response) => response.text())
-    .then((html) => {
-      document.getElementById("modalContainer").innerHTML = html;
-      document.getElementById("editQuestionModal").style.display = "block";
-    })
-    .catch((error) => {
-      console.error("Error fetching the edit question modal:", error);
-    });
-});
 
 function fetchEditModalContent(
   questionId,
