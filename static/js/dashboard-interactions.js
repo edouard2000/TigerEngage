@@ -13,18 +13,19 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
+  document.getElementById("reviews").addEventListener("click", function () {
+    const classId = this.getAttribute("data-class-id");
+    fetchContent(`/class/${classId}/reviews`);
+  });
   const userListButton = document.getElementById("classUsers");
     if (userListButton) {
-        userListButton.click(); // Simulate click event
+        userListButton.click(); 
     }
   
   document
     .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
-  setupDisplayButtons();
   initializeStartEndToggle();
-  initializeQuestionFormEventListeners();
-  fetchQuestionsAndDisplay(globalClassId);
   document
     .querySelector(".edit-question-modal .close-button")
     .addEventListener("click", function () {
@@ -125,9 +126,7 @@ function initializeQuestionFormEventListeners() {
   let csrfToken = document
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
-  console.log(` classid:${globalClassId}`);
   const classId = globalClassId;
-  console.log(`this is a classid: ${classId}`);
 
   const createQuestionBtn = document.getElementById("createQuestionBtn");
   const questionForm = document.getElementById("questionForm");
@@ -192,12 +191,15 @@ function initializeQuestionFormEventListeners() {
 
   fetchQuestionsAndDisplay(classId);
 }
-
 function fetchQuestionsAndDisplay(classId) {
   fetch(`/class/${classId}/questions`)
     .then((response) => response.json())
     .then((data) => {
       const questionsContainer = document.getElementById("questionsList");
+      if (!questionsContainer) {
+        console.error("The questionsList container was not found on the page.");
+        return; 
+      }
       questionsContainer.innerHTML = "";
       if (data.questions && data.questions.length > 0) {
         data.questions.forEach((question) => {
@@ -206,16 +208,19 @@ function fetchQuestionsAndDisplay(classId) {
         });
         initializeQuestionEventListeners();
         updateButtonsStateBasedOnActivity();
-        setupDisplayButtons();
       } else {
-        questionsContainer.innerHTML =
-          "<p>No questions found for this class.</p>";
+        questionsContainer.innerHTML = "<p>No questions found for this class.</p>";
       }
     })
     .catch((error) => {
       console.error("Error fetching questions:", error);
+    })
+    .finally(() => {
+      setupDisplayButtons(); 
     });
 }
+
+
 
 function createQuestionElement(question) {
   const element = document.createElement("div");
@@ -411,43 +416,6 @@ function deleteQuestion(questionId) {
     });
 }
 
-function setupDisplayButtons() {
-  document.querySelectorAll(".display-button").forEach((button) => {
-      button.addEventListener("click", function () {
-          const questionId = this.getAttribute("data-question-id");
-          if (!confirm("Do you want to change the display status of this question?")) return;
-
-          const csrfToken = document
-              .querySelector('meta[name="csrf-token"]')
-              .getAttribute("content");
-
-          fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-                  "X-CSRF-Token": csrfToken,
-              },
-              credentials: "include",
-          })
-          .then((response) => response.json())
-          .then((data) => {
-              alert(data.message);
-
-              if (data.isDisplayed) {
-                  button.textContent = "UnDisplay";
-              } else {
-                  button.textContent = "Display";
-              }
-              fetchQuestionsAndDisplay(globalClassId);
-          })
-          .catch((error) => {
-              console.error("Error:", error);
-              alert("There was an issue toggling the display status of the question.");
-          });
-      });
-  });
-}
-
 
 document
   .getElementById("editQuestionForm")
@@ -600,36 +568,85 @@ function submitEditForm() {
 }
 
 function setupDisplayButtons() {
-  document.querySelectorAll(".display-button").forEach((button) => {
-    button.addEventListener("click", function () {
-      const questionId = button.getAttribute("data-question-id");
-
-      fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": document
-            .querySelector('meta[name="csrf-token"]')
-            .getAttribute("content"),
-        },
-        credentials: "include",
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          alert(data.message);
-
-          if (data.isDisplayed) {
-            button.textContent = "UnDisplay";
-          } else {
-            button.textContent = "Display";
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          alert(
-            "There was an issue toggling the display status of the question."
-          );
-        });
+  const buttons = document.querySelectorAll(".display-button");
+  buttons.forEach(button => {
+    const questionId = button.getAttribute("data-question-id");
+    const isDisplayed = localStorage.getItem(`displayState-${questionId}`) === "true";
+    button.textContent = isDisplayed ? "UnDisplay" : "Display";
+    button.addEventListener("click", function() {
+      const shouldDisplay = !isDisplayed; 
+      toggleDisplay(questionId, shouldDisplay, button);
     });
   });
 }
+
+function updateQuestionDisplay(questionId, isDisplayed) {
+  const questionElement = document.querySelector(`[data-question-id="${questionId}"]`);
+  if (questionElement) {
+    questionElement.style.display = isDisplayed ? 'block' : 'none'; 
+  }
+}
+
+function handleDisplayClick() {
+  const button = this;
+  const questionId = button.getAttribute("data-question-id");
+  const shouldDisplay = localStorage.getItem(`displayState-${questionId}`) !== "true";
+  toggleDisplay(questionId, shouldDisplay, button);
+}
+
+
+async function toggleDisplay(questionId) {
+  const button = document.querySelector(`[data-question-id="${questionId}"].display-button`);
+  const endpoint = `/class/${globalClassId}/question/${questionId}/toggle_display`;
+  const shouldDisplay = !button.classList.contains('active');
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+      },
+      credentials: "include",
+      body: JSON.stringify({ displayed: shouldDisplay })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      updateDisplayState(questionId, data.isDisplayed);
+      alert(data.message);
+    } else {
+      alert(data.message); 
+      if (data.displayedQuestionId) {
+        highlightDisplayedQuestion(data.displayedQuestionId);
+      }
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    alert(`An error occurred: ${error.message}`);
+  }
+}
+
+function highlightDisplayedQuestion(displayedQuestionId) {
+  document.querySelectorAll('.display-button').forEach(button => {
+    if (button.getAttribute('data-question-id') === displayedQuestionId) {
+      button.classList.add('highlighted'); 
+    } else {
+      button.classList.remove('highlighted');
+    }
+  });
+}
+
+
+function updateDisplayState(questionId, isDisplayed) {
+  const buttons = document.querySelectorAll(".display-button");
+  buttons.forEach(btn => {
+    btn.disabled = false; 
+  });
+
+  const targetButton = document.querySelector(`[data-question-id="${questionId}"].display-button`);
+  targetButton.classList.toggle('active', isDisplayed);
+  targetButton.textContent = isDisplayed ? "UnDisplay" : "Display";
+}
+

@@ -8,10 +8,11 @@
 import os
 import uuid
 from datetime import datetime
-from auth import authenticate
+from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect # type: ignore
 import flask
 from sqlalchemy.exc import SQLAlchemyError
+import sqlalchemy.exc as db_exc
 from sqlalchemy.exc import NoResultFound
 from flask import jsonify, request, flash, redirect, session, url_for, render_template
 from database import (
@@ -22,10 +23,20 @@ from database import (
     Class,
     Enrollment,
     Answer,
+    AfterClassInputs
 )
 import db_operations
+from auth import authenticate
 from req_lib import ReqLib
 from dotenv import load_dotenv
+from conciseNotes import LectureNoteSummarizer
+from reportlab.pdfgen import canvas
+import io
+from flask import send_file
+from reportlab.lib.pagesizes import letter
+
+
+
 
 load_dotenv()
 
@@ -117,37 +128,6 @@ def questions():
     html_code = flask.render_template("Question.html")
     response = flask.make_response(html_code)
     return response
-
-
-# @app.route("/feedback")
-# def feedback():
-#     feedback_data = {
-#         "question_content": "What is the capital of France?",
-#         "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-#         "correct_answer": "The correct answer is Paris.",
-#         "user_answer": "Your answer was Paris.",
-#     }
-#
-#     classid = flask.session.get("classes.class_id")
-#     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
-#     user_id = flask.session.get("user_id")
-#     question_id = flask.session.get("question_id")
-#     user_answer, student_answers = db_operations.get_answers(user_id, question_id)
-
-#     summarized_feedback = GenerateFeedback.answers_summary(
-#         correct_answer=correct_answer, list_of_student_answers=student_answers
-#     )
-
-#     html_code = flask.render_template(
-#         "feedback.html",
-#         question_content=question,
-#         answers_summary=summarized_feedback,
-#         correct_answer=correct_answer,
-#         user_answer=user_answer,
-#     )
-#     response = flask.make_response(html_code)
-#     return response
-
 
 @app.route("/class_dashboard/<class_id>")
 def class_dashboard(class_id):
@@ -362,6 +342,40 @@ def get_questions_for_class_route(class_id):
         )
 
 
+@app.route('/process_transcript', methods=['POST'])
+@csrf.exempt
+def process_transcript():
+    data = request.get_json()
+    transcript = data.get('transcript')
+    if not transcript:
+        return jsonify({'error': 'No transcript provided'}), 400
+
+    summarizer = LectureNoteSummarizer()
+    notes = summarizer.create_concise_notes(transcript)
+    if not notes:
+        return jsonify({'error': 'Failed to generate notes'}), 500
+
+    
+    pdf_buffer = io.BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=letter)
+    width, height = letter
+
+    textobject = p.beginText(72, height - 100)  
+    textobject.setFont("Helvetica", 12)  
+    lines = notes.split('\n')  
+    for line in lines:
+        textobject.textLine(line)  
+    p.drawText(textobject)  
+    p.showPage()
+    p.save()
+    pdf_buffer.seek(0)
+
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        mimetype='application/pdf',
+        download_name='notes.pdf'
+    )
 @app.route("/search_classes", methods=["GET"])
 def search_classes():
     if "username" not in session:
@@ -478,69 +492,70 @@ def get_enrolled_classes():
     return jsonify({"success": True, "classes": classes_data})
 
 
+
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
     db = SessionLocal()
     try:
-        active_session = (
-            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
-        )
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if active_session:
             return jsonify({"success": False, "message": "Session already active"}), 400
+
         class_ = db.query(Class).filter_by(class_id=class_id).first()
         if not class_:
             return jsonify({"success": False, "message": "Class not found"}), 404
         class_.total_sessions_planned += 1
         class_.possible_scores += 1
+
         new_session = ClassSession(
             session_id=str(uuid.uuid4()),
             class_id=class_id,
             start_time=datetime.now(),
             is_active=True,
         )
-        db.add(new_session)
 
+        db.add(new_session)
         db.commit()
 
-        return (
-            jsonify(
-                {"success": True, "message": "Class session started successfully."}
-            ),
-            200,
-        )
+        session['class_session_id'] = new_session.session_id 
+
+        return jsonify({"success": True, "message": "Class session started successfully.", "session_id": new_session.session_id}), 200
+
+    except db_exc.SQLAlchemyError as e:
+        db.rollback()
+        return jsonify({"success": False, "message": "Database error: " + str(e)}), 500
     except Exception as e:
         db.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": "Error: " + str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/class/<class_id>/end_session", methods=["POST"])
 def end_class_session(class_id):
     db = SessionLocal()
     try:
-        active_session = (
-            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
-        )
+        # Fetch the active session that needs to be ended
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if not active_session:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "No active session found for this class",
-                    }
-                ),
-                404,
-            )
+            return jsonify({
+                "success": False,
+                "message": "No active session found for this class"
+            }), 404
+
         active_session.is_active = False
+        active_session.ended = True  
         active_session.end_time = datetime.now()
-
         db.commit()
+        session['show_feedback_modal'] = True
+        
+        return jsonify({
+            "success": True,
+            "message": "Class session ended successfully.",
+            "showModal": True 
+        }), 200
 
-        return (
-            jsonify({"success": True, "message": "Class session ended successfully."}),
-            200,
-        )
     except Exception as e:
         db.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
@@ -742,7 +757,6 @@ def submit_answer(class_id):
             500,
         )
 
-
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
     print("Getting active question")
@@ -797,33 +811,131 @@ def class_feedback(class_id):
         return render_template("feedback.html", **feedback_data)
     finally:
         db_session.close()
+        
+        
+        
 
- 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
     db_session = SessionLocal()
     try:
-        question = db_session.query(Question).filter_by(class_id=class_id, question_id=question_id, is_active=False).first()
+        question = db_session.query(Question).filter_by(
+            class_id=class_id,
+            question_id=question_id
+        ).first()
         if not question:
-            return jsonify({"error": "Question not found or is still active."}), 404
+            return jsonify({"success": False, "message": "Question not found."}), 404
+        currently_displayed_question = db_session.query(Question).filter(
+            Question.class_id == class_id,
+            Question.is_displayed == True,  
+            Question.question_id != question_id
+        ).first()
         
-        currently_displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
-        if currently_displayed_question and currently_displayed_question.question_id != question_id:
-            currently_displayed_question.is_displayed = False
-        
+        if currently_displayed_question:
+            return jsonify({
+                "success": False,
+                "message": "Another question is currently displayed. Please undisplay it first.",
+                "displayedQuestionId": currently_displayed_question.question_id
+            }), 200
+
         question.is_displayed = not question.is_displayed
         db_session.commit()
-
         status_message = "displayed" if question.is_displayed else "undisplayed"
-        return jsonify({"message": f"Question {status_message} successfully.", "isDisplayed": question.is_displayed}), 200
+        return jsonify({
+            "success": True,
+            "message": f"Question {status_message} successfully.",
+            "isDisplayed": question.is_displayed
+        }), 200
+
     except Exception as e:
         db_session.rollback()
-        return jsonify({"error": f"Failed to toggle the display status of the question: {e}"}), 500
+        return jsonify({
+            "success": False,
+            "message": f"Failed to toggle the display status of the question: {e}"
+        }), 500
     finally:
         db_session.close()
+        
+        
+@app.route("/submit_feedback", methods=["POST"])
+def submit_feedback():
+    data = request.get_json()
+    class_session_id = data.get("class_session_id")
+    class_id = data.get("class_id")
+    student_id = data.get("student_id")
+    rating = data.get("rating")
+    comment = data.get("comment")
+    db = SessionLocal()
+    try:
+        feedback = AfterClassInputs(
+            input_id=str(uuid.uuid4()),
+            class_session_id=class_session_id,
+            class_id=class_id,
+            student_id=student_id,
+            response_category=rating,
+            comment=comment
+        )
+        db.add(feedback)
+        db.commit()
 
+        return jsonify({"success": True, "message": "Feedback submitted successfully"}), 200
 
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route("/check_feedback_modal/<class_session_id>", methods=["GET"])
+def check_feedback_modal(class_session_id):
+    db = SessionLocal()
+    try:
+        class_session = db.query(ClassSession).filter_by(session_id=class_session_id).first()
+        
+        if not class_session:
+            return jsonify({
+                "success": False,
+                "message": "Class session not found",
+                "showModal": False
+            }), 404
+        if class_session.ended:
+            return jsonify({
+                "success": True,
+                "message": "Class session has ended. Show feedback modal.",
+                "showModal": True
+            }), 200
+        else:
+            return jsonify({
+                "success": True,
+                "message": "Class session is still active.",
+                "showModal": False
+            }), 200
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": str(e),
+            "showModal": False
+        }), 500
+    finally:
+        db.close()
+        
+        
+@app.route("/class/<class_id>/session/<session_id>/reviews")
+def class_review(class_id, session_id):
+    try:
+        feedback_entries = AfterClassInputs.query.filter_by(class_id=class_id, class_session_id=session_id).all()
+        ratings = [entry.response_category for entry in feedback_entries]
+        comments = [entry.comment for entry in feedback_entries if entry.comment]
+
+        summarizer = TextSummarizer()
+        rating_summary = summarizer.average_sentences(ratings)
+        comment_summary = summarizer.average_sentences(comments) if comments else "No comments provided."
+
+        return render_template("reviews.html", rating_summary=rating_summary, comment_summary=comment_summary)
+    except Exception as e:
+        print(f"Error accessing database or summarizing feedback: {e}")
+        return jsonify({"error": "Failed to retrieve or process class feedback"}), 500
 
 if __name__ == "__main__":
     app.run(debug=False)
-    
