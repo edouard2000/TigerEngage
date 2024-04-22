@@ -34,6 +34,7 @@ from reportlab.pdfgen import canvas
 import io
 from flask import send_file
 from reportlab.lib.pagesizes import letter
+from summarizer import TextSummarizer
 
 
 
