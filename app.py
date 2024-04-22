@@ -178,7 +178,7 @@ def edit_user(class_id, user_id):
         enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
             enrollment.score = float(request.form.get("score", enrollment.score))
-            # enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
+            enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
             db_session.commit()
             flash("Student information updated successfully.", "success")
         else:
