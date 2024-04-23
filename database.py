@@ -86,7 +86,7 @@ class Enrollment(Base):
     student_id = Column(String, ForeignKey("students.user_id"))
     class_id = Column(String, ForeignKey("classes.class_id"))
     sessions_attended = Column(Integer, default=0)
-    score = Column(Float, default=0.0)
+    score = Column(Integer, default=0)
     is_ta = Column(Boolean, default=False)
     student = relationship("Student", back_populates="enrollments")
     class_ = relationship("Class", back_populates="enrollments")

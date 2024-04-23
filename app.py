@@ -20,6 +20,7 @@ from database import (
     Question,
     SessionLocal,
     User,
+    Student,
     Class,
     Enrollment,
     Answer,
@@ -167,17 +168,18 @@ def professor_dashboard(class_id):
 @app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
 def edit_user(class_id, user_id):
     db_session = SessionLocal()
-    user = db_session.query(User).filter_by(user_id=user_id).first()
+    student = db_session.query(Student).filter_by(user_id=user_id).first()
 
-    if user is None:
+    if student is None:
         db_session.close()
         flash("Student not found.", "error")
         return redirect(url_for("class_userlist", class_id=class_id))
 
+    enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
+    
     if request.method == "POST":
-        enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
-            enrollment.score = float(request.form.get("score", enrollment.score))
+            enrollment.score = request.form.get("score", enrollment.score)
             enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
             db_session.commit()
             flash("Student information updated successfully.", "success")
@@ -186,7 +188,7 @@ def edit_user(class_id, user_id):
         return redirect(url_for("professor_dashboard", class_id=class_id))
 
     db_session.close()
-    return render_template("edit_student.html", student=user, class_id=class_id)
+    return render_template("edit_student.html", student=student, class_id=class_id, score=enrollment.score if enrollment else None, is_ta=enrollment.is_ta if enrollment else None)
 
 
 @app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])

@@ -13,15 +13,15 @@
 
     <div class="mb-6">
       <label for="score" class="block text-gray-700 text-sm font-bold mb-2">Score:</label>
-      <input type="number" id="score" name="score" value="{{ student.score }}" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+      <input type="number" id="score" name="score" value="{{ score }}" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
       <small id="scoreHelp" class="text-gray-600">Student's current score.</small>
     </div>
 
     <div class="mb-6">
       <label for="is_ta" class="block text-gray-700 text-sm font-bold mb-2">Teaching Assistant:</label>
       <select id="is_ta" name="is_ta" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-        <option value="0" {% if not student.is_ta %}selected{% endif %}>No</option>
-        <option value="1" {% if student.is_ta %}selected{% endif %}>Yes</option>
+        <option value="0" {% if not is_ta %}selected{% endif %}>No</option>
+        <option value="1" {% if is_ta %}selected{% endif %}>Yes</option>
       </select>
       <small id="taHelp" class="text-gray-600">Choose whether the student is a teaching assistant or not.</small>
     </div>
