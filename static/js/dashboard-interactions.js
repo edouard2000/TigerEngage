@@ -102,21 +102,36 @@ function toggleClassSession(classId, action, button) {
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        alert(
-          `Class session ${
-            action === "start" ? "started" : "ended"
-          } successfully.`
-        );
-        checkSessionStatusAndUpdateButton(classId, button);
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: `Class session ${action === "start" ? "started" : "ended"} successfully.`,
+          confirmButtonText: 'OK'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            checkSessionStatusAndUpdateButton(classId, button);
+          }
+        });
       } else {
-        alert(data.message || `Failed to ${action} class session.`);
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed!',
+          text: data.message || `Failed to ${action} class session.`,
+          confirmButtonText: 'OK'
+        });
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert(`An error occurred while trying to ${action} the class session.`);
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: `An error occurred while trying to ${action} the class session.`,
+        confirmButtonText: 'OK'
+      });
     });
 }
+
 
 function checkSessionStatusAndUpdateButton(classId, button) {
   fetch(`/class/${classId}/session_status`)
