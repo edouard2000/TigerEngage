@@ -7,55 +7,78 @@
     <title>Your Page Title</title>
     <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
-  
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body> 
-  <div
-  class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full"
-  id="createClassModal"
->
-  <div
-    class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
-  >
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-bold">Create New Class</h3>
-      <button class="text-black" onclick="closeModal()">&times;</button>
+  <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="createClassModal">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">Create New Class</h3>
+        <button class="text-black" onclick="closeModal()">&times;</button>
+      </div>
+
+      <form id="createClassForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-4">
+          <label for="class-name" class="block text-gray-700 text-sm font-bold mb-2">Class Name</label>
+          <input type="text" name="class_name" id="class-name" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required />
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 focus:outline-none">Create Class</button>
+        </div>
+      </form>
     </div>
-
-    <form action="/create_class" method="POST">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="mb-4">
-        <label
-          for="class-name"
-          class="block text-gray-700 text-sm font-bold mb-2"
-          >Class Name</label
-        >
-        <input
-          type="text"
-          name="class_name"
-          id="class-name"
-          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          required
-        />
-      </div>
-
-      <div class="flex justify-end">
-        <button
-          type="submit"
-          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700 focus:outline-none"
-        >
-          Create Class
-        </button>
-      </div>
-    </form>
   </div>
-</div>
 
 <script>
+  document.getElementById('createClassForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch('/create_class', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.status === 'success') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: data.message,
+          confirmButtonText: 'OK'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            closeModal();
+            window.location.href = '/professor_dashboard/' + data.class_id;
+          }
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Oops...',
+          text: data.message
+        });
+      }
+    })
+    .catch((error) => {
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Something went wrong!'
+      });
+    });
+  });
+
   function closeModal() {
     document.getElementById("createClassModal").style.display = "none";
   }
+
 </script>
 
 </body>

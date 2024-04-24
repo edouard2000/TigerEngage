@@ -5,40 +5,29 @@
 # Authors: Edouard Kwizera, Roshaan Khalid, Jourdain Babisa, Wangari Karani
 # --------------------------------------------------------------------------------------------
 
+# Standard library imports
+import io
 import os
 import uuid
 from datetime import datetime
+
+# Related third-party imports
 from dotenv import load_dotenv
-from flask_wtf.csrf import CSRFProtect # type: ignore
 import flask
-from sqlalchemy.exc import SQLAlchemyError
-import sqlalchemy.exc as db_exc
-from sqlalchemy.exc import NoResultFound
-from flask import jsonify, request, flash, redirect, session, url_for, render_template
-from database import (
-    ClassSession,
-    Question,
-    SessionLocal,
-    User,
-    Student,
-    Class,
-    Enrollment,
-    Answer,
-    AfterClassInputs
-)
-import db_operations
-from auth import authenticate
-from req_lib import ReqLib
-from dotenv import load_dotenv
-from conciseNotes import LectureNoteSummarizer
+from flask import jsonify, request, flash, redirect, session, url_for, render_template, send_file
+from flask_socketio import SocketIO, emit
+from flask_wtf.csrf import CSRFProtect
 from reportlab.pdfgen import canvas
-import io
-from flask import send_file
 from reportlab.lib.pagesizes import letter
+from sqlalchemy.exc import SQLAlchemyError, NoResultFound
+
+# Local application/library specific imports
+from auth import authenticate
+from conciseNotes import LectureNoteSummarizer
+from database import ClassSession, Question, SessionLocal, User, Student, Class, Enrollment, Answer, AfterClassInputs, ChatMessage
+import db_operations
+from req_lib import ReqLib
 from summarizer import TextSummarizer
-
-
-
 
 load_dotenv()
 
@@ -46,6 +35,7 @@ load_dotenv()
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("APP_SECRET_KEY", "123456")
 csrf = CSRFProtect(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
@@ -54,9 +44,6 @@ if database_url:
     )
 else:
     print("The DATABASE_URL environment variable is not set.")
-
-
-
 # -------------------------------------------
 @app.route("/", methods=["GET"])
 def index():
@@ -87,7 +74,6 @@ def home():
 
 @app.route("/logout", methods=["GET"])
 def logout():
-    # Log out of the application.
     flask.session.clear()
     html_code = flask.render_template('home.html')
     response = flask.make_response(html_code)
@@ -115,8 +101,6 @@ def student_dashboard():
 
     username = username[0].get('displayname')
     return flask.render_template("student-dashboard.html", student_name=username)
-
-
 
 
 @app.route("/chat")
@@ -286,12 +270,16 @@ def create_class():
         username, class_name
     )
     if success:
-        return flask.redirect(
-            flask.url_for("professor_dashboard", class_id=class_id_returned)
-        )
+        return jsonify({
+            'status': 'success',
+            'message': 'Class successfully created!',
+            'class_id': class_id_returned
+        })
     else:
-        flash("Error creating class.", "error")
-        return flask.redirect(flask.url_for("create_class_form"))
+        return jsonify({
+            'status': 'error',
+            'message': 'Error creating class.'
+        }), 400
 
 
 @app.route("/add-question")
@@ -379,6 +367,8 @@ def process_transcript():
         mimetype='application/pdf',
         download_name='notes.pdf'
     )
+    
+    
 @app.route("/search_classes", methods=["GET"])
 def search_classes():
     if "username" not in session:
@@ -942,3 +932,139 @@ def class_review(class_id, session_id):
 
 if __name__ == "__main__":
     app.run(debug=False)
+    
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    db_session = SessionLocal()
+    try:
+        new_message = ChatMessage(
+            message_id=uuid.uuid4(),
+            sender_id=session.get('username'),  
+            class_id=session.get('class_id'),
+            session_id=session.get('session_id'),
+            text=data['text'],
+            replied_to_id=data.get('replied_to_id', None)
+        )
+        db_session.add(new_message)
+        db_session.commit()
+        emit('new_message', {
+            'message_id': str(new_message.message_id),
+            'text': new_message.text,
+            'sender_id': new_message.sender_id,
+            'timestamp': new_message.timestamp.isoformat()
+        }, room=new_message.session_id)
+    except Exception as e:
+        db_session.rollback()
+        emit('error', {'message': str(e)})
+    finally:
+        db_session.close()
+        
+
+@app.route('/fetch_messages', methods=['GET'])
+def fetch_messages():
+    class_id = session.get('class_id') 
+    session_id = session.get('session_id')  
+
+    if not class_id or not session_id:
+        return jsonify({'success': False, 'message': 'Missing class or session identifier'}), 400
+
+    db_session = SessionLocal()
+    try:
+        messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=session_id).order_by(ChatMessage.timestamp).all()
+        messages_json = [{
+            'message_id': str(message.message_id),
+            'sender_id': message.sender_id,
+            'text': message.text,
+            'timestamp': message.timestamp.isoformat(),
+            'replied_to_id': str(message.replied_to_id) if message.replied_to_id else None
+        } for message in messages]
+
+        return jsonify({'success': True, 'messages': messages_json})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        db_session.close()
+        
+        
+@app.route('/delete_message/<message_id>', methods=['DELETE'])
+def delete_message(message_id):
+    user_id = session.get('username') 
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    db_session = SessionLocal()
+    try:
+        message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
+        if not message:
+            return jsonify({'success': False, 'message': 'Message not found'}), 404
+        
+        if message.sender_id != user_id:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+        
+        db_session.delete(message)
+        db_session.commit()
+
+        emit('message_deleted', {'message_id': str(message_id)}, room=message.class_id)
+
+        return jsonify({'success': True, 'message': 'Message deleted successfully'})
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        db_session.close()
+        
+@app.route('/edit_message/<message_id>', methods=['POST'])
+def edit_message(message_id):
+    user_id = session.get('username') 
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+
+    data = request.get_json()
+    new_text = data.get('text')
+    if not new_text:
+        return jsonify({'success': False, 'message': 'No text provided'}), 400
+
+    db_session = SessionLocal()
+    try:
+        message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
+        if not message:
+            return jsonify({'success': False, 'message': 'Message not found'}), 404
+
+        if message.sender_id != user_id:
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+        message.text = new_text
+        db_session.commit()
+        emit('message_updated', {'message_id': str(message_id), 'new_text': new_text}, room=message.class_id)
+
+        return jsonify({'success': True, 'message': 'Message updated successfully'})
+    except SQLAlchemyError as e:
+        db_session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        db_session.close()
+        
+
+@app.route('/get_replies/<message_id>', methods=['GET'])
+def get_replies(message_id):
+    db_session = SessionLocal()
+    try:
+        parent_message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
+        if not parent_message:
+            return jsonify({'success': False, 'message': 'Parent message not found'}), 404
+
+        replies = db_session.query(ChatMessage).filter_by(replied_to_id=message_id).order_by(ChatMessage.timestamp).all()
+        replies_json = [{
+            'message_id': str(reply.message_id),
+            'sender_id': reply.sender_id,
+            'text': reply.text,
+            'timestamp': reply.timestamp.isoformat(),
+            'replied_to_id': str(reply.replied_to_id)
+        } for reply in replies]
+
+        return jsonify({'success': True, 'replies': replies_json})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        db_session.close()
