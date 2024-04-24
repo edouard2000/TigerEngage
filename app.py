@@ -611,6 +611,7 @@ def check_in(class_id):
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
 def toggle_question(class_id, question_id):
+    print("Toggling question")
     try:
         data = request.get_json()
         is_active = data.get("active", True)
@@ -778,7 +779,7 @@ def attendance(class_id):
 #
 @app.route("/class/<class_id>/feedback")
 def class_feedback(class_id):
-    db_session = SessionLocal()  
+    db_session = SessionLocal()
     try:
         logged_in_user_id = flask.session.get("username")
         user_role = flask.session.get("role")

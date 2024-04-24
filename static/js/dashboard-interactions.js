@@ -20,11 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
-
-  // document.getElementById("reviews").addEventListener("click", function () {
-  //   const classId = this.getAttribute("data-class-id");
-  //   fetchContent(`/class/${classId}/reviews`);
-  // });
   
   document.getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
@@ -35,17 +30,6 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("editQuestionModal").style.display = "none";
     });
   
-  // document.getElementById("openEditModal").addEventListener("click", function () {
-  //   fetch("/edit_question_modal")
-  //     .then((response) => response.text())
-  //     .then((html) => {
-  //       document.getElementById("modalContainer").innerHTML = html;
-  //       document.getElementById("editQuestionModal").style.display = "block";
-  //     })
-  //     .catch((error) => {
-  //       console.error("Error fetching the edit question modal:", error);
-  //     });
-  // });
 });
 
 function showEditQuestionModal(
@@ -180,7 +164,7 @@ function initializeQuestionFormEventListeners() {
           icon: 'warning',
           title: 'Incomplete Fields',
           text: 'Please fill in both the question and the answer.',
-          confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+          confirmButtonColor: '#0284c7',  
           confirmButtonText: 'OK'
         });
         return;
@@ -223,7 +207,7 @@ function initializeQuestionFormEventListeners() {
             icon: 'error',
             title: 'Failed',
             text: 'Failed to add the question. Please try again.',
-            confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+            confirmButtonColor: '#0284c7',  
             confirmButtonText: 'OK'
           });
         }
@@ -234,7 +218,7 @@ function initializeQuestionFormEventListeners() {
           icon: 'error',
           title: 'Error',
           text: 'An error occurred while trying to add the question.',
-          confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+          confirmButtonColor: '#0284c7',  
           confirmButtonText: 'OK'
         });
         questionForm.classList.add("hidden");
@@ -245,8 +229,6 @@ function initializeQuestionFormEventListeners() {
 
   fetchQuestionsAndDisplay(classId);
 }
-
-
 
 function fetchQuestionsAndDisplay(classId) {
   fetch(`/class/${classId}/questions`)
@@ -264,6 +246,7 @@ function fetchQuestionsAndDisplay(classId) {
           questionsContainer.appendChild(questionElement);
         });
         initializeQuestionEventListeners();
+        restoreButtonStates();
         updateButtonsStateBasedOnActivity();
       } else {
         questionsContainer.innerHTML = "<p>No questions found for this class.</p>";
@@ -365,48 +348,70 @@ function updateButtonsStateBasedOnActivity() {
 }
 
 function handleAskStopQuestion(questionId, isAsking, buttonElement) {
-  const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
+  const actionText = isAsking ? "ask" : "stop";
+  Swal.fire({
+    title: `Are you sure you want to ${actionText} this question?`,
+    text: `This will ${isAsking ? "start" : "stop"} showing the question to the class.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: `Yes, ${actionText} it!`
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
+      buttonElement.disabled = true;
 
-  buttonElement.disabled = true;
+      fetch(endpoint, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+        },
+        body: JSON.stringify({ active: isAsking }),
+      })
+      .then((response) => response.json())
+      .then((data) => {
+          if (data.success) {
+              updateAskButtons(questionId, isAsking);
+              Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: `Question was successfully ${isAsking ? "asked" : "stopped"}.`,
+                confirmButtonColor: '#3085d6',  
+                confirmButtonText: 'OK'
+              });
+          } else {
+              throw new Error(data.message);
+          }
+      })
+      .catch((error) => {
+          console.error("Error:", error);
+          Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: `An error occurred: ${error.message}`,
+              confirmButtonColor: '#d33',  
+              confirmButtonText: 'Close'
+          });
+      })
+      .finally(() => {
+          buttonElement.disabled = false;
+      });
+    }
+  });
+}
 
-  fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": document
-        .querySelector('meta[name="csrf-token"]')
-        .getAttribute("content"),
-    },
-    body: JSON.stringify({ active: isAsking }),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+
+function updateAskButtons(questionId, isAsking) {
+  const buttons = document.querySelectorAll(".ask-button");
+  buttons.forEach((btn) => {
+      if (btn.getAttribute("data-question-id") === questionId) {
+          btn.textContent = isAsking ? "Stop" : "Ask";
+          btn.setAttribute("data-is-active", isAsking.toString());
       }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        buttonElement.textContent = isAsking ? "Stop" : "Ask";
-        buttonElement.setAttribute("data-is-active", isAsking.toString());
-        if (isAsking) {
-          disableAllOtherAskButtons(buttonElement);
-        } else {
-          enableAllAskButtons();
-        }
-      } else {
-        throw new Error(data.message);
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      alert(`An error occurred: ${error.message}`);
-      buttonElement.textContent = isAsking ? "Ask" : "Stop";
-      buttonElement.setAttribute("data-is-active", (!isAsking).toString());
-    })
-    .finally(() => {
-      buttonElement.disabled = false;
-    });
+      btn.disabled = isAsking && btn.getAttribute("data-question-id") !== questionId;
+  });
 }
 
 
@@ -441,37 +446,52 @@ function getClassIdFromUrl() {
 }
 
 function deleteQuestion(questionId) {
-  if (!confirm("Are you sure you want to delete this question?")) return;
-  const csrfToken = document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
-
-  fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken,
-    },
-    credentials: "include",
-  })
-    .then((response) =>
-      response.json().then((data) => ({ status: response.status, data: data }))
-    )
-    .then((result) => {
-      if (result.status !== 200) {
-        throw new Error(
-          result.data.message ||
-            "An error occurred while trying to delete the question."
-        );
-      }
-      alert("Question successfully deleted.");
-      fetchQuestionsAndDisplay(globalClassId);
-    })
-    .catch((error) => {
-      console.error("Error deleting question:", error);
-      alert(error.message);
-    });
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+      fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+        },
+        credentials: "include",
+      })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          Swal.fire(
+            'Deleted!',
+            'Your question has been deleted.',
+            'success'
+          );
+          fetchQuestionsAndDisplay(globalClassId);
+        } else {
+          throw new Error(data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting question:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: `An error occurred: ${error.message}`,
+          confirmButtonColor: '#d33',  
+          confirmButtonText: 'OK'
+        });
+      });
+    }
+  });
 }
+
 
 
 document
@@ -503,7 +523,6 @@ document
       })
       .then((data) => {
         if (data.success) {
-          alert("Question successfully updated.");
           fetchQuestionsAndDisplay(globalClassId);
           document.getElementById("editQuestionModal").style.display = "none";
         } else {
@@ -574,24 +593,22 @@ document
     submitEditForm();
   });
 
-function submitEditForm() {
-  const questionId = document.getElementById("editingQuestionId").value;
-  const questionText = document.getElementById("editQuestionText").value;
-  const answerText = document.getElementById("editAnswerText").value;
-
-  fetch(`/class/${globalClassId}/question/${questionId}/edit`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": document
-        .querySelector('meta[name="csrf-token"]')
-        .getAttribute("content"),
-    },
-    body: JSON.stringify({
-      question_text: questionText,
-      correct_answer: answerText,
-    }),
-  })
+  function submitEditForm() {
+    const questionId = document.getElementById("editingQuestionId").value;
+    const questionText = document.getElementById("editQuestionText").value;
+    const answerText = document.getElementById("editAnswerText").value;
+  
+    fetch(`/class/${globalClassId}/question/${questionId}/edit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+      },
+      body: JSON.stringify({
+        question_text: questionText,
+        correct_answer: answerText,
+      }),
+    })
     .then((response) => {
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -599,18 +616,31 @@ function submitEditForm() {
     })
     .then((data) => {
       if (data.success) {
-        alert("Question successfully updated.");
-        document.getElementById("editQuestionModal").style.display = "none";
+        Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Question successfully updated.',
+          confirmButtonColor: '#3085d6',  
+          confirmButtonText: 'OK'
+        });
         fetchQuestionsAndDisplay(globalClassId);
+        document.getElementById("editQuestionModal").style.display = "none";
       } else {
         throw new Error("Failed to update the question.");
       }
     })
     .catch((error) => {
       console.error("Error updating question:", error);
-      alert(`An error occurred: ${error.message}`);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: `An error occurred: ${error.message}`,
+        confirmButtonColor: '#d33',  
+        confirmButtonText: 'OK'
+      });
     });
-}
+  }
+  
 
 function setupDisplayButtons() {
   const buttons = document.querySelectorAll(".display-button");
@@ -642,36 +672,56 @@ function handleDisplayClick() {
 
 async function toggleDisplay(questionId) {
   const button = document.querySelector(`[data-question-id="${questionId}"].display-button`);
-  const endpoint = `/class/${globalClassId}/question/${questionId}/toggle_display`;
   const shouldDisplay = !button.classList.contains('active');
+  const actionText = shouldDisplay ? "display" : "hide";
 
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-      },
-      credentials: "include",
-      body: JSON.stringify({ displayed: shouldDisplay })
-    });
+  Swal.fire({
+    title: `Are you sure you want to ${actionText} this question?`,
+    text: `This will ${shouldDisplay ? "show" : "remove"} the question from the class display.`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: `Yes, ${actionText} it!`
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+          },
+          body: JSON.stringify({ displayed: shouldDisplay })
+        });
 
-    const data = await response.json();
-
-    if (data.success) {
-      updateDisplayState(questionId, data.isDisplayed);
-      alert(data.message);
-    } else {
-      alert(data.message); 
-      if (data.displayedQuestionId) {
-        highlightDisplayedQuestion(data.displayedQuestionId);
+        const data = await response.json();
+        if (data.success) {
+          updateDisplayState(questionId, data.isDisplayed);
+          Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: `Question has been ${shouldDisplay ? "displayed" : "hidden"} successfully.`,
+            confirmButtonColor: '#3085d6',  
+            confirmButtonText: 'OK'
+          });
+        } else {
+          throw new Error(data.message); 
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: `An error occurred: ${error.message}`,
+            confirmButtonColor: '#d33',  
+            confirmButtonText: 'Close'
+        });
       }
     }
-  } catch (error) {
-    console.error("Error:", error);
-    alert(`An error occurred: ${error.message}`);
-  }
+  });
 }
+
 
 function highlightDisplayedQuestion(displayedQuestionId) {
   document.querySelectorAll('.display-button').forEach(button => {
@@ -695,3 +745,14 @@ function updateDisplayState(questionId, isDisplayed) {
   targetButton.textContent = isDisplayed ? "UnDisplay" : "Display";
 }
 
+
+function restoreButtonStates() {
+  document.querySelectorAll('.ask-button, .display-button').forEach(button => {
+    const questionId = button.getAttribute('data-question-id');
+    const isAskButton = button.classList.contains('ask-button');
+    const stateKey = (isAskButton ? "askState-" : "displayState-") + questionId;
+    const isActive = localStorage.getItem(stateKey) === "true";
+    button.textContent = isAskButton ? (isActive ? "Stop" : "Ask") : (isActive ? "UnDisplay" : "Display");
+    button.dataset.isActive = isActive.toString(); 
+  });
+}
