@@ -169,13 +169,20 @@ function initializeQuestionFormEventListeners() {
   }
 
   const addQuestionBtn = document.getElementById("addQuestionBtn");
+  
   if (addQuestionBtn) {
     addQuestionBtn.addEventListener("click", function () {
       const questionInput = document.getElementById("questionInput");
       const answerInput = document.getElementById("answerInput");
 
       if (!questionInput.value.trim() || !answerInput.value.trim()) {
-        alert("Please fill in both the question and the answer.");
+        Swal.fire({
+          icon: 'warning',
+          title: 'Incomplete Fields',
+          text: 'Please fill in both the question and the answer.',
+          confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+          confirmButtonText: 'OK'
+        });
         return;
       }
 
@@ -191,36 +198,56 @@ function initializeQuestionFormEventListeners() {
           correct_answer: answerInput.value,
         }),
       })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(
-              "Network response was not ok. Status: " + response.status
-            );
-          }
-          return response.json();
-        })
-        .then((data) => {
-          if (data.success) {
-            questionInput.value = "";
-            answerInput.value = "";
-            fetchQuestionsAndDisplay(classId);
-            questionForm.classList.add("hidden");
-            createQuestionBtn.classList.remove("hidden");
-          } else {
-            alert("Failed to add the question. Please try again.");
-          }
-        })
-        .catch((error) => {
-          console.error("Error adding question:", error);
-          alert("An error occurred while trying to add the question.");
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok. Status: " + response.status);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          questionInput.value = "";
+          answerInput.value = "";
+          fetchQuestionsAndDisplay(classId);
           questionForm.classList.add("hidden");
           createQuestionBtn.classList.remove("hidden");
+          Swal.fire({
+            icon: 'success',
+            title: 'Question Added',
+            text: 'The question has been successfully added.',
+            confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+            confirmButtonText: 'OK'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Failed',
+            text: 'Failed to add the question. Please try again.',
+            confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+            confirmButtonText: 'OK'
+          });
+        }
+      })
+      .catch((error) => {
+        console.error("Error adding question:", error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'An error occurred while trying to add the question.',
+          confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
+          confirmButtonText: 'OK'
         });
+        questionForm.classList.add("hidden");
+        createQuestionBtn.classList.remove("hidden");
+      });
     });
   }
 
   fetchQuestionsAndDisplay(classId);
 }
+
+
+
 function fetchQuestionsAndDisplay(classId) {
   fetch(`/class/${classId}/questions`)
     .then((response) => response.json())
