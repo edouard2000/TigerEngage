@@ -8,3 +8,4 @@ openai
 requests
 SocketIO
 reportlab
+flask_socketio
