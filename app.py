@@ -74,10 +74,30 @@ def home():
 
 @app.route("/logout", methods=["GET"])
 def logout():
-    flask.session.clear()
-    html_code = flask.render_template('home.html')
-    response = flask.make_response(html_code)
-    return response
+    db = SessionLocal()
+    try:
+        user_id = flask.session.get("username")
+        if user_id:
+            # Check for active or displayed questions associated with the user's classes
+            active_or_displayed_questions = db.query(Question).join(Class, Question.class_id == Class.class_id).filter(
+                (Class.instructor_id == user_id) & ((Question.is_active == True) | (Question.is_displayed == True))
+            ).first()
+            if active_or_displayed_questions:
+                return jsonify({
+                    "success": False,
+                    "message": "There are active or displayed questions. Please resolve them before logging out."
+                }), 400
+
+        flask.session.clear()
+        html_code = flask.render_template('home.html')
+        response = flask.make_response(html_code)
+        return response
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
+
 
 
 @app.route("/role-selection")
@@ -529,16 +549,24 @@ def end_class_session(class_id):
                 "message": "No active session found for this class"
             }), 404
 
+        # Check for active or displayed questions
+        active_or_displayed_questions = db.query(Question).filter(
+            Question.class_id == class_id, (Question.is_active == True) | (Question.is_displayed == True)
+        ).first()
+        if active_or_displayed_questions:
+            return jsonify({
+                "success": False,
+                "message": "There are still active or displayed questions. Please resolve them before ending the session."
+            }), 400
+
         active_session.is_active = False
         active_session.ended = True  
         active_session.end_time = datetime.now()
         db.commit()
-        session['show_feedback_modal'] = True
-        
+
         return jsonify({
             "success": True,
-            "message": "Class session ended successfully.",
-            "showModal": True 
+            "message": "Class session ended successfully."
         }), 200
 
     except Exception as e:
@@ -546,6 +574,7 @@ def end_class_session(class_id):
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/class/<class_id>/session_status", methods=["GET"])
@@ -1071,3 +1100,8 @@ def get_replies(message_id):
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         db_session.close()
+        
+        
+        
+
+

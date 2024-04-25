@@ -102,9 +102,7 @@ function toggleClassSession(classId, action, button) {
         Swal.fire({
           icon: "success",
           title: "Success!",
-          text: `Class session ${
-            action === "start" ? "started" : "ended"
-          } successfully.`,
+          text: `Class session ${action === "start" ? "started" : "ended"} successfully.`,
           confirmButtonText: "OK",
         }).then((result) => {
           if (result.isConfirmed) {
@@ -112,10 +110,11 @@ function toggleClassSession(classId, action, button) {
           }
         });
       } else {
+ 
         Swal.fire({
           icon: "error",
           title: "Failed!",
-          text: data.message || `Failed to ${action} class session.`,
+          text: data.message, 
           confirmButtonText: "OK",
         });
       }
@@ -125,11 +124,12 @@ function toggleClassSession(classId, action, button) {
       Swal.fire({
         icon: "error",
         title: "Oops...",
-        text: `An error occurred while trying to ${action} the class session.`,
+        text: `An error occurred while trying to ${action} the class session: ${error.message}`,
         confirmButtonText: "OK",
       });
     });
 }
+
 
 
 
@@ -375,7 +375,6 @@ function toggleDisplay(questionId, button) {
   });
 }
 
-
 function handleAskStopQuestion(questionId, buttonElement) {
   const currentState = buttonElement.getAttribute("data-is-active") === "true";
   const isAsking = !currentState;
@@ -487,8 +486,6 @@ function getClassIdFromUrl() {
 
 
 
-
-
 function deleteQuestion(questionId) {
   Swal.fire({
     title: "Are you sure?",
@@ -536,7 +533,6 @@ function deleteQuestion(questionId) {
 
 
 
-
 document
   .getElementById("editQuestionForm")
   .addEventListener("submit", function (e) {
@@ -577,7 +573,6 @@ document
         alert(`An error occurred: ${error.message}`);
       });
   });
-
 
 
 
@@ -642,9 +637,6 @@ document
     e.preventDefault();
     submitEditForm();
   });
-
-
-
 
 
 
