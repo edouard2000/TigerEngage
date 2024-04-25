@@ -37,7 +37,6 @@ class TextSummarizer:
             return "An error occurred while generating the summary."
 
     def summarize_student_answers(self, question, student_answers, correct_answer):
-        print(f"question: {question} student answers: {student_answers} correct answer: {correct_answer}")
         openai.api_key = self.api_key
 
         prompt = f"Question: {question}\n\nStudent answers:\n" + "\n".join([f"- {ans}" for ans in student_answers]) + \

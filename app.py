@@ -700,10 +700,7 @@ def toggle_question(class_id, question_id):
     finally:
         session.close()
 
-
-@app.route(
-    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
-)
+@app.route("/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
 def edit_question(class_id, question_id):
     data = request.get_json()
     db = SessionLocal()
@@ -714,6 +711,20 @@ def edit_question(class_id, question_id):
             .first()
         )
         if question:
+            if question.summaries or question.is_displayed or question.is_active:
+                messages = []
+                if question.summaries:
+                    messages.append("This question has summaries associated with it.")
+                if question.is_displayed:
+                    messages.append("This question is currently displayed to students.")
+                if question.is_active:
+                    messages.append("This question is currently active.")
+                
+                return jsonify({
+                    "success": False,
+                    "message": " ".join(messages)
+                }), 403
+
             question.text = data["question_text"]
             question.correct_answer = data["correct_answer"]
             db.commit()
@@ -726,8 +737,7 @@ def edit_question(class_id, question_id):
         db.close()
 
 
-@app.route(
-    "/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
+@app.route("/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
 def delete_question(class_id, question_id):
     db = SessionLocal()
     try:
@@ -737,21 +747,21 @@ def delete_question(class_id, question_id):
             .first()
         )
         if question:
-            if question.is_active:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": "Question is active. Please deactivate the question before deleting.",
-                        }
-                    ),
-                    400,
-                )
+            if question.is_active or question.is_displayed:
+                message = "Question is "
+                if question.is_active:
+                    message += "active"
+                if question.is_displayed:
+                    if question.is_active:
+                        message += " and displayed"
+                    else:
+                        message += "displayed"
+                message += ". Please deactivate and ensure it is not displayed before deleting."
+                return jsonify({"success": False, "message": message}), 400
+            
             db.delete(question)
             db.commit()
-            return jsonify(
-                {"success": True, "message": "Question deleted successfully."}
-            )
+            return jsonify({"success": True, "message": "Question deleted successfully."})
         else:
             return jsonify({"success": False, "message": "Question not found."}), 404
     except Exception as e:
@@ -759,6 +769,7 @@ def delete_question(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/class/<class_id>/submit-answer", methods=["POST"])
@@ -838,7 +849,7 @@ def class_feedback(class_id):
 
         feedback_data = db_operations.get_feedback_data(db_session, class_id, displayed_question.question_id)
         if not feedback_data:
-            return render_template("feedback.html", error="Feedback data not available.")
+            return render_template("feedback.html", question_content="Question haven't asked yet")
 
         user_answer_text = "You are an instructor; you don't have a submitted answer."
         if user_role == "student":
@@ -1077,58 +1088,58 @@ def delete_message(message_id):
         
         
         
-@app.route('/edit_message/<message_id>', methods=['POST'])
-def edit_message(message_id):
-    user_id = session.get('username') 
-    if not user_id:
-        return jsonify({'success': False, 'message': 'Authentication required'}), 401
+# @app.route('/edit_message/<message_id>', methods=['POST'])
+# def edit_message(message_id):
+#     user_id = session.get('username') 
+#     if not user_id:
+#         return jsonify({'success': False, 'message': 'Authentication required'}), 401
 
-    data = request.get_json()
-    new_text = data.get('text')
-    if not new_text:
-        return jsonify({'success': False, 'message': 'No text provided'}), 400
+#     data = request.get_json()
+#     new_text = data.get('text')
+#     if not new_text:
+#         return jsonify({'success': False, 'message': 'No text provided'}), 400
 
-    db_session = SessionLocal()
-    try:
-        message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
-        if not message:
-            return jsonify({'success': False, 'message': 'Message not found'}), 404
+#     db_session = SessionLocal()
+#     try:
+#         message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
+#         if not message:
+#             return jsonify({'success': False, 'message': 'Message not found'}), 404
 
-        if message.sender_id != user_id:
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+#         if message.sender_id != user_id:
+#             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
-        message.text = new_text
-        db_session.commit()
-        emit('message_updated', {'message_id': str(message_id), 'new_text': new_text}, room=message.class_id)
+#         message.text = new_text
+#         db_session.commit()
+#         emit('message_updated', {'message_id': str(message_id), 'new_text': new_text}, room=message.class_id)
 
-        return jsonify({'success': True, 'message': 'Message updated successfully'})
-    except SQLAlchemyError as e:
-        db_session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        db_session.close()
+#         return jsonify({'success': True, 'message': 'Message updated successfully'})
+#     except SQLAlchemyError as e:
+#         db_session.rollback()
+#         return jsonify({'success': False, 'error': str(e)}), 500
+#     finally:
+#         db_session.close()
         
 
-@app.route('/get_replies/<message_id>', methods=['GET'])
-def get_replies(message_id):
-    db_session = SessionLocal()
-    try:
-        parent_message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
-        if not parent_message:
-            return jsonify({'success': False, 'message': 'Parent message not found'}), 404
+# @app.route('/get_replies/<message_id>', methods=['GET'])
+# def get_replies(message_id):
+#     db_session = SessionLocal()
+#     try:
+#         parent_message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
+#         if not parent_message:
+#             return jsonify({'success': False, 'message': 'Parent message not found'}), 404
 
-        replies = db_session.query(ChatMessage).filter_by(replied_to_id=message_id).order_by(ChatMessage.timestamp).all()
-        replies_json = [{
-            'message_id': str(reply.message_id),
-            'sender_id': reply.sender_id,
-            'text': reply.text,
-            'timestamp': reply.timestamp.isoformat(),
-            'replied_to_id': str(reply.replied_to_id)
-        } for reply in replies]
+#         replies = db_session.query(ChatMessage).filter_by(replied_to_id=message_id).order_by(ChatMessage.timestamp).all()
+#         replies_json = [{
+#             'message_id': str(reply.message_id),
+#             'sender_id': reply.sender_id,
+#             'text': reply.text,
+#             'timestamp': reply.timestamp.isoformat(),
+#             'replied_to_id': str(reply.replied_to_id)
+#         } for reply in replies]
 
-        return jsonify({'success': True, 'replies': replies_json})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        db_session.close()
+#         return jsonify({'success': True, 'replies': replies_json})
+#     except Exception as e:
+#         return jsonify({'success': False, 'error': str(e)}), 500
+#     finally:
+#         db_session.close()
 

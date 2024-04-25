@@ -252,7 +252,6 @@ function initializeQuestionFormEventListeners() {
 
   fetchQuestionsAndDisplay(classId);
 }
-
 function fetchQuestionsAndDisplay(classId) {
   console.log("Fetching questions...");
   fetch(`/class/${classId}/questions`)
@@ -266,33 +265,45 @@ function fetchQuestionsAndDisplay(classId) {
       questionsContainer.innerHTML = "";
       if (data.questions && data.questions.length > 0) {
         data.questions.forEach(question => {
+          const questionElement = createQuestionElement(question);  
+          questionsContainer.appendChild(questionElement); 
+        });
+
+
+        data.questions.forEach(question => {
           fetch(`/class/${classId}/question/${question.question_id}/status`)
             .then(statusResponse => statusResponse.json())
             .then(statusData => {
               if (statusData.success) {
-                question.is_active = statusData.isActive;
-                question.is_displayed = statusData.isDisplayed;
-                console.log(`is displayed status: ${question.is_displayed}`)
+                const questionElement = document.querySelector(`[data-question-id="${question.question_id}"]`);
+                updateQuestionStatus(questionElement, statusData.isActive, statusData.isDisplayed);
 
                 localStorage.setItem(`askState-${question.question_id}`, statusData.isActive.toString());
                 localStorage.setItem(`displayState-${question.question_id}`, statusData.isDisplayed.toString());
               }
-              const questionElement = createQuestionElement(question);
-              questionsContainer.appendChild(questionElement);
             })
             .catch(statusError => {
               console.error(`Error fetching status for question ${question.question_id}:`, statusError);
             });
         });
+
         initializeQuestionEventListeners();
       } else {
         questionsContainer.innerHTML = "<p>No questions found for this class.</p>";
       }
     })
-    .catch(error => {
+    .catch(error => {8
       console.error("Error fetching questions:", error);
-    })  
+    });
 }
+
+function updateQuestionStatus(questionElement, isActive, isDisplayed) {
+  if (questionElement) {
+    questionElement.classList.toggle('active', isActive);
+    questionElement.classList.toggle('displayed', isDisplayed);
+  }
+}
+
 
 
 function createQuestionElement(question) {
@@ -490,43 +501,40 @@ function deleteQuestion(questionId) {
     showCancelButton: true,
     confirmButtonColor: "#3085d6",
     cancelButtonColor: "#d33",
-    confirmButtonText: "Yes, delete it!",
+    confirmButtonText: "Yes, delete it!"
   }).then((result) => {
     if (result.isConfirmed) {
-      const csrfToken = document
-        .querySelector('meta[name="csrf-token"]')
-        .getAttribute("content");
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
       fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": csrfToken,
+          "X-CSRF-Token": csrfToken
         },
-        credentials: "include",
+        credentials: "include"
       })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            Swal.fire("Deleted!", "Your question has been deleted.", "success");
-            fetchQuestionsAndDisplay(globalClassId);
-          } else {
-            throw new Error(data.message);
-          }
-        })
-        .catch((error) => {
-          console.error("Error deleting question:", error);
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: `An error occurred: ${error.message}`,
-            confirmButtonColor: "#d33",
-            confirmButtonText: "OK",
-          });
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          Swal.fire("Deleted!", "Your question has been deleted.", "success");
+          fetchQuestionsAndDisplay(globalClassId);
+        } else {
+          throw new Error(data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting question:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: `An error occurred: ${error.message}`,
+          confirmButtonColor: "#d33",
+          confirmButtonText: "OK"
         });
+      });
     }
   });
 }
-
 
 
 document
@@ -541,34 +549,39 @@ document
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": document
-          .querySelector('meta[name="csrf-token"]')
-          .getAttribute("content"),
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
       },
       body: JSON.stringify({
         question_text: questionText,
         correct_answer: answerText,
       }),
     })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          fetchQuestionsAndDisplay(globalClassId);
-          document.getElementById("editQuestionModal").style.display = "none";
-        } else {
-          throw new Error("Failed to update the question.");
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating question:", error);
-        alert(`An error occurred: ${error.message}`);
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        fetchQuestionsAndDisplay(globalClassId);
+        document.getElementById("editQuestionModal").style.display = "none";
+        Swal.fire({
+          title: 'Success!',
+          text: 'Question updated successfully.',
+          icon: 'success',
+          confirmButtonText: 'Ok'
+        });
+      } else {
+        throw new Error(data.message);
+      }
+    })
+    .catch(error => {
+      console.error("Error updating question:", error);
+      Swal.fire({
+        title: 'Error!',
+        text: error.message,
+        icon: 'error',
+        confirmButtonText: 'Ok'
       });
+    });
   });
+
 
 
 
