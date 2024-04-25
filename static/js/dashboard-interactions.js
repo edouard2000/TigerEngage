@@ -355,14 +355,21 @@ function toggleDisplay(questionId, button) {
   .then(data => {
     if (data.success) {
       button.setAttribute('data-is-displayed', (!isDisplayed).toString());
-      button.textContent = isDisplayed ? 'Display' : 'UnDisplay';
+      button.textContent = isDisplayed ? 'UnDisplay' : 'Display';
       Swal.fire({
         icon: 'success',
         title: 'Success',
         text: `Question has been ${!isDisplayed ? 'displayed' : 'undisplayed'} successfully.`
       });
     } else {
-      throw new Error(data.message);
+      // Handle specific server-side error messages
+      Swal.fire({
+        icon: 'error',
+        title: 'Action Denied',
+        text: data.message,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'OK'
+      });
     }
   })
   .catch(error => {
@@ -375,6 +382,8 @@ function toggleDisplay(questionId, button) {
   });
 }
 
+
+
 function handleAskStopQuestion(questionId, buttonElement) {
   const currentState = buttonElement.getAttribute("data-is-active") === "true";
   const isAsking = !currentState;
@@ -383,9 +392,7 @@ function handleAskStopQuestion(questionId, buttonElement) {
 
   Swal.fire({
     title: `Are you sure you want to ${actionText} this question?`,
-    text: `This will ${
-      isAsking ? "start" : "stop"
-    } showing the question to the class.`,
+    text: `This will ${isAsking ? "start" : "stop"} showing the question to the class.`,
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#3085d6",
@@ -397,40 +404,28 @@ function handleAskStopQuestion(questionId, buttonElement) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-CSRF-Token": document
-            .querySelector('meta[name="csrf-token"]')
-            .getAttribute("content"),
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
         },
         body: JSON.stringify({ active: isAsking }),
       })
-        .then((response) => {
-          if (response.status === 409) {
-            response.json().then((data) => {
-              Swal.fire({
-                icon: "error",
-                title: "Activation Conflict",
-                text: data.message,
-                confirmButtonColor: "#d33",
-                confirmButtonText: "OK",
-              });
-            });
-          } else if (response.ok) {
-            return response.json();
-          } else {
-            throw new Error("Failed to toggle question status.");
-          }
-        })
+        .then((response) => response.json())
         .then((data) => {
-          if (data && data.success) {
+          if (data.success) {
             buttonElement.setAttribute("data-is-active", isAsking.toString());
             updateAskButtons(questionId, isAsking);
             Swal.fire({
               icon: "success",
               title: "Success!",
-              text: `Question was successfully ${
-                isAsking ? "asked" : "stopped"
-              }.`,
+              text: `Question was successfully ${isAsking ? "asked" : "stopped"}.`,
               confirmButtonColor: "#3085d6",
+              confirmButtonText: "OK",
+            });
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Activation Conflict",
+              text: data.message,
+              confirmButtonColor: "#d33",
               confirmButtonText: "OK",
             });
           }
@@ -440,7 +435,7 @@ function handleAskStopQuestion(questionId, buttonElement) {
           Swal.fire({
             icon: "error",
             title: "Error",
-            text: error.toString(),
+            text: `An error occurred while trying to ${actionText} the question: ${error.message}`,
             confirmButtonColor: "#d33",
             confirmButtonText: "Close",
           });
@@ -448,6 +443,7 @@ function handleAskStopQuestion(questionId, buttonElement) {
     }
   });
 }
+
 
 function updateAskButtons(questionId, isAsking) {
   const buttons = document.querySelectorAll(".ask-button");

@@ -653,11 +653,27 @@ def get_question_status(class_id, question_id):
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
 def toggle_question(class_id, question_id):
+    session = SessionLocal()
     try:
         data = request.get_json()
         is_active = data.get("active", True)
-        session = SessionLocal()
         
+        # Check for an active class session
+        active_session = session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        if not active_session:
+            return jsonify({
+                "success": False, 
+                "message": "No active class session. Please start a session before asking questions."
+            }), 403
+
+        # Check if the question is currently displayed
+        question_to_update = session.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
+        if question_to_update.is_displayed:
+            return jsonify({
+                "success": False, 
+                "message": "This question is currently displayed. Please undisplay it before asking."
+            }), 409
+
         # Check if another question is already active
         if is_active:
             active_question = session.query(Question).filter(
@@ -672,18 +688,15 @@ def toggle_question(class_id, question_id):
                     "activeQuestionId": active_question.question_id
                 }), 409  
 
-        question_to_update = session.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
-        if question_to_update:
-            question_to_update.is_active = is_active
-            session.commit()
-            return jsonify({"success": True, "message": "Question status updated."}), 200
-        else:
-            return jsonify({"success": False, "message": "Question not found."}), 404
+        question_to_update.is_active = is_active
+        session.commit()
+        return jsonify({"success": True, "message": "Question status updated."}), 200
     except SQLAlchemyError as e:
         session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         session.close()
+
 
 
 @app.route(
@@ -844,43 +857,60 @@ def class_feedback(class_id):
 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
-    db_session = SessionLocal()
+    session = SessionLocal()
     try:
         data = request.get_json()
         should_display = data.get('displayed', False)
-        currently_displayed_question = db_session.query(Question).filter_by(
-            class_id=class_id, is_displayed=True).first()
-        if should_display and currently_displayed_question and currently_displayed_question.question_id != question_id:
-            return jsonify({
-                "success": False,
-                "message": "Another question is currently displayed. Please undisplay it before displaying this one."
-            }), 409
-        question = db_session.query(Question).filter_by(
-            class_id=class_id,
-            question_id=question_id
-        ).first()
-
+        
+        # Fetch the question to be updated
+        question = session.query(Question).filter_by(class_id=class_id, question_id=question_id).first()
         if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
-        if should_display:
-            question.is_displayed = True
-        else:
-            question.is_displayed = False
 
-        db_session.commit()
+        # Check if a class session is currently active
+        active_session = session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        if not active_session:
+            return jsonify({
+                "success": False,
+                "message": "No active class session. Please start a session before displaying questions."
+            }), 403
+
+        # Check if the question is currently active and the request is to display it
+        if should_display and question.is_active:
+            return jsonify({
+                "success": False,
+                "message": "This question is currently active. Please stop it before displaying."
+            }), 409
+
+        # Check if another question is already displayed when trying to display this one
+        if should_display:
+            currently_displayed_question = session.query(Question).filter(
+                Question.class_id == class_id,
+                Question.is_displayed == True,
+                Question.question_id != question_id
+            ).first()
+            if currently_displayed_question:
+                return jsonify({
+                    "success": False,
+                    "message": "Another question is currently displayed. Please undisplay it before displaying this one."
+                }), 409
+
+        question.is_displayed = should_display
+        session.commit()
         return jsonify({
             "success": True,
             "message": f"Question display status updated to {'displayed' if question.is_displayed else 'undisplayed'}.",
             "isDisplayed": question.is_displayed
         }), 200
 
-    except Exception as e:
-        db_session.rollback()
+    except SQLAlchemyError as e:
+        session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
-        db_session.close()
+        session.close()
 
-  
+
+
         
 @app.route("/submit_feedback", methods=["POST"])
 def submit_feedback():
