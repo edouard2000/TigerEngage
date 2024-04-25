@@ -689,8 +689,6 @@ def toggle_question(class_id, question_id):
 
         question_to_update.is_active = is_active
         session.commit()
-
-        # Handle summary generation and storage when question is deactivated
         if not is_active:
             summary_text = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
             db_operations.store_summary(session, question_id, summary_text)
@@ -701,7 +699,6 @@ def toggle_question(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         session.close()
-
 
 
 @app.route(
@@ -1134,8 +1131,4 @@ def get_replies(message_id):
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         db_session.close()
-        
-        
-        
-
 

@@ -291,25 +291,26 @@ def get_professors_class_id(user_id):
 
 def get_questions_for_class(class_id: str):
     """
-    Retrieves questions for a specific class.
+    Retrieves questions for a specific class ordered by their question_id to maintain consistency.
 
     Args:
         class_id (str): The unique identifier for the class.
 
     Returns:
-        list: A list of dictionaries, each containing the question ID, text, and correct answer.
+        list: A list of dictionaries, each containing the question ID, text, and correct answer, ordered by creation.
     """
     with SessionLocal() as session:
-        questions = session.query(Question).filter_by(class_id=class_id).all()
+        questions = session.query(Question).filter_by(class_id=class_id).order_by(Question.created_at).all()
         questions_data = [
             {
                 "question_id": question.question_id,
                 "text": question.text,
-                "correct_answer": question.correct_answer,
+                "correct_answer": question.correct_answer
             }
             for question in questions
         ]
         return questions_data
+
 
 
 def enroll_student(user_id, class_id):

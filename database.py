@@ -133,6 +133,7 @@ class Attendance(Base):
 class Question(Base):
     __tablename__ = "questions"
     question_id = Column(String, primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     class_id = Column(String, ForeignKey("classes.class_id"))
     text = Column(Text, nullable=False)
     correct_answer = Column(Text, nullable=True)
