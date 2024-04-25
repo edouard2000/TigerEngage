@@ -8,25 +8,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const audioStopAlert = document.getElementById('recordingStopAlert');
     let isRecording = false;  
     let recorder = null;
-    let recognition = null; 
+    let chunks = [];
+    let can_record = false;
+    let recognition; 
 
-    mic_btn.addEventListener('click', function() {
-        if (!isRecording) {
-            // Request access to the microphone
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(setupStream)
-                .catch(err => {
-                    console.error('Failed to get audio stream from microphone:', err);
-                    alert('Could not access the microphone.');
-                });
-            isRecording = true;
-        } else {
-            stopRecording();
-        }
-    });
-
-    function setupStream(stream) {
-        recorder = new MediaRecorder(stream);
+    if ('webkitSpeechRecognition' in window) {
         recognition = new webkitSpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = false; 
@@ -43,37 +29,57 @@ document.addEventListener('DOMContentLoaded', function() {
         recognition.onerror = function(event) {
             console.error('Speech recognition error:', event.error);
         };
+    } else {
+        console.log('Speech recognition not supported in this browser.');
+    }
+
+    function SetupAudio() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(SetupStream)
+            .catch(err => {
+                console.error('Failed to get audio stream from microphone:', err);
+                alert('Could not access the microphone.');
+            });
+    }
+
+    SetupAudio();
+
+    function SetupStream(stream) {
+        recorder = new MediaRecorder(stream);
 
         recorder.ondataavailable = e => chunks.push(e.data);
 
         recorder.onstop = e => {
             const blob = new Blob(chunks, {type: 'audio/ogg; codecs=opus'});
+            chunks = [];
             const audioURL = window.URL.createObjectURL(blob);
             playback.src = audioURL;
-            stopRecognition(); // Stop speech recognition
         };
 
-        recorder.start();
-        recognition.start();
-        mic_btn.textContent = 'Stop Recording';
-        recordingDot.style.display = 'inline-block';
+        can_record = true;
     }
 
-    function stopRecording() {
-        if (recorder.state !== 'inactive') {
-            recorder.stop();
-            recorder.stream.getTracks().forEach(track => track.stop()); // Release the media stream
+    mic_btn.addEventListener('click', function() {
+        if (!isRecording) {
+            audioStartAlert.play();
+            mic_btn.textContent = 'Stop Recording';
+            recordingDot.style.display = 'inline-block';
+            if (can_record) {
+                recorder.start();
+                recognition.start(); // Start speech recognition
+            }
+            isRecording = true;
+        } else {
+            audioStopAlert.play();
+            mic_btn.textContent = 'Start Recording';
+            recordingDot.style.display = 'none';
+            if (can_record) {
+                recorder.stop();
+                recognition.stop(); // Stop speech recognition
+            }
+            isRecording = false;
         }
-        mic_btn.textContent = 'Start Recording';
-        recordingDot.style.display = 'none';
-        isRecording = false;
-    }
-
-    function stopRecognition() {
-        if (recognition) {
-            recognition.stop();
-        }
-    }
+    });
 
     submit_btn.addEventListener('click', function() {
         const transcript = transcriptArea.value;
