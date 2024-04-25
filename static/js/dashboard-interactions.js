@@ -2,9 +2,10 @@ let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
   globalClassId = getClassIdFromUrl();
-  
-  document.getElementById("addQuestion")
-  .addEventListener("click", () => fetchContent("/add-question"));
+
+  document
+    .getElementById("addQuestion")
+    .addEventListener("click", () => fetchContent("/add-question"));
 
   document.getElementById("classUsers").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
@@ -13,26 +14,28 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const userListButton = document.getElementById("classUsers");
   if (userListButton) {
-      userListButton.click(); 
+    userListButton.click();
   }
 
   document.getElementById("feedback").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
-  
-  document.getElementById("liveChat")
+
+  document
+    .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
   initializeStartEndToggle();
 
-  document.querySelector(".edit-question-modal .close-button")
+  document
+    .querySelector(".edit-question-modal .close-button")
     .addEventListener("click", function () {
       document.getElementById("editQuestionModal").style.display = "none";
     });
-    updateAskButtonStates();
-    updateDisplayButtonStates();
-    initializeQuestionEventListeners();
+  initializeQuestionEventListeners();
 });
+
+
 
 function showEditQuestionModal(
   questionId,
@@ -44,6 +47,9 @@ function showEditQuestionModal(
   document.getElementById("editAnswerText").value = currentAnswerText;
   document.getElementById("editingQuestionId").value = questionId;
 }
+
+
+
 
 function fetchContent(endpoint) {
   fetch(endpoint)
@@ -62,6 +68,8 @@ function fetchContent(endpoint) {
     .catch((error) => console.error("Error loading content:", error));
 }
 
+
+
 function initializeStartEndToggle() {
   const startClassBtn = document.getElementById("startClass");
   const classId = getClassIdFromUrl();
@@ -72,6 +80,9 @@ function initializeStartEndToggle() {
     toggleClassSession(classId, action, startClassBtn);
   });
 }
+
+
+
 
 function toggleClassSession(classId, action, button) {
   const endpoint = `/class/${classId}/${action}_session`;
@@ -89,10 +100,12 @@ function toggleClassSession(classId, action, button) {
     .then((data) => {
       if (data.success) {
         Swal.fire({
-          icon: 'success',
-          title: 'Success!',
-          text: `Class session ${action === "start" ? "started" : "ended"} successfully.`,
-          confirmButtonText: 'OK'
+          icon: "success",
+          title: "Success!",
+          text: `Class session ${
+            action === "start" ? "started" : "ended"
+          } successfully.`,
+          confirmButtonText: "OK",
         }).then((result) => {
           if (result.isConfirmed) {
             checkSessionStatusAndUpdateButton(classId, button);
@@ -100,23 +113,24 @@ function toggleClassSession(classId, action, button) {
         });
       } else {
         Swal.fire({
-          icon: 'error',
-          title: 'Failed!',
+          icon: "error",
+          title: "Failed!",
           text: data.message || `Failed to ${action} class session.`,
-          confirmButtonText: 'OK'
+          confirmButtonText: "OK",
         });
       }
     })
     .catch((error) => {
       console.error("Error:", error);
       Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
+        icon: "error",
+        title: "Oops...",
         text: `An error occurred while trying to ${action} the class session.`,
-        confirmButtonText: 'OK'
+        confirmButtonText: "OK",
       });
     });
 }
+
 
 
 function checkSessionStatusAndUpdateButton(classId, button) {
@@ -138,6 +152,7 @@ function checkSessionStatusAndUpdateButton(classId, button) {
     });
 }
 
+
 function initializeQuestionFormEventListeners() {
   let csrfToken = document
     .querySelector('meta[name="csrf-token"]')
@@ -154,8 +169,12 @@ function initializeQuestionFormEventListeners() {
     });
   }
 
+
+
+
+
   const addQuestionBtn = document.getElementById("addQuestionBtn");
-  
+
   if (addQuestionBtn) {
     addQuestionBtn.addEventListener("click", function () {
       const questionInput = document.getElementById("questionInput");
@@ -163,11 +182,11 @@ function initializeQuestionFormEventListeners() {
 
       if (!questionInput.value.trim() || !answerInput.value.trim()) {
         Swal.fire({
-          icon: 'warning',
-          title: 'Incomplete Fields',
-          text: 'Please fill in both the question and the answer.',
-          confirmButtonColor: '#0284c7',  
-          confirmButtonText: 'OK'
+          icon: "warning",
+          title: "Incomplete Fields",
+          text: "Please fill in both the question and the answer.",
+          confirmButtonColor: "#0284c7",
+          confirmButtonText: "OK",
         });
         return;
       }
@@ -184,48 +203,50 @@ function initializeQuestionFormEventListeners() {
           correct_answer: answerInput.value,
         }),
       })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok. Status: " + response.status);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          questionInput.value = "";
-          answerInput.value = "";
-          fetchQuestionsAndDisplay(classId);
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(
+              "Network response was not ok. Status: " + response.status
+            );
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data.success) {
+            questionInput.value = "";
+            answerInput.value = "";
+            fetchQuestionsAndDisplay(classId);
+            questionForm.classList.add("hidden");
+            createQuestionBtn.classList.remove("hidden");
+            Swal.fire({
+              icon: "success",
+              title: "Question Added",
+              text: "The question has been successfully added.",
+              confirmButtonColor: "#0284c7", 
+              confirmButtonText: "OK",
+            });
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Failed",
+              text: "Failed to add the question. Please try again.",
+              confirmButtonColor: "#0284c7",
+              confirmButtonText: "OK",
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error adding question:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "An error occurred while trying to add the question.",
+            confirmButtonColor: "#0284c7",
+            confirmButtonText: "OK",
+          });
           questionForm.classList.add("hidden");
           createQuestionBtn.classList.remove("hidden");
-          Swal.fire({
-            icon: 'success',
-            title: 'Question Added',
-            text: 'The question has been successfully added.',
-            confirmButtonColor: '#0284c7',  // Tailwind CSS sky-600
-            confirmButtonText: 'OK'
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Failed',
-            text: 'Failed to add the question. Please try again.',
-            confirmButtonColor: '#0284c7',  
-            confirmButtonText: 'OK'
-          });
-        }
-      })
-      .catch((error) => {
-        console.error("Error adding question:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'An error occurred while trying to add the question.',
-          confirmButtonColor: '#0284c7',  
-          confirmButtonText: 'OK'
         });
-        questionForm.classList.add("hidden");
-        createQuestionBtn.classList.remove("hidden");
-      });
     });
   }
 
@@ -233,23 +254,28 @@ function initializeQuestionFormEventListeners() {
 }
 
 function fetchQuestionsAndDisplay(classId) {
+  console.log("Fetching questions...");
   fetch(`/class/${classId}/questions`)
     .then(response => response.json())
     .then(data => {
       const questionsContainer = document.getElementById("questionsList");
       if (!questionsContainer) {
         console.error("The questionsList container was not found on the page.");
-        return; 
+        return;
       }
       questionsContainer.innerHTML = "";
       if (data.questions && data.questions.length > 0) {
         data.questions.forEach(question => {
-          // Fetch the current status for each question
           fetch(`/class/${classId}/question/${question.question_id}/status`)
             .then(statusResponse => statusResponse.json())
             .then(statusData => {
               if (statusData.success) {
-                question.is_active = statusData.is_active; // Set the current active status from the server
+                question.is_active = statusData.isActive;
+                question.is_displayed = statusData.isDisplayed;
+                console.log(`is displayed status: ${question.is_displayed}`)
+
+                localStorage.setItem(`askState-${question.question_id}`, statusData.isActive.toString());
+                localStorage.setItem(`displayState-${question.question_id}`, statusData.isDisplayed.toString());
               }
               const questionElement = createQuestionElement(question);
               questionsContainer.appendChild(questionElement);
@@ -258,25 +284,21 @@ function fetchQuestionsAndDisplay(classId) {
               console.error(`Error fetching status for question ${question.question_id}:`, statusError);
             });
         });
-        // These will setup event listeners and restore states once all questions are processed
         initializeQuestionEventListeners();
-        restoreButtonStates();
-        updateButtonsStateBasedOnActivity();
       } else {
         questionsContainer.innerHTML = "<p>No questions found for this class.</p>";
       }
     })
     .catch(error => {
       console.error("Error fetching questions:", error);
-    })
-    .finally(() => {
-      setupDisplayButtons();
-    });
+    })  
 }
 
 
-
 function createQuestionElement(question) {
+  const isActive = localStorage.getItem(`askState-${question.question_id}`) === 'true';
+  const isDisplayed = localStorage.getItem(`displayState-${question.question_id}`) === 'true';
+  
   const element = document.createElement("div");
   element.className = "question-element flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 text-white";
   element.innerHTML = `
@@ -291,17 +313,20 @@ function createQuestionElement(question) {
         <button class="delete-button py-1 px-3 rounded bg-red-500 hover:bg-red-600 transition duration-300 ml-2" data-question-id="${question.question_id}">
             Delete
         </button>
-        <button class="ask-button py-1 px-3 rounded ${question.is_active ? "bg-red-600" : "bg-green-500"} hover:bg-green-600 transition duration-300 ml-2" data-question-id="${question.question_id}" data-is-active="${question.is_active}">
-            ${question.is_active ? "Stop" : "Ask"}
+        <button class="ask-button py-1 px-3 rounded ${isActive ? "bg-red-600" : "bg-green-500"} hover:bg-green-600 transition duration-300 ml-2" data-question-id="${question.question_id}" data-is-active="${isActive}">
+            ${isActive ? "Stop" : "Ask"}
         </button>
-        <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${question.question_id}">
-            Display
+        <button class="display-button py-1 px-3 rounded ${isDisplayed ? "bg-blue-700" : "bg-blue-500"} hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${question.question_id}" data-is-displayed="${isDisplayed}">
+            ${isDisplayed ? "UnDisplay" : "Display"}
         </button>
     </div>
   `;
 
   element.querySelector(".ask-button").addEventListener("click", function () {
     handleAskStopQuestion(question.question_id, this);
+  });
+  element.querySelector(".display-button").addEventListener("click", function () {
+    toggleDisplay(question.question_id, this);
   });
   element.querySelector(".delete-button").addEventListener("click", function () {
     deleteQuestion(question.question_id);
@@ -314,134 +339,138 @@ function createQuestionElement(question) {
 }
 
 
-function updateButtonsStateBasedOnActivity() {
-  const askButtons = document.querySelectorAll(".ask-button");
-  let isActiveQuestionPresent = false;
 
-  askButtons.forEach((button) => {
-    const isActive = button.getAttribute("data-is-active") === "true";
-    button.textContent = isActive ? "Stop" : "Ask";
-
-    if (isActive) {
-      isActiveQuestionPresent = true;
+function toggleDisplay(questionId, button) {
+  const isDisplayed = button.getAttribute('data-is-displayed') === 'true';
+  const endpoint = `/class/${globalClassId}/question/${questionId}/toggle_display`;
+  fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ displayed: !isDisplayed })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      button.setAttribute('data-is-displayed', (!isDisplayed).toString());
+      button.textContent = isDisplayed ? 'Display' : 'UnDisplay';
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: `Question has been ${!isDisplayed ? 'displayed' : 'undisplayed'} successfully.`
+      });
+    } else {
+      throw new Error(data.message);
     }
-  });
-
-  if (isActiveQuestionPresent) {
-    askButtons.forEach((button) => {
-      const isActive = button.getAttribute("data-is-active") === "true";
-      if (!isActive) {
-        button.disabled = true;
-      }
+  })
+  .catch(error => {
+    console.error('Error toggling display:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: `An error occurred: ${error.message}`
     });
-  }
+  });
 }
 
+
 function handleAskStopQuestion(questionId, buttonElement) {
-  const currentState = buttonElement.getAttribute('data-is-active') === 'true';
-  const isAsking = !currentState; // Toggle the current state
+  const currentState = buttonElement.getAttribute("data-is-active") === "true";
+  const isAsking = !currentState;
   const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
   const actionText = isAsking ? "ask" : "stop";
 
   Swal.fire({
-      title: `Are you sure you want to ${actionText} this question?`,
-      text: `This will ${isAsking ? "start" : "stop"} showing the question to the class.`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: `Yes, ${actionText} it!`
+    title: `Are you sure you want to ${actionText} this question?`,
+    text: `This will ${
+      isAsking ? "start" : "stop"
+    } showing the question to the class.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: `Yes, ${actionText} it!`,
   }).then((result) => {
-      if (result.isConfirmed) {
-          fetch(endpoint, {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-                  "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-              },
-              body: JSON.stringify({ active: isAsking }),
-          })
-          .then((response) => {
-              if (response.status === 409) { // Conflict, another question is active
-                  response.json().then(data => {
-                      Swal.fire({
-                          icon: 'error',
-                          title: 'Activation Conflict',
-                          text: data.message,
-                          confirmButtonColor: '#d33',
-                          confirmButtonText: 'OK'
-                      });
-                  });
-              } else if (response.ok) {
-                  return response.json();
-              } else {
-                  throw new Error('Failed to toggle question status.');
-              }
-          })
-          .then((data) => {
-              if (data && data.success) {
-                  buttonElement.setAttribute('data-is-active', isAsking.toString());
-                  updateAskButtons(questionId, isAsking);
-                  Swal.fire({
-                      icon: 'success',
-                      title: 'Success!',
-                      text: `Question was successfully ${isAsking ? "asked" : "stopped"}.`,
-                      confirmButtonColor: '#3085d6',
-                      confirmButtonText: 'OK'
-                  });
-              }
-          })
-          .catch((error) => {
-              console.error("Error:", error);
+    if (result.isConfirmed) {
+      fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document
+            .querySelector('meta[name="csrf-token"]')
+            .getAttribute("content"),
+        },
+        body: JSON.stringify({ active: isAsking }),
+      })
+        .then((response) => {
+          if (response.status === 409) {
+            response.json().then((data) => {
               Swal.fire({
-                  icon: 'error',
-                  title: 'Error',
-                  text: error.toString(),
-                  confirmButtonColor: '#d33',
-                  confirmButtonText: 'Close'
+                icon: "error",
+                title: "Activation Conflict",
+                text: data.message,
+                confirmButtonColor: "#d33",
+                confirmButtonText: "OK",
               });
+            });
+          } else if (response.ok) {
+            return response.json();
+          } else {
+            throw new Error("Failed to toggle question status.");
+          }
+        })
+        .then((data) => {
+          if (data && data.success) {
+            buttonElement.setAttribute("data-is-active", isAsking.toString());
+            updateAskButtons(questionId, isAsking);
+            Swal.fire({
+              icon: "success",
+              title: "Success!",
+              text: `Question was successfully ${
+                isAsking ? "asked" : "stopped"
+              }.`,
+              confirmButtonColor: "#3085d6",
+              confirmButtonText: "OK",
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: error.toString(),
+            confirmButtonColor: "#d33",
+            confirmButtonText: "Close",
           });
-      }
-  });
-}
-
-
-
-
-function updateAskButtons(questionId, isAsking) {
-  const buttons = document.querySelectorAll(".ask-button");
-  buttons.forEach((btn) => {
-      if (btn.getAttribute("data-question-id") === questionId) {
-          btn.textContent = isAsking ? "Stop" : "Ask";
-          btn.setAttribute("data-is-active", isAsking.toString());
-      }
-      btn.disabled = isAsking && btn.getAttribute("data-question-id") !== questionId;
-  });
-}
-
-
-function disableAllOtherAskButtons(excludeButton) {
-  document.querySelectorAll(".ask-button").forEach((btn) => {
-    if (btn !== excludeButton) {
-      btn.disabled = true;
+        });
     }
   });
 }
 
-function enableAllAskButtons() {
-  document.querySelectorAll(".ask-button").forEach((btn) => {
-    btn.disabled = false;
+function updateAskButtons(questionId, isAsking) {
+  const buttons = document.querySelectorAll(".ask-button");
+  buttons.forEach((btn) => {
+    if (btn.getAttribute("data-question-id") === questionId) {
+      btn.textContent = isAsking ? "Stop" : "Ask";
+      btn.setAttribute("data-is-active", isAsking.toString());
+    }
+    btn.disabled =
+      isAsking && btn.getAttribute("data-question-id") !== questionId;
   });
 }
+
+
 
 function initializeQuestionEventListeners() {
   const askButtons = document.querySelectorAll(".ask-button");
   askButtons.forEach((button) => {
     if (!button.dataset.listenerAdded) {
-      button.addEventListener("click", function() {
-        const questionId = button.getAttribute("data-question-id");
+      button.addEventListener("click", function () {
         const isActive = button.getAttribute("data-is-active") === "true";
-        const newIsActive = !isActive; 
+        const newIsActive = !isActive;
 
         handleAskStopQuestion(this.dataset.questionId, this);
         button.setAttribute("data-is-active", newIsActive.toString());
@@ -456,18 +485,24 @@ function getClassIdFromUrl() {
   return urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
 }
 
+
+
+
+
 function deleteQuestion(questionId) {
   Swal.fire({
-    title: 'Are you sure?',
+    title: "Are you sure?",
     text: "You won't be able to revert this!",
-    icon: 'warning',
+    icon: "warning",
     showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it!",
   }).then((result) => {
     if (result.isConfirmed) {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+      const csrfToken = document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content");
       fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
         method: "DELETE",
         headers: {
@@ -476,32 +511,29 @@ function deleteQuestion(questionId) {
         },
         credentials: "include",
       })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          Swal.fire(
-            'Deleted!',
-            'Your question has been deleted.',
-            'success'
-          );
-          fetchQuestionsAndDisplay(globalClassId);
-        } else {
-          throw new Error(data.message);
-        }
-      })
-      .catch((error) => {
-        console.error("Error deleting question:", error);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: `An error occurred: ${error.message}`,
-          confirmButtonColor: '#d33',  
-          confirmButtonText: 'OK'
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            Swal.fire("Deleted!", "Your question has been deleted.", "success");
+            fetchQuestionsAndDisplay(globalClassId);
+          } else {
+            throw new Error(data.message);
+          }
+        })
+        .catch((error) => {
+          console.error("Error deleting question:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: `An error occurred: ${error.message}`,
+            confirmButtonColor: "#d33",
+            confirmButtonText: "OK",
+          });
         });
-      });
     }
   });
 }
+
 
 
 
@@ -546,6 +578,9 @@ document
       });
   });
 
+
+
+
 function fetchEditModalContent(
   questionId,
   currentQuestionText,
@@ -586,6 +621,10 @@ function fetchEditModalContent(
     });
 }
 
+
+
+
+
 function showEditQuestionModal(
   questionId,
   currentQuestionText,
@@ -604,22 +643,29 @@ document
     submitEditForm();
   });
 
-  function submitEditForm() {
-    const questionId = document.getElementById("editingQuestionId").value;
-    const questionText = document.getElementById("editQuestionText").value;
-    const answerText = document.getElementById("editAnswerText").value;
-  
-    fetch(`/class/${globalClassId}/question/${questionId}/edit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-      },
-      body: JSON.stringify({
-        question_text: questionText,
-        correct_answer: answerText,
-      }),
-    })
+
+
+
+
+
+function submitEditForm() {
+  const questionId = document.getElementById("editingQuestionId").value;
+  const questionText = document.getElementById("editQuestionText").value;
+  const answerText = document.getElementById("editAnswerText").value;
+
+  fetch(`/class/${globalClassId}/question/${questionId}/edit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": document
+        .querySelector('meta[name="csrf-token"]')
+        .getAttribute("content"),
+    },
+    body: JSON.stringify({
+      question_text: questionText,
+      correct_answer: answerText,
+    }),
+  })
     .then((response) => {
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -628,11 +674,11 @@ document
     .then((data) => {
       if (data.success) {
         Swal.fire({
-          icon: 'success',
-          title: 'Success',
-          text: 'Question successfully updated.',
-          confirmButtonColor: '#3085d6',  
-          confirmButtonText: 'OK'
+          icon: "success",
+          title: "Success",
+          text: "Question successfully updated.",
+          confirmButtonColor: "#3085d6",
+          confirmButtonText: "OK",
         });
         fetchQuestionsAndDisplay(globalClassId);
         document.getElementById("editQuestionModal").style.display = "none";
@@ -643,148 +689,13 @@ document
     .catch((error) => {
       console.error("Error updating question:", error);
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
+        icon: "error",
+        title: "Error",
         text: `An error occurred: ${error.message}`,
-        confirmButtonColor: '#d33',  
-        confirmButtonText: 'OK'
+        confirmButtonColor: "#d33",
+        confirmButtonText: "OK",
       });
     });
-  }
-  
-
-function setupDisplayButtons() {
-  const buttons = document.querySelectorAll(".display-button");
-  buttons.forEach(button => {
-    const questionId = button.getAttribute("data-question-id");
-    const isDisplayed = localStorage.getItem(`displayState-${questionId}`) === "true";
-    button.textContent = isDisplayed ? "UnDisplay" : "Display";
-    button.addEventListener("click", function() {
-      const shouldDisplay = !isDisplayed; 
-      toggleDisplay(questionId, shouldDisplay, button);
-    });
-  });
-}
-
-function updateQuestionDisplay(questionId, isDisplayed) {
-  const questionElement = document.querySelector(`[data-question-id="${questionId}"]`);
-  if (questionElement) {
-    questionElement.style.display = isDisplayed ? 'block' : 'none'; 
-  }
-}
-
-function handleDisplayClick() {
-  const button = this;
-  const questionId = button.getAttribute("data-question-id");
-  const shouldDisplay = localStorage.getItem(`displayState-${questionId}`) !== "true";
-  toggleDisplay(questionId, shouldDisplay, button);
 }
 
 
-async function toggleDisplay(questionId) {
-  const button = document.querySelector(`[data-question-id="${questionId}"].display-button`);
-  const shouldDisplay = !button.classList.contains('active');
-  localStorage.setItem(`displayState-${questionId}`, shouldDisplay);
-  const actionText = shouldDisplay ? "display" : "hide";
-
-  
-  Swal.fire({
-    title: `Are you sure you want to ${actionText} this question?`,
-    text: `This will ${shouldDisplay ? "show" : "remove"} the question from the class display.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: `Yes, ${actionText} it!`
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-          },
-          body: JSON.stringify({ displayed: shouldDisplay })
-        });
-
-        const data = await response.json();
-        if (data.success) {
-          updateDisplayState(questionId, data.isDisplayed);
-          Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: `Question has been ${shouldDisplay ? "displayed" : "hidden"} successfully.`,
-            confirmButtonColor: '#3085d6',  
-            confirmButtonText: 'OK'
-          });
-        } else {
-          throw new Error(data.message); 
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: `An error occurred: ${error.message}`,
-            confirmButtonColor: '#d33',  
-            confirmButtonText: 'Close'
-        });
-      }
-    }
-  });
-}
-
-
-function highlightDisplayedQuestion(displayedQuestionId) {
-  document.querySelectorAll('.display-button').forEach(button => {
-    if (button.getAttribute('data-question-id') === displayedQuestionId) {
-      button.classList.add('highlighted'); 
-    } else {
-      button.classList.remove('highlighted');
-    }
-  });
-}
-
-
-function updateDisplayState(questionId, isDisplayed) {
-  const buttons = document.querySelectorAll(".display-button");
-  buttons.forEach(btn => {
-    btn.disabled = false; 
-  });
-
-  const targetButton = document.querySelector(`[data-question-id="${questionId}"].display-button`);
-  targetButton.classList.toggle('active', isDisplayed);
-  targetButton.textContent = isDisplayed ? "UnDisplay" : "Display";
-}
-
-
-function restoreButtonStates() {
-  document.querySelectorAll('.ask-button, .display-button').forEach(button => {
-    const questionId = button.getAttribute('data-question-id');
-    const isAskButton = button.classList.contains('ask-button');
-    const stateKey = (isAskButton ? "askState-" : "displayState-") + questionId;
-    const isActive = localStorage.getItem(stateKey) === "true";
-    button.textContent = isAskButton ? (isActive ? "Stop" : "Ask") : (isActive ? "UnDisplay" : "Display");
-    button.dataset.isActive = isActive.toString(); 
-  });
-}
-
-
-function updateAskButtonStates() {
-  document.querySelectorAll(".ask-button").forEach(button => {
-    const questionId = button.getAttribute("data-question-id");
-    const isAsking = localStorage.getItem(`askState-${questionId}`) === 'true';
-    button.textContent = isAsking ? "Stop" : "Ask";
-    button.dataset.isActive = isAsking;
-  });
-}
-
-function updateDisplayButtonStates() {
-  document.querySelectorAll(".display-button").forEach(button => {
-    const questionId = button.getAttribute("data-question-id");
-    const isDisplayed = localStorage.getItem(`displayState-${questionId}`) === 'true';
-    button.textContent = isDisplayed ? "UnDisplay" : "Display";
-    button.classList.toggle('active', isDisplayed);
-  });
-}

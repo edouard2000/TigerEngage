@@ -603,16 +603,23 @@ def check_in(class_id):
 
 @app.route("/class/<class_id>/question/<question_id>/status", methods=["GET"])
 def get_question_status(class_id, question_id):
-    """Endpoint to get the current status of a question."""
-    session = SessionLocal()
+    db_session = SessionLocal()
     try:
-        question = session.query(Question).filter_by(class_id=class_id, question_id=question_id).first()
-        if question:
-            return jsonify({"success": True, "is_active": question.is_active}), 200
-        else:
+        question = db_session.query(Question).filter_by(
+            class_id=class_id, question_id=question_id).first()
+        if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
+
+        return jsonify({
+            "success": True,
+            "isActive": question.is_active,
+            "isDisplayed": question.is_displayed
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
-        session.close()
+        db_session.close()
+
 
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
@@ -803,42 +810,48 @@ def class_feedback(class_id):
         db_session.close()
         
         
-        
 
-# Server-side endpoint adjustment
+
+
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
     db_session = SessionLocal()
     try:
         data = request.get_json()
-        should_display = data.get('displayed', False)  
-
+        should_display = data.get('displayed', False)
+        currently_displayed_question = db_session.query(Question).filter_by(
+            class_id=class_id, is_displayed=True).first()
+        if should_display and currently_displayed_question and currently_displayed_question.question_id != question_id:
+            return jsonify({
+                "success": False,
+                "message": "Another question is currently displayed. Please undisplay it before displaying this one."
+            }), 409
         question = db_session.query(Question).filter_by(
             class_id=class_id,
             question_id=question_id
         ).first()
+
         if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
+        if should_display:
+            question.is_displayed = True
+        else:
+            question.is_displayed = False
 
-        question.is_displayed = should_display  
         db_session.commit()
-        status_message = "displayed" if question.is_displayed else "undisplayed"
         return jsonify({
             "success": True,
-            "message": f"Question {status_message} successfully.",
+            "message": f"Question display status updated to {'displayed' if question.is_displayed else 'undisplayed'}.",
             "isDisplayed": question.is_displayed
         }), 200
 
     except Exception as e:
         db_session.rollback()
-        return jsonify({
-            "success": False,
-            "message": f"Failed to toggle the display status of the question: {e}"
-        }), 500
+        return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db_session.close()
 
-        
+  
         
 @app.route("/submit_feedback", methods=["POST"])
 def submit_feedback():
