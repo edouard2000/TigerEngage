@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   loadContent("/chat");
+  console.log("Test 5")
 
   document.getElementById("nav-question").addEventListener("click", (e) => {
     e.preventDefault();
@@ -21,8 +22,9 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const classId = getClassIdFromUrl(); 
     loadContent(`/attendance/${classId}/`);
+  });
 });
-});
+
 
 function loadContent(url) {
   fetch(url)

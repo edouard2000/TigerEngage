@@ -1,0 +1,130 @@
+<div class=" flex flex-col p-4 space-y-4 overflow-y-auto h-full">
+
+          <div id="other_user_msgs" class="messageBubble flex justify-start">
+            <div
+              class="bg-gray-200 text-gray-800 rounded-l-lg rounded-br-lg px-4 py-2"
+              style="max-width: 70%"
+            >
+              <p>This is a message from the another user.</p>
+              <div class="flex justify-end space-x-2 mt-2">
+                <button class="text-xs text-sky-600 hover:underline">
+                  Reply
+                </button>
+                <button class="text-xs text-sky-600 hover:underline">
+                  Edit
+                </button>
+                <button class="text-xs text-red-500 hover:underline">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="this_user_msgs" class="messageBubble flex justify-end">
+            <div
+              class="bg-sky-300 text-black rounded-r-lg rounded-bl-lg px-4 py-2"
+              style="max-width: 70%"
+            >
+              <p>This is your message.</p>
+              <div class="flex justify-end space-x-2 mt-2">
+                <button class="text-xs text-sky-600 hover:underline">
+                  Reply
+                </button>
+                <button class="text-xs text-sky-600 hover:underline">
+                  Edit
+                </button>
+                <button class="text-xs text-red-500 hover:underline">
+                  Delete
+                </button>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+
+        // --------------------------------------------------------------------------------------------
+        // Attempt 3
+        // --------------------------------------------------------------------------------------------
+        // $(document).ready(function() {
+          // console.log("test"); 
+          // var socket = io.connect("http://localhost:5000")
+  
+          // socket.on('connect', function() {
+          //   socket.send("User connected!");
+          // });
+  
+          // socket.on('message', function(data) {
+          //   $('#messages').append($'<p>').text(data);
+          // });
+  
+        //   $('#sendBtn').on('click', function () {
+        //     // socket.emit($('#username').val() + ': ' + $('#message').val());
+        //     console.log("test");
+        //     // socket.emit('message', "Hello");
+        //     $('#message').val('');
+        //   })
+        // })
+  
+  
+        // --------------------------------------------------------------------------------------------
+        // Attempt 2
+        // --------------------------------------------------------------------------------------------
+  
+        // var socketio = io();
+  
+        // let messageContainer = document.querySelector(".messages");
+  
+        // socket.on("connect", () => {
+        //   let p = document.createElement("p");
+        //   p.innerText = "You're connected";
+        //   messageContainer.appendChild(p);
+        // });
+  
+        // let messageInput = document.getElementById("messageInput");
+        // messageInput.addEventListener("keypress", (e) => {
+        //   if (e.which === 13) {
+        //     socketio.emit("message", messageInput.value);
+        //     messageInput.value = "";
+        //   }
+        // });
+  
+        // socketio.on('message', (message) => {
+        //   let messageElement = document.createElement("p");
+        //   messageElement.innerText = message;
+        //   messageContainer.appendChild(messageElement);
+        // });
+  
+  
+        // --------------------------------------------------------------------------------------------
+        // Attempt 1
+        // --------------------------------------------------------------------------------------------
+        // const messages = document.getElementById("messages");
+  
+        // const createMessage = (name, msg) => {
+        //   const time = new Date()
+        //   const content = `
+        //   <div class="received-message">
+        //     <span class="message-data">${name}</span>
+        //     <span class="message-data">${msg}</span>
+        //     <span class="muted">${time.getHours()}:${time.getMinutes()}}</span>
+        //   </div>
+        //   `;
+        //   messages.innerHTML += content;
+        // };
+  
+        // socketio.on("message", (data) => {
+        //   createMessage(data.name, data.message);
+        // });
+  
+        // const sendMessage = () => {
+        //   // console.log("send");
+        //   const message = document.getElementById("message");
+        //   if (message.value == "") return;
+        //   $('#send-btn').on('click', function() {
+        //     socket.send($(message.val()));
+        //     $('message').val('');
+        //   });
+  
+        //   socketio.emit("message", {data: message.value});
+        //   message.value = "";
+        // };

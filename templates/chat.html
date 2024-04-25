@@ -1,98 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chat Interface with Send Button</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-      rel="stylesheet"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js" integrity="sha512-luMnTJZ7oEchNDZAtQhgjomP1eZefnl82ruTH/3Oj/Yu5qYtwL7+dVRccACS/Snp1lFXq188XFipHKYE75IaQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  </head>
+	<head>
+		<meta charset="UTF-8" />
 
-  <body class="bg-gray-100 flex items-center justify-center min-h-screen">
-    <div class="w-full max-w-4xl p-6 bg-sky-600 shadow-xl rounded-lg">
-      <h1 class="font-bold text-xl mb-4 text-white">Live Chat</h1>
-      <div class="flex flex-col bg-white shadow-lg p-0 rounded-lg h-[60vh]">
-        <div class="flex flex-col p-4 space-y-4 overflow-y-auto h-full" id="messages">
-          <div class="flex justify-start">
-            <div
-              class="bg-gray-200 text-gray-800 rounded-l-lg rounded-br-lg px-4 py-2"
-              style="max-width: 70%"
-            >
-              <p>This is a message from the sender.</p>
-              <div class="flex justify-end space-x-2 mt-2">
-                <button class="text-xs text-sky-600 hover:underline">
-                  Reply
-                </button>
-                <button class="text-xs text-sky-600 hover:underline">
-                  Edit
-                </button>
-                <button class="text-xs text-red-500 hover:underline">
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="flex justify-end">
-            <div
-              class="bg-sky-300 text-black rounded-r-lg rounded-bl-lg px-4 py-2"
-              style="max-width: 70%"
-            >
-              <p>This is a reply from the user (receiver).</p>
-              <div class="flex justify-end space-x-2 mt-2">
-                <button class="text-xs text-sky-600 hover:underline">
-                  Reply
-                </button>
-                <button class="text-xs text-sky-600 hover:underline">
-                  Edit
-                </button>
-                <button class="text-xs text-red-500 hover:underline">
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        <div
-          class="border-t border-gray-300 px-4 py-3 bg-gray-50 flex justify-between"
-          id="message"
-        >
-          <input
-            type="text"
-            class="border rounded-l-lg px-4 py-2 w-full mr-2"
-            placeholder="Type your message..."
-          />
-          <button
-            class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-r-lg"
-            id="sendBtn"
-          >
-            Send
-          </button>
-        </div>
+		<title>Chat Interface with Send Button</title>
+		
+		<link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet">
+		<link rel="stylesheet" href="{{url_for('static', filename='css/styles.css')}}"/>
 
-      </div>
-    </div>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-    <script type="text/javascript"> 
-      $(document).ready(function() {
-        var socket = io.connect("http://localhost:5000")
-        socket.on('connect', function() {
-          socket.send("User connected!");
-        });
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js" integrity="sha512-luMnTJZ7oEchNDZAtQhgjomP1eZefnl82ruTH/3Oj/Yu5qYtwL7+dVRccACS/Snp1lFXq188XFipHKYE75IaQQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-        socket.on('message', function(data) {
-          $('#messages').append($('<p>').text(data));
-        });
+		<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script> 
 
-        $('#sendBtn').on('click', function() {
-          socket.send($('message').val());
-          $('message').val('');
-        });
-      })
-    </script>
-  </body>
+	</head>
+
+	<body class="chat-page"> <!--class="chat-page"-->
+		<div class="chatbox"> <!--class="chatbox"-->
+			<h1 class="chatbox-header">Live Chat</h1>
+			<div class="chatbox-wrapper">
+				<div class="messages" id="messages"></div>
+
+				<div class="message-input-area">
+					<input id="message" class="message-text" placeholder="Type your message..." type="text"/>
+
+					<button class="sendMsgBtn" id="sendBtn" onclick="sendMessage()">
+						Send
+					</button>
+				</div> 
+			</div>
+		</div>
+
+		<script>
+			const messages = document.getElementById("messages");
+
+			function sendMessage() {
+				const messagedata = document.getElementById('message');
+				if (messagedata.value == "") return;
+				const time = new Date()
+				const content = `
+					<div class="sent-message">
+						<span class="message-data">${messagedata.value}</span>
+						<span class="message-data">${time.getHours()}:${time.getMinutes()}}</span>
+					</div>
+					`;
+				messages.innerHTML += content;
+				socketio.emit("message", {message: messagedata.value});
+				message.value = "";
+			}
+	
+			function createMessage(other_user_msg, time_sent) {
+				const content = `
+					<div class="received-message">
+						<span class="message-data">${other_user_msg}</span>
+						<span class="message-data">${time_sent}}</span>
+					</div>
+					`;
+				messages.innerHTML += content;
+			};
+	
+			socketio.on("message", (message) => {
+				createMessage(message.message);
+			});
+
+		</script>
+	</body>
 </html>
