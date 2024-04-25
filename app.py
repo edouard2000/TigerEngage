@@ -128,7 +128,6 @@ def class_dashboard(class_id):
 
 @app.route("/professor_dashboard/<class_id>")
 def professor_dashboard(class_id):
-    print("Professor dashboard")
     username = flask.session.get("username")
     if not username:
         return flask.redirect(url_for("home"))
@@ -209,9 +208,7 @@ def class_userlist(class_id):
 @app.route("/select_role", methods=["POST"])
 def select_role():
     role = request.json["role"]
-    print(f"we got a role: {role}")
     flask.session["role"] = role
-    print("we are now redirecting")
     return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
 
 
@@ -248,7 +245,6 @@ def authenticate_and_direct():
         if role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
-                print(f"{username} has no class yet")
                 return flask.redirect(flask.url_for("create_class_form"))
             dashboard_url = "professor_dashboard"
             return flask.redirect(flask.url_for(dashboard_url, class_id=class_id))
@@ -321,7 +317,6 @@ def add_question_to_class_route(class_id):
 @app.route("/class/<class_id>/questions", methods=["GET"])
 def get_questions_for_class_route(class_id):
     results = db_operations.get_questions_for_class(class_id)
-    print(f"this is results: {results}")
     if results:
         return jsonify({"success": True, "questions": results})
     else:
@@ -402,9 +397,6 @@ def search_classes():
 def enroll_in_class():
     username = session.get("username")
     class_id = request.json.get("class_id")
-
-    print(f"username: {username}, class_id: {class_id}")
-
     if not username and class_id:
         return jsonify({"success": False, "message": "User not authenticated"}), 401
 
@@ -607,49 +599,55 @@ def check_in(class_id):
         )
     else:
         return jsonify({"success": False, "message": message}), 500
+    
+
+@app.route("/class/<class_id>/question/<question_id>/status", methods=["GET"])
+def get_question_status(class_id, question_id):
+    """Endpoint to get the current status of a question."""
+    session = SessionLocal()
+    try:
+        question = session.query(Question).filter_by(class_id=class_id, question_id=question_id).first()
+        if question:
+            return jsonify({"success": True, "is_active": question.is_active}), 200
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    finally:
+        session.close()
 
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
 def toggle_question(class_id, question_id):
-    print("Toggling question")
     try:
         data = request.get_json()
         is_active = data.get("active", True)
+        session = SessionLocal()
+        
+        # Check if another question is already active
+        if is_active:
+            active_question = session.query(Question).filter(
+                Question.class_id == class_id,
+                Question.is_active == True,
+                Question.question_id != question_id
+            ).first()
+            if active_question:
+                return jsonify({
+                    "success": False, 
+                    "message": "Another question is currently active. Please deactivate it first.",
+                    "activeQuestionId": active_question.question_id
+                }), 409  
 
-        with SessionLocal() as session:
-            if is_active:
-                session.query(Question).filter(
-                    Question.class_id == class_id, Question.is_active.is_(True)
-                ).update({Question.is_active: False}, synchronize_session="fetch")
-
-            question_to_update = (
-                session.query(Question)
-                .filter_by(question_id=question_id, class_id=class_id)
-                .first()
-            )
-
-            if question_to_update:
-                question_to_update.is_active = is_active
-                session.commit()
-
-                if not is_active:
-                    summary_text = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
-                    db_operations.store_summary(session, question_id, summary_text)
-                return (
-                    jsonify({"success": True, "message": "Question status updated."}),
-                    200,
-                )
-            else:
-                return (
-                    jsonify({"success": False, "message": "Question not found."}),
-                    404,
-                )
+        question_to_update = session.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
+        if question_to_update:
+            question_to_update.is_active = is_active
+            session.commit()
+            return jsonify({"success": True, "message": "Question status updated."}), 200
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
     except SQLAlchemyError as e:
         session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
-
+    finally:
+        session.close()
 
 
 @app.route(
@@ -714,7 +712,6 @@ def delete_question(class_id, question_id):
 
 @app.route("/class/<class_id>/submit-answer", methods=["POST"])
 def submit_answer(class_id):
-    print("Submitting answer")
     data = request.get_json()
     question_id = data.get("questionId")
     answer_text = data.get("answerText")
@@ -753,7 +750,6 @@ def submit_answer(class_id):
 
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
-    print("Getting active question")
     active_question = db_operations.get_active_questions_for_class(class_id)
     if active_question:
         question_data = {
@@ -809,30 +805,22 @@ def class_feedback(class_id):
         
         
 
+# Server-side endpoint adjustment
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
     db_session = SessionLocal()
     try:
+        data = request.get_json()
+        should_display = data.get('displayed', False)  
+
         question = db_session.query(Question).filter_by(
             class_id=class_id,
             question_id=question_id
         ).first()
         if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
-        currently_displayed_question = db_session.query(Question).filter(
-            Question.class_id == class_id,
-            Question.is_displayed == True,  
-            Question.question_id != question_id
-        ).first()
-        
-        if currently_displayed_question:
-            return jsonify({
-                "success": False,
-                "message": "Another question is currently displayed. Please undisplay it first.",
-                "displayedQuestionId": currently_displayed_question.question_id
-            }), 200
 
-        question.is_displayed = not question.is_displayed
+        question.is_displayed = should_display  
         db_session.commit()
         status_message = "displayed" if question.is_displayed else "undisplayed"
         return jsonify({
@@ -849,6 +837,7 @@ def toggle_display(class_id, question_id):
         }), 500
     finally:
         db_session.close()
+
         
         
 @app.route("/submit_feedback", methods=["POST"])

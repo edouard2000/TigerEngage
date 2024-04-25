@@ -29,7 +29,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", function () {
       document.getElementById("editQuestionModal").style.display = "none";
     });
-  
+    updateAskButtonStates();
+    updateDisplayButtonStates();
+    initializeQuestionEventListeners();
 });
 
 function showEditQuestionModal(
@@ -232,8 +234,8 @@ function initializeQuestionFormEventListeners() {
 
 function fetchQuestionsAndDisplay(classId) {
   fetch(`/class/${classId}/questions`)
-    .then((response) => response.json())
-    .then((data) => {
+    .then(response => response.json())
+    .then(data => {
       const questionsContainer = document.getElementById("questionsList");
       if (!questionsContainer) {
         console.error("The questionsList container was not found on the page.");
@@ -241,10 +243,22 @@ function fetchQuestionsAndDisplay(classId) {
       }
       questionsContainer.innerHTML = "";
       if (data.questions && data.questions.length > 0) {
-        data.questions.forEach((question) => {
-          const questionElement = createQuestionElement(question);
-          questionsContainer.appendChild(questionElement);
+        data.questions.forEach(question => {
+          // Fetch the current status for each question
+          fetch(`/class/${classId}/question/${question.question_id}/status`)
+            .then(statusResponse => statusResponse.json())
+            .then(statusData => {
+              if (statusData.success) {
+                question.is_active = statusData.is_active; // Set the current active status from the server
+              }
+              const questionElement = createQuestionElement(question);
+              questionsContainer.appendChild(questionElement);
+            })
+            .catch(statusError => {
+              console.error(`Error fetching status for question ${question.question_id}:`, statusError);
+            });
         });
+        // These will setup event listeners and restore states once all questions are processed
         initializeQuestionEventListeners();
         restoreButtonStates();
         updateButtonsStateBasedOnActivity();
@@ -252,11 +266,11 @@ function fetchQuestionsAndDisplay(classId) {
         questionsContainer.innerHTML = "<p>No questions found for this class.</p>";
       }
     })
-    .catch((error) => {
+    .catch(error => {
       console.error("Error fetching questions:", error);
     })
     .finally(() => {
-      setupDisplayButtons(); 
+      setupDisplayButtons();
     });
 }
 
@@ -264,65 +278,41 @@ function fetchQuestionsAndDisplay(classId) {
 
 function createQuestionElement(question) {
   const element = document.createElement("div");
-  element.className =
-    "question-element flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 text-white";
+  element.className = "question-element flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 text-white";
   element.innerHTML = `
-        <div class="flex-1">
-            <div><span class="font-semibold">Q:</span> ${question.text}</div>
-            <div><span class="font-semibold">A:</span> ${
-              question.correct_answer
-            }</div>
-        </div>
-        <div class="actions">
-            <button class="edit-button py-1 px-3 rounded bg-yellow-500 hover:bg-yellow-600 transition duration-300" data-question-id="${
-              question.question_id
-            }">
-                Edit
-            </button>
-            <button class="delete-button py-1 px-3 rounded bg-red-500 hover:bg-red-600 transition duration-300 ml-2" data-question-id="${
-              question.question_id
-            }">
-                Delete
-            </button>
+    <div class="flex-1">
+        <div><span class="font-semibold">Q:</span> ${question.text}</div>
+        <div><span class="font-semibold">A:</span> ${question.correct_answer}</div>
+    </div>
+    <div class="actions">
+        <button class="edit-button py-1 px-3 rounded bg-yellow-500 hover:bg-yellow-600 transition duration-300" data-question-id="${question.question_id}">
+            Edit
+        </button>
+        <button class="delete-button py-1 px-3 rounded bg-red-500 hover:bg-red-600 transition duration-300 ml-2" data-question-id="${question.question_id}">
+            Delete
+        </button>
+        <button class="ask-button py-1 px-3 rounded ${question.is_active ? "bg-red-600" : "bg-green-500"} hover:bg-green-600 transition duration-300 ml-2" data-question-id="${question.question_id}" data-is-active="${question.is_active}">
+            ${question.is_active ? "Stop" : "Ask"}
+        </button>
+        <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${question.question_id}">
+            Display
+        </button>
+    </div>
+  `;
 
-            <button class="ask-button py-1 px-3 rounded ${
-              question.is_active ? "bg-red-600" : "bg-green-500"
-            } hover:bg-green-600 transition duration-300 ml-2" data-question-id="${
-    question.question_id
-  }" data-is-active="${question.is_active}">
-                ${question.is_active ? "Stop" : "Ask"}
-            </button>
-            <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${
-              question.question_id
-            }">
-                Display
-            </button>
-        </div>
-    `;
-
-  const askButton = element.querySelector(".ask-button");
-  askButton.addEventListener("click", function () {
-    const isActive = this.getAttribute("data-is-active") === "true";
-    handleAskStopQuestion(question.question_id, !isActive, this);
+  element.querySelector(".ask-button").addEventListener("click", function () {
+    handleAskStopQuestion(question.question_id, this);
   });
-
-  element
-    .querySelector(".delete-button")
-    .addEventListener("click", function () {
-      deleteQuestion(question.question_id);
-    });
-
-  const editButton = element.querySelector(".edit-button");
-  editButton.addEventListener("click", function () {
-    showEditQuestionModal(
-      question.question_id,
-      question.text,
-      question.correct_answer
-    );
+  element.querySelector(".delete-button").addEventListener("click", function () {
+    deleteQuestion(question.question_id);
+  });
+  element.querySelector(".edit-button").addEventListener("click", function () {
+    showEditQuestionModal(question.question_id, question.text, question.correct_answer);
   });
 
   return element;
 }
+
 
 function updateButtonsStateBasedOnActivity() {
   const askButtons = document.querySelectorAll(".ask-button");
@@ -347,60 +337,75 @@ function updateButtonsStateBasedOnActivity() {
   }
 }
 
-function handleAskStopQuestion(questionId, isAsking, buttonElement) {
+function handleAskStopQuestion(questionId, buttonElement) {
+  const currentState = buttonElement.getAttribute('data-is-active') === 'true';
+  const isAsking = !currentState; // Toggle the current state
+  const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
   const actionText = isAsking ? "ask" : "stop";
-  Swal.fire({
-    title: `Are you sure you want to ${actionText} this question?`,
-    text: `This will ${isAsking ? "start" : "stop"} showing the question to the class.`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: `Yes, ${actionText} it!`
-  }).then((result) => {
-    if (result.isConfirmed) {
-      const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
-      buttonElement.disabled = true;
 
-      fetch(endpoint, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-        },
-        body: JSON.stringify({ active: isAsking }),
-      })
-      .then((response) => response.json())
-      .then((data) => {
-          if (data.success) {
-              updateAskButtons(questionId, isAsking);
+  Swal.fire({
+      title: `Are you sure you want to ${actionText} this question?`,
+      text: `This will ${isAsking ? "start" : "stop"} showing the question to the class.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: `Yes, ${actionText} it!`
+  }).then((result) => {
+      if (result.isConfirmed) {
+          fetch(endpoint, {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+                  "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+              },
+              body: JSON.stringify({ active: isAsking }),
+          })
+          .then((response) => {
+              if (response.status === 409) { // Conflict, another question is active
+                  response.json().then(data => {
+                      Swal.fire({
+                          icon: 'error',
+                          title: 'Activation Conflict',
+                          text: data.message,
+                          confirmButtonColor: '#d33',
+                          confirmButtonText: 'OK'
+                      });
+                  });
+              } else if (response.ok) {
+                  return response.json();
+              } else {
+                  throw new Error('Failed to toggle question status.');
+              }
+          })
+          .then((data) => {
+              if (data && data.success) {
+                  buttonElement.setAttribute('data-is-active', isAsking.toString());
+                  updateAskButtons(questionId, isAsking);
+                  Swal.fire({
+                      icon: 'success',
+                      title: 'Success!',
+                      text: `Question was successfully ${isAsking ? "asked" : "stopped"}.`,
+                      confirmButtonColor: '#3085d6',
+                      confirmButtonText: 'OK'
+                  });
+              }
+          })
+          .catch((error) => {
+              console.error("Error:", error);
               Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: `Question was successfully ${isAsking ? "asked" : "stopped"}.`,
-                confirmButtonColor: '#3085d6',  
-                confirmButtonText: 'OK'
+                  icon: 'error',
+                  title: 'Error',
+                  text: error.toString(),
+                  confirmButtonColor: '#d33',
+                  confirmButtonText: 'Close'
               });
-          } else {
-              throw new Error(data.message);
-          }
-      })
-      .catch((error) => {
-          console.error("Error:", error);
-          Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: `An error occurred: ${error.message}`,
-              confirmButtonColor: '#d33',  
-              confirmButtonText: 'Close'
           });
-      })
-      .finally(() => {
-          buttonElement.disabled = false;
-      });
-    }
+      }
   });
 }
+
+
 
 
 function updateAskButtons(questionId, isAsking) {
@@ -432,11 +437,17 @@ function enableAllAskButtons() {
 function initializeQuestionEventListeners() {
   const askButtons = document.querySelectorAll(".ask-button");
   askButtons.forEach((button) => {
-    const questionId = button.getAttribute("data-question-id");
-    const isActive = button.getAttribute("data-is-active") === "true";
-    button.addEventListener("click", () =>
-      handleAskStopQuestion(questionId, !isActive, button)
-    );
+    if (!button.dataset.listenerAdded) {
+      button.addEventListener("click", function() {
+        const questionId = button.getAttribute("data-question-id");
+        const isActive = button.getAttribute("data-is-active") === "true";
+        const newIsActive = !isActive; 
+
+        handleAskStopQuestion(this.dataset.questionId, this);
+        button.setAttribute("data-is-active", newIsActive.toString());
+      });
+      button.dataset.listenerAdded = "true";
+    }
   });
 }
 
@@ -673,8 +684,10 @@ function handleDisplayClick() {
 async function toggleDisplay(questionId) {
   const button = document.querySelector(`[data-question-id="${questionId}"].display-button`);
   const shouldDisplay = !button.classList.contains('active');
+  localStorage.setItem(`displayState-${questionId}`, shouldDisplay);
   const actionText = shouldDisplay ? "display" : "hide";
 
+  
   Swal.fire({
     title: `Are you sure you want to ${actionText} this question?`,
     text: `This will ${shouldDisplay ? "show" : "remove"} the question from the class display.`,
@@ -754,5 +767,24 @@ function restoreButtonStates() {
     const isActive = localStorage.getItem(stateKey) === "true";
     button.textContent = isAskButton ? (isActive ? "Stop" : "Ask") : (isActive ? "UnDisplay" : "Display");
     button.dataset.isActive = isActive.toString(); 
+  });
+}
+
+
+function updateAskButtonStates() {
+  document.querySelectorAll(".ask-button").forEach(button => {
+    const questionId = button.getAttribute("data-question-id");
+    const isAsking = localStorage.getItem(`askState-${questionId}`) === 'true';
+    button.textContent = isAsking ? "Stop" : "Ask";
+    button.dataset.isActive = isAsking;
+  });
+}
+
+function updateDisplayButtonStates() {
+  document.querySelectorAll(".display-button").forEach(button => {
+    const questionId = button.getAttribute("data-question-id");
+    const isDisplayed = localStorage.getItem(`displayState-${questionId}`) === 'true';
+    button.textContent = isDisplayed ? "UnDisplay" : "Display";
+    button.classList.toggle('active', isDisplayed);
   });
 }
