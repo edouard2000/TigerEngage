@@ -698,7 +698,6 @@ def toggle_question(class_id, question_id):
         session.close()
 
 
-
 @app.route(
     "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
 )
@@ -830,10 +829,13 @@ def class_feedback(class_id):
         user_role = flask.session.get("role")
 
         displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
+        print(f"displayed_question: {displayed_question}")
         if not displayed_question:
             return render_template("feedback.html", error="No question is currently displayed.")
 
         feedback_data = db_operations.get_feedback_data(db_session, class_id, displayed_question.question_id)
+        
+        print(f"Feedback: {feedback_data}")
         if not feedback_data:
             return render_template("feedback.html", error="Feedback data not available.")
 
@@ -851,9 +853,6 @@ def class_feedback(class_id):
     finally:
         db_session.close()
         
-        
-
-
 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
@@ -908,8 +907,6 @@ def toggle_display(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         session.close()
-
-
 
         
 @app.route("/submit_feedback", methods=["POST"])
@@ -1049,6 +1046,7 @@ def fetch_messages():
         db_session.close()
         
         
+        
 @app.route('/delete_message/<message_id>', methods=['DELETE'])
 def delete_message(message_id):
     user_id = session.get('username') 
@@ -1075,6 +1073,9 @@ def delete_message(message_id):
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         db_session.close()
+        
+        
+        
         
 @app.route('/edit_message/<message_id>', methods=['POST'])
 def edit_message(message_id):

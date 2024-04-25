@@ -607,8 +607,7 @@ def get_feedback_data(session: Session, class_id: str, question_id: str) -> dict
         return feedback_data
     else:
         return None 
-
-
+    
 
 def fetch_user_answer(
     session: Session, question_id: str, user_id: str, user_role: str

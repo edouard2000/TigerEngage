@@ -355,7 +355,7 @@ function toggleDisplay(questionId, button) {
   .then(data => {
     if (data.success) {
       button.setAttribute('data-is-displayed', (!isDisplayed).toString());
-      button.textContent = isDisplayed ? 'UnDisplay' : 'Display';
+      button.textContent = isDisplayed ? 'Display' : 'UnDisplay';
       Swal.fire({
         icon: 'success',
         title: 'Success',
