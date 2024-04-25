@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block title %}{{ course_name }}{% endblock %} {%
 block navbar %}
-<a href="#" class="ml-4 hover:underline">{{ course_name }}</a>
-<a href="{{ url_for('logout') }}" class="ml-4 hover:underline">Logout</a>
+<a href="#" class="ml-4 hover:underline mr-3">{{ course_name }}</a>
+<a href="#" class="hover:underline" id="logoutButton">Logout</a>
 {% endblock %} {% block content %}
 <style>
   .content-area {

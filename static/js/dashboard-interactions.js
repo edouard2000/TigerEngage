@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", function () {
       document.getElementById("editQuestionModal").style.display = "none";
     });
+
   initializeQuestionEventListeners();
 });
 
@@ -700,3 +701,59 @@ function submitEditForm() {
 }
 
 
+
+
+document.getElementById("logoutButton").addEventListener("click", function (e) {
+  e.preventDefault(); 
+  logout();  
+});
+
+function logout() {
+  Swal.fire({
+      title: 'Are you sure you want to logout?',
+      text: "Make sure all activities are properly closed.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, logout!'
+  }).then((result) => {
+      if (result.isConfirmed) {
+          fetch("/logout", {
+              method: "GET",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              credentials: "include"
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  Swal.fire(
+                      'Logged Out!',
+                      'You have been successfully logged out.',
+                      'success'
+                  ).then(() => {
+                      window.location.href = '/'; 
+                  });
+              } else {
+                  Swal.fire({
+                      icon: 'error',
+                      title: 'Logout Failed',
+                      text: data.message,
+                      confirmButtonText: 'OK'
+                  });
+              }
+          })
+          .catch(error => {
+              console.error('Logout error:', error);
+              Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'An unexpected error occurred during logout.',
+                  confirmButtonText: 'OK'
+              });
+          });
+      }
+  });
+}

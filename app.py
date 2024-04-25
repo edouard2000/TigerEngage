@@ -72,31 +72,34 @@ def home():
     response = flask.make_response(html_code)
     return response
 
+
 @app.route("/logout", methods=["GET"])
 def logout():
     db = SessionLocal()
     try:
         user_id = flask.session.get("username")
         if user_id:
-            # Check for active or displayed questions associated with the user's classes
-            active_or_displayed_questions = db.query(Question).join(Class, Question.class_id == Class.class_id).filter(
-                (Class.instructor_id == user_id) & ((Question.is_active == True) | (Question.is_displayed == True))
-            ).first()
-            if active_or_displayed_questions:
+            # Check if the user has an active class session
+            active_session = (
+                db.query(ClassSession)
+                .join(Class, ClassSession.class_id == Class.class_id)
+                .filter(Class.instructor_id == user_id, ClassSession.is_active == True)
+                .first()
+            )
+            if active_session:
                 return jsonify({
                     "success": False,
-                    "message": "There are active or displayed questions. Please resolve them before logging out."
+                    "message": "There is an active session. Please end the session before logging out."
                 }), 400
 
         flask.session.clear()
-        html_code = flask.render_template('home.html')
-        response = flask.make_response(html_code)
-        return response
+        return jsonify({"success": True, "message": "You have been logged out successfully."})
 
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+
 
 
 
