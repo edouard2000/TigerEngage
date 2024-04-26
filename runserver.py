@@ -25,7 +25,7 @@ def main():
         sys.exit(1)
 
     try:
-        socketio.run(app, host='0.0.0.0', port=port, debug=True)
+        socketio.run(app, host='localhost', port=port, debug=True)
     except Exception as ex:
         logging.error("Failed to start the server: %s", ex)
         sys.exit(1)

@@ -773,8 +773,6 @@ function logout() {
 
 
 
-
-
 function initializeChat() {
   var messageInput = document.getElementById('message');
   var messagesContainer = document.querySelector('.chat-messages');
@@ -847,7 +845,32 @@ function fetchMessages(classId) {
 function displayMessage(message) {
   const messagesContainer = document.querySelector('.chat-messages');
   const messageElement = document.createElement('div');
-  messageElement.textContent = message.text;
+  messageElement.className = 'chat-message p-3 rounded-lg shadow mb-3 flex justify-between items-center'; 
+  messageElement.innerHTML = `
+    <p class="flex-1">${message.text}</p>
+    <div class="chat-buttons">
+      <button class="chat-button bg-blue-500 hover:bg-blue-700 text-white rounded py-1 px-3" onclick="editMessage('${message.message_id}')">Edit</button>
+      <button class="chat-button bg-red-500 hover:bg-red-700 text-white rounded py-1 px-3" onclick="deleteMessage('${message.message_id}')">Delete</button>
+      <button class="chat-button bg-green-500 hover:bg-green-700 text-white rounded py-1 px-3" onclick="replyToMessage('${message.message_id}')">Reply</button>
+    </div>
+  `;
   messagesContainer.appendChild(messageElement);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight; 
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+
+
+function editMessage(messageId) {
+  console.log('Editing message:', messageId);
+  // Add your editing logic here
+}
+
+function deleteMessage(messageId) {
+  console.log('Deleting message:', messageId);
+  // Add your deletion logic here
+}
+
+function replyToMessage(messageId) {
+  console.log('Replying to message:', messageId);
+  // Add your reply logic here
 }
