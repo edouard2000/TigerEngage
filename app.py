@@ -998,3 +998,7 @@ def fetch_chat_messages(class_id):
     finally:
         db_session.close()
 
+
+
+if __name__ == '__main__':
+    socketio.run(app)

@@ -1,11 +1,13 @@
 Flask
 SQLAlchemy
-psycopg2-binary 
+psycopg2-binary
 Flask-SQLAlchemy
 Flask-WTF
 python-dotenv
 openai
 requests
-SocketIO
 reportlab
 flask_socketio
+gunicorn
+gevent
+gevent-websocket
