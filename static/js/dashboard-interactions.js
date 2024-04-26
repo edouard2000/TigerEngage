@@ -51,7 +51,6 @@ function showEditQuestionModal(
 
 
 
-
 function fetchContent(endpoint) {
   fetch(endpoint)
     .then((response) => response.text())
@@ -64,10 +63,13 @@ function fetchContent(endpoint) {
         fetchQuestionsAndDisplay(globalClassId);
       } else if (endpoint === "/add-question") {
         initializeQuestionFormEventListeners();
+      } else if (endpoint === "/chat") {
+        initializeChat(); 
       }
     })
     .catch((error) => console.error("Error loading content:", error));
 }
+
 
 
 function initializeStartEndToggle() {
@@ -767,4 +769,85 @@ function logout() {
           });
       }
   });
+}
+
+
+
+
+
+function initializeChat() {
+  var messageInput = document.getElementById('message');
+  var messagesContainer = document.querySelector('.chat-messages');
+  if (!messageInput || !messagesContainer) {
+    console.error('Chat initialization failed: Essential elements are missing.');
+    return;
+  }
+
+  const classId = getClassIdFromUrl();
+  fetchMessages(classId);
+
+  var socket = io.connect(window.location.origin);
+  function sendMessage() {
+    var content = messageInput.value.trim();
+    if (content) {
+      console.log('Sending message:', content);  
+      socket.emit('send_message', { content: content });
+      messageInput.value = ''; 
+    }
+  }
+
+  var sendButton = document.querySelector('[aria-label="Send Message"]');
+  if (sendButton) {
+    sendButton.addEventListener('click', sendMessage);
+  } else {
+    console.error('Send button not found.');
+  }
+
+  messageInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      sendMessage();
+      e.preventDefault();
+    }
+  });
+
+  socket.on('receive_message', function(data) {
+    console.log('Received message:', data); 
+    var messageElement = document.createElement('div');
+    messageElement.textContent = data.content;
+    messagesContainer.appendChild(messageElement);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;  
+});
+
+  socket.on('connect_error', function(err) {
+    console.error('Connection to the server lost:', err);
+  });
+
+  socket.on('connect', function() {
+    console.log('Connected to WebSocket server.');
+  });
+}
+
+
+
+function fetchMessages(classId) {
+  fetch(`/chat/${classId}/messages`)
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              data.messages.forEach(message => {
+                  displayMessage(message);
+              });
+          } else {
+              console.error('Failed to load messages:', data.error);
+          }
+      })
+      .catch(error => console.error('Error fetching chat messages:', error));
+}
+
+function displayMessage(message) {
+  const messagesContainer = document.querySelector('.chat-messages');
+  const messageElement = document.createElement('div');
+  messageElement.textContent = message.text;
+  messagesContainer.appendChild(messageElement);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight; 
 }

@@ -10,12 +10,14 @@ import io
 import os
 import uuid
 from datetime import datetime
+import logging
+from zoneinfo import ZoneInfo
 
 # Related third-party imports
 from dotenv import load_dotenv
 import flask
 from flask import jsonify, request, flash, redirect, session, url_for, render_template, send_file
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, send, emit
 from flask_wtf.csrf import CSRFProtect
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -24,7 +26,7 @@ from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 # Local application/library specific imports
 from auth import authenticate
 from conciseNotes import LectureNoteSummarizer
-from database import ClassSession, Question, SessionLocal, User, Student, Class, Enrollment, Answer, AfterClassInputs, ChatMessage
+from database import ChatMessage, ClassSession, Question, SessionLocal, User, Student, Class, Enrollment, Answer
 import db_operations
 from req_lib import ReqLib
 from summarizer import TextSummarizer
@@ -124,13 +126,6 @@ def student_dashboard():
 
     username = username[0].get('displayname')
     return flask.render_template("student-dashboard.html", student_name=username)
-
-
-@app.route("/chat")
-def chat():
-    html_code = flask.render_template("chat.html")
-    response = flask.make_response(html_code)
-    return response
 
 @app.route("/questions")
 def questions():
@@ -251,13 +246,19 @@ def authenticate_and_direct():
         if actual_role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
-                print(f"{username} has no class yet, so let create one")
+                print(f"No class associated with the professor {username}")
                 return flask.redirect(flask.url_for("create_class_form"))
-            return flask.redirect(
-                flask.url_for("professor_dashboard", class_id=class_id)
-            )
-        else:
-            return flask.redirect(flask.url_for("student_dashboard"))
+            flask.session['class_id'] = class_id  
+            return flask.redirect(flask.url_for("professor_dashboard", class_id=class_id))
+        
+        
+        elif actual_role == "student":
+            class_id = db_operations.get_students_class_id(username)
+            if not class_id:
+                print(f"No class associated with the student {username}")
+                return flask.redirect(url_for("student_dashboard"))
+            flask.session['class_id'] = class_id 
+            return flask.redirect(flask.url_for("student_dashboard", class_id=class_id))
     else:
         role = flask.session.get("role", "student")
         print(
@@ -269,8 +270,8 @@ def authenticate_and_direct():
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
                 return flask.redirect(flask.url_for("create_class_form"))
-            dashboard_url = "professor_dashboard"
-            return flask.redirect(flask.url_for(dashboard_url, class_id=class_id))
+            flask.session['class_id'] = class_id  
+            return flask.redirect(flask.url_for("professor_dashboard", class_id=class_id))
         else:
             dashboard_url = "student_dashboard"
             return flask.redirect(flask.url_for(dashboard_url))
@@ -848,7 +849,7 @@ def class_feedback(class_id):
 
         displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
         if not displayed_question:
-            return render_template("feedback.html", question_content="No question is currently displayed.")
+            return render_template("feedback.html", question_content="No question is currently displayed.", notes = "No question is currently displayed")
 
         feedback_data = db_operations.get_feedback_data(db_session, class_id, displayed_question.question_id)
         if not feedback_data:
@@ -920,228 +921,80 @@ def toggle_display(class_id, question_id):
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         session.close()
-
         
-# @app.route("/submit_feedback", methods=["POST"])
-# def submit_feedback():
-#     data = request.get_json()
-#     class_session_id = data.get("class_session_id")
-#     class_id = data.get("class_id")
-#     student_id = data.get("student_id")
-#     rating = data.get("rating")
-#     comment = data.get("comment")
-#     db = SessionLocal()
-#     try:
-#         feedback = AfterClassInputs(
-#             input_id=str(uuid.uuid4()),
-#             class_session_id=class_session_id,
-#             class_id=class_id,
-#             student_id=student_id,
-#             response_category=rating,
-#             comment=comment
-#         )
-#         db.add(feedback)
-#         db.commit()
 
-#         return jsonify({"success": True, "message": "Feedback submitted successfully"}), 200
+@app.route("/chat")
+def chat():
+    html_code = flask.render_template("chat.html")
+    response = flask.make_response(html_code)
+    return response
 
-#     except Exception as e:
-#         db.rollback()
-#         return jsonify({"success": False, "message": str(e)}), 500
-#     finally:
-#         db.close()
-
-# @app.route("/check_feedback_modal/<class_session_id>", methods=["GET"])
-# def check_feedback_modal(class_session_id):
-#     db = SessionLocal()
-#     try:
-#         class_session = db.query(ClassSession).filter_by(session_id=class_session_id).first()
-        
-#         if not class_session:
-#             return jsonify({
-#                 "success": False,
-#                 "message": "Class session not found",
-#                 "showModal": False
-#             }), 404
-#         if class_session.ended:
-#             return jsonify({
-#                 "success": True,
-#                 "message": "Class session has ended. Show feedback modal.",
-#                 "showModal": True
-#             }), 200
-#         else:
-#             return jsonify({
-#                 "success": True,
-#                 "message": "Class session is still active.",
-#                 "showModal": False
-#             }), 200
-
-#     except Exception as e:
-#         return jsonify({
-#             "success": False,
-#             "message": str(e),
-#             "showModal": False
-#         }), 500
-#     finally:
-#         db.close()
-        
-        
-# @app.route("/class/<class_id>/session/<session_id>/reviews")
-# def class_review(class_id, session_id):
-#     try:
-#         feedback_entries = AfterClassInputs.query.filter_by(class_id=class_id, class_session_id=session_id).all()
-#         ratings = [entry.response_category for entry in feedback_entries]
-#         comments = [entry.comment for entry in feedback_entries if entry.comment]
-
-#         summarizer = TextSummarizer()
-#         rating_summary = summarizer.average_sentences(ratings)
-#         comment_summary = summarizer.average_sentences(comments) if comments else "No comments provided."
-
-#         return render_template("reviews.html", rating_summary=rating_summary, comment_summary=comment_summary)
-#     except Exception as e:
-#         print(f"Error accessing database or summarizing feedback: {e}")
-#         return jsonify({"error": "Failed to retrieve or process class feedback"}), 500
-
-# if __name__ == "__main__":
-#     app.run(debug=False)
-    
 
 @socketio.on('send_message')
 def handle_send_message(data):
+    user_id = session.get('username')
     db_session = SessionLocal()
+
+    class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
+
+    if not class_id or not session_id:
+        emit('error', {'error': 'No active session or class found for the user.'})
+        return
+
+    content = data.get('content')
+    if not content:
+        emit('error', {'error': 'Message content cannot be empty.'})
+        return
+
     try:
         new_message = ChatMessage(
-            message_id=uuid.uuid4(),
-            sender_id=session.get('username'),  
-            class_id=session.get('class_id'),
-            session_id=session.get('session_id'),
-            text=data['text'],
-            replied_to_id=data.get('replied_to_id', None)
+            message_id=str(uuid.uuid4()),
+            sender_id=user_id,
+            class_id=class_id,
+            session_id=session_id,
+            text=content,
+            timestamp=datetime.now(ZoneInfo("UTC"))
         )
         db_session.add(new_message)
         db_session.commit()
-        emit('new_message', {
-            'message_id': str(new_message.message_id),
-            'text': new_message.text,
-            'sender_id': new_message.sender_id,
-            'timestamp': new_message.timestamp.isoformat()
-        }, room=new_message.session_id)
+        emit('receive_message', {'content': content}, broadcast=True)
     except Exception as e:
         db_session.rollback()
-        emit('error', {'message': str(e)})
+        emit('error', {'error': f'Failed to save message: {str(e)}'})
     finally:
         db_session.close()
-        
 
-@app.route('/fetch_messages', methods=['GET'])
-def fetch_messages():
-    class_id = session.get('class_id') 
-    session_id = session.get('session_id')  
 
-    if not class_id or not session_id:
-        return jsonify({'success': False, 'message': 'Missing class or session identifier'}), 400
-
+@app.route('/chat/<class_id>/messages', methods=['GET'])
+def fetch_chat_messages(class_id):
     db_session = SessionLocal()
     try:
-        messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=session_id).order_by(ChatMessage.timestamp).all()
-        messages_json = [{
-            'message_id': str(message.message_id),
-            'sender_id': message.sender_id,
-            'text': message.text,
-            'timestamp': message.timestamp.isoformat(),
-            'replied_to_id': str(message.replied_to_id) if message.replied_to_id else None
-        } for message in messages]
-
-        return jsonify({'success': True, 'messages': messages_json})
+        active_session = (
+            db_session.query(ClassSession)
+            .filter_by(class_id=class_id, is_active=True)
+            .first()
+        )
+        if not active_session:
+            print(f"No active session found for class ID: {class_id}")
+            return jsonify({'success': False, 'message': 'No active session for this class.'}), 404
+        messages = (
+            db_session.query(ChatMessage)
+            .filter_by(class_id=class_id, session_id=active_session.session_id)
+            .order_by(ChatMessage.timestamp.asc())
+            .all()
+        )
+        messages_list = [
+            {
+                'message_id': message.message_id,
+                'sender_id': message.sender_id,
+                'text': message.text,
+                'timestamp': message.timestamp.isoformat()
+            } for message in messages
+        ]
+        return jsonify({'success': True, 'messages': messages_list})
     except Exception as e:
+        print(f"Error fetching messages: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         db_session.close()
-        
-        
-        
-@app.route('/delete_message/<message_id>', methods=['DELETE'])
-def delete_message(message_id):
-    user_id = session.get('username') 
-    if not user_id:
-        return jsonify({'success': False, 'message': 'Authentication required'}), 401
-
-    db_session = SessionLocal()
-    try:
-        message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
-        if not message:
-            return jsonify({'success': False, 'message': 'Message not found'}), 404
-        
-        if message.sender_id != user_id:
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-        
-        db_session.delete(message)
-        db_session.commit()
-
-        emit('message_deleted', {'message_id': str(message_id)}, room=message.class_id)
-
-        return jsonify({'success': True, 'message': 'Message deleted successfully'})
-    except SQLAlchemyError as e:
-        db_session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-    finally:
-        db_session.close()
-        
-        
-        
-        
-# @app.route('/edit_message/<message_id>', methods=['POST'])
-# def edit_message(message_id):
-#     user_id = session.get('username') 
-#     if not user_id:
-#         return jsonify({'success': False, 'message': 'Authentication required'}), 401
-
-#     data = request.get_json()
-#     new_text = data.get('text')
-#     if not new_text:
-#         return jsonify({'success': False, 'message': 'No text provided'}), 400
-
-#     db_session = SessionLocal()
-#     try:
-#         message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
-#         if not message:
-#             return jsonify({'success': False, 'message': 'Message not found'}), 404
-
-#         if message.sender_id != user_id:
-#             return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-
-#         message.text = new_text
-#         db_session.commit()
-#         emit('message_updated', {'message_id': str(message_id), 'new_text': new_text}, room=message.class_id)
-
-#         return jsonify({'success': True, 'message': 'Message updated successfully'})
-#     except SQLAlchemyError as e:
-#         db_session.rollback()
-#         return jsonify({'success': False, 'error': str(e)}), 500
-#     finally:
-#         db_session.close()
-        
-
-# @app.route('/get_replies/<message_id>', methods=['GET'])
-# def get_replies(message_id):
-#     db_session = SessionLocal()
-#     try:
-#         parent_message = db_session.query(ChatMessage).filter_by(message_id=message_id).first()
-#         if not parent_message:
-#             return jsonify({'success': False, 'message': 'Parent message not found'}), 404
-
-#         replies = db_session.query(ChatMessage).filter_by(replied_to_id=message_id).order_by(ChatMessage.timestamp).all()
-#         replies_json = [{
-#             'message_id': str(reply.message_id),
-#             'sender_id': reply.sender_id,
-#             'text': reply.text,
-#             'timestamp': reply.timestamp.isoformat(),
-#             'replied_to_id': str(reply.replied_to_id)
-#         } for reply in replies]
-
-#         return jsonify({'success': True, 'replies': replies_json})
-#     except Exception as e:
-#         return jsonify({'success': False, 'error': str(e)}), 500
-#     finally:
-#         db_session.close()
 

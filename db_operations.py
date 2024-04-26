@@ -289,6 +289,48 @@ def get_professors_class_id(user_id):
         session.close()
 
 
+def get_students_class_id(user_id):
+    session = SessionLocal()
+    try:
+        student_class = (
+            session.query(Class)
+            .join(Enrollment, Class.class_id == Enrollment.class_id)
+            .join(Student, Enrollment.student_id == Student.user_id)
+            .filter(Student.user_id == user_id)
+            .first()
+        )
+        if student_class:
+            return student_class.class_id
+        else:
+            return None
+    except Exception as e:
+        print(f"Error fetching student's class_id: {e}")
+        return None
+    finally:
+        session.close()
+        
+
+def get_active_class_and_session_ids(user_id, db_session: Session):
+    """Fetch the class ID and active session ID for the specified user."""
+    try:
+        active_session = (
+            db_session.query(ClassSession)
+            .join(Class, Class.class_id == ClassSession.class_id)
+            .join(User, Class.instructor_id == User.user_id)
+            .filter(User.user_id == user_id, ClassSession.is_active == True)
+            .first()
+        )
+
+        if active_session:
+            return active_session.class_id, active_session.session_id
+        else:
+            return None, None
+    except Exception as e:
+        print(f"Error fetching active class and session IDs: {e}")
+        return None, None
+
+
+
 def get_questions_for_class(class_id: str):
     """
     Retrieves questions for a specific class ordered by their question_id to maintain consistency.

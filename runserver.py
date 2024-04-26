@@ -5,26 +5,25 @@
 # -----------------------------------------------------------------------
 
 import sys
-import app
+from app import app, socketio  
 
 def main():
-    print("Starting the Flask application...")
+    print("Starting the Flask-SocketIO application...")
     if len(sys.argv) != 2:
         print("Usage: " + sys.argv[0] + " port", file=sys.stderr)
         sys.exit(1)
 
     try:
         port = int(sys.argv[1])
-    except Exception:
+    except ValueError:
         print("Port must be an integer.", file=sys.stderr)
         sys.exit(1)
 
     try:
-        app.app.run(host='localhost', port=port, debug=True)
+        socketio.run(app, host='0.0.0.0', port=port, debug=True)
     except Exception as ex:
-        print(ex, file=sys.stderr)
+        print("Failed to start the server:", ex, file=sys.stderr)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
