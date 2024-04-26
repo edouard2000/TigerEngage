@@ -21,7 +21,9 @@ class TextSummarizer:
 
         prompt = (f"Question: {question}\n"
                 f"Correct answer: {correct_answer}\n"
-                f"Explain why this is the correct answer by relating key elements of the question to the answer. "
+                f"""Explain why this is the correct answer by relating key elements 
+                of the question to the answer. Elaborate by adding your own explation 
+                by providn logical explanation of why it it is true and perhasp offer examples"""
                 f"Provide a clear and concise explanation, keeping it under 500 characters.")
 
         try:
@@ -34,7 +36,6 @@ class TextSummarizer:
             )
 
             enhanced_explanation = completion.choices[0].message.content
-            # Automatically truncate to ensure it does not exceed 100 characters
             return enhanced_explanation[:500]
         except Exception as e:
             print(f"Error generating enhanced explanation: {e}")

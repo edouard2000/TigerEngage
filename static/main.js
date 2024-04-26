@@ -62,20 +62,20 @@ document.addEventListener('DOMContentLoaded', function() {
     mic_btn.addEventListener('click', function() {
         if (!isRecording) {
             audioStartAlert.play();
-            mic_btn.textContent = 'Stop Recording';
+            mic_btn.textContent = 'Stop';
             recordingDot.style.display = 'inline-block';
             if (can_record) {
                 recorder.start();
-                recognition.start(); // Start speech recognition
+                recognition.start(); 
             }
             isRecording = true;
         } else {
             audioStopAlert.play();
-            mic_btn.textContent = 'Start Recording';
+            mic_btn.textContent = 'Record';
             recordingDot.style.display = 'none';
             if (can_record) {
                 recorder.stop();
-                recognition.stop(); // Stop speech recognition
+                recognition.stop();
             }
             isRecording = false;
         }

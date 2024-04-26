@@ -95,9 +95,6 @@ function toggleMoreInfo() {
 }
 
 
-
-
-
 function toggleClassSession(classId, action, button) {
   const endpoint = `/class/${classId}/${action}_session`;
   fetch(endpoint, {

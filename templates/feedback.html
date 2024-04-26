@@ -11,48 +11,51 @@
 </head>
 <body>
     <div class="container mx-auto px-4">
-        <div class="bg-sky-600 text-white p-4 rounded-lg shadow-md my-6">
-            <h2 class="text-xl font-bold">Question:</h2>
+        <!-- Question Container -->
+        <div class="bg-gray-100 text-gray-800 p-4 rounded-lg shadow-md my-6">
+            <h2 class="text-xl font-bold mb-2">Question:</h2>
             <p class="text-sm">{{ question_content }}</p>
         </div>
 
-        <div class="bg-sky-600 text-white p-4 rounded-lg shadow-md my-6">
-            <h3 class="text-lg font-bold">Answers Summary:</h3>
+        <!-- Answers Summary Container -->
+        <div class="bg-gray-100 text-gray-800 p-4 rounded-lg shadow-md my-6">
+            <h3 class="text-lg font-bold mb-2">Answers Summary:</h3>
             <p class="text-sm">{{ answers_summary }}</p>
         </div>
 
+        <!-- Answers Detail Container -->
         <div class="flex flex-wrap -mx-2">
             <div class="w-full md:w-1/2 px-2">
-                <div class="bg-green-700 text-white p-4 rounded-lg shadow-md my-6">
-                    <h3 class="text-lg font-bold">Correct Answer:</h3>
+                <div class="bg-blue-100 text-gray-800 p-4 rounded-lg shadow-md my-6">
+                    <h3 class="text-lg font-bold mb-2">Correct Answer:</h3>
                     <p class="text-sm">{{ correct_answer }}</p>
                 </div>
             </div>
             
             <div class="w-full md:w-1/2 px-2">
-                <div class="bg-green-900 text-white p-4 rounded-lg shadow-md my-6">
-                    <h3 class="text-lg font-bold">Your Answer:</h3>
+                <div class="bg-blue-200 text-gray-800 p-4 rounded-lg shadow-md my-6">
+                    <h3 class="text-lg font-bold mb-2">Your Answer:</h3>
                     <p class="text-sm">{{ user_answer }}</p>
                 </div>
             </div>
         </div>
 
+
         <div class="text-center my-6">
             <button
                 id="learnMoreBtn"
-                class="bg-purple-800 hover:bg-purple-900 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out"
+                class="bg-blue-800 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg transition duration-300 ease-in-out"
                 onclick="toggleMoreInfo()">Learn More</button>
         </div>
 
         <div
             id="moreInfoContent"
-            class="bg-purple-500 text-white p-4 rounded-lg shadow-lg my-6"
+            class="bg-blue-500 text-white p-4 rounded-lg shadow-lg my-6"
             style="display: none;">
             <p class="text-sm">
                {{ notes }}
             </p>
         </div>
     </div>
-    
 </body>
 </html>

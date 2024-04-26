@@ -706,6 +706,7 @@ def toggle_question(class_id, question_id):
 @app.route("/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
 def edit_question(class_id, question_id):
     data = request.get_json()
+    print(data)
     db = SessionLocal()
     try:
         question = (
