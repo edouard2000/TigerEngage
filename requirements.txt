@@ -11,3 +11,5 @@ flask_socketio
 gunicorn
 gevent
 gevent-websocket
+numpy
+
