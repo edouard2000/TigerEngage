@@ -693,8 +693,8 @@ def toggle_question(class_id, question_id):
         question_to_update.is_active = is_active
         session.commit()
         if not is_active:
-            summary_text = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
-            db_operations.store_summary(session, question_id, summary_text)
+            summary_text, explanations = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
+            db_operations.store_summary(session, question_id, summary_text, explanations)
 
         return jsonify({"success": True, "message": "Question status updated."}), 200
     except SQLAlchemyError as e:
@@ -846,9 +846,8 @@ def class_feedback(class_id):
         user_role = flask.session.get("role")
 
         displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
-        print(f"displayed_question: {displayed_question}")
         if not displayed_question:
-            return render_template("feedback.html", error="No question is currently displayed.")
+            return render_template("feedback.html", question_content="No question is currently displayed.")
 
         feedback_data = db_operations.get_feedback_data(db_session, class_id, displayed_question.question_id)
         if not feedback_data:
@@ -859,8 +858,7 @@ def class_feedback(class_id):
             user_answer = (
                 db_session.query(Answer)
                 .filter_by(question_id=displayed_question.question_id, student_id=logged_in_user_id)
-                .first()
-            )
+                .first())
             user_answer_text = user_answer.text if user_answer else "No answer submitted."
         feedback_data.update({"user_answer": user_answer_text})
         return render_template("feedback.html", **feedback_data)

@@ -49,20 +49,10 @@
             class="bg-purple-500 text-white p-4 rounded-lg shadow-lg my-6"
             style="display: none;">
             <p class="text-sm">
-                This is a placeholder for additional information that might be provided, such as insights into common misconceptions, further reading materials, or AI-generated content for deeper understanding.
+               {{ notes }}
             </p>
         </div>
     </div>
-
-    <script>
-        function toggleMoreInfo() {
-            const moreInfoContent = document.getElementById('moreInfoContent');
-            if (moreInfoContent.style.display === 'none') {
-                moreInfoContent.style.display = 'block';
-            } else {
-                moreInfoContent.style.display = 'none';
-            }
-        }
-    </script>
+    
 </body>
 </html>

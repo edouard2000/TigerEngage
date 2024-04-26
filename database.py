@@ -159,6 +159,7 @@ class Summary(Base):
     summary_id = Column(String, primary_key=True)
     question_id = Column(String, ForeignKey("questions.question_id"))
     text = Column(Text, nullable=False)
+    notes = Column(Text, nullable=False)
     question = relationship("Question", back_populates="summaries")
 
 

@@ -564,9 +564,7 @@ def check_question_not_active(
     return question is not None and not question.is_active
 
 
-def fetch_answers_generate_summary(
-    session: Session, class_id: str, question_id: str
-) -> str:
+def fetch_answers_generate_summary(session: Session, class_id: str, question_id: str) -> str:
     question = (
         session.query(Question)
         .filter_by(class_id=class_id, question_id=question_id)
@@ -582,13 +580,15 @@ def fetch_answers_generate_summary(
     summary = summarizer.summarize_student_answers(
         question.text, student_answers, question.correct_answer
     )
-    return summary
+    notes = summarizer.learn_more(question.text, question.correct_answer)
+    
+    return summary, notes
 
 
-def store_summary(session: Session, question_id: str, summary_text: str):
+def store_summary(session: Session, question_id: str, summary_text: str, explation: str):
     summary = session.query(Summary).filter_by(question_id=question_id).first()
     if not summary:
-        summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, text=summary_text)
+        summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, text=summary_text, notes=explation)
         session.add(summary)
     else:
         summary.text = summary_text
@@ -603,7 +603,8 @@ def get_feedback_data(session: Session, class_id: str, question_id: str) -> dict
         feedback_data = {
             "question_content": question.text,
             "answers_summary": summary.text,
-            "correct_answer": question.correct_answer, 
+            "correct_answer": question.correct_answer,
+            "notes": summary.notes
         }
         return feedback_data
     else:
@@ -636,3 +637,13 @@ def fetch_user_answer(
         )
         return answer.text if answer else "No answer submitted."
     return "Role not recognized."
+
+
+def store_detailed_explanation(session, question_id, explanation_note):
+    summary = session.query(Summary).filter_by(question_id=question_id).first()
+    if summary:
+        summary.notes = explanation_note 
+    else:
+        new_summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, notes=explanation_note)
+        session.add(new_summary)
+    session.commit()

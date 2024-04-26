@@ -70,7 +70,6 @@ function fetchContent(endpoint) {
 }
 
 
-
 function initializeStartEndToggle() {
   const startClassBtn = document.getElementById("startClass");
   const classId = getClassIdFromUrl();
@@ -81,6 +80,20 @@ function initializeStartEndToggle() {
     toggleClassSession(classId, action, startClassBtn);
   });
 }
+
+function toggleMoreInfo() {
+  var infoContent = document.getElementById('moreInfoContent');
+  var learnMoreBtn = document.getElementById('learnMoreBtn'); 
+
+  if (infoContent.style.display === 'none' || !infoContent.style.display) {
+      infoContent.style.display = 'block';
+      learnMoreBtn.textContent = 'Close'; 
+  } else {
+      infoContent.style.display = 'none';
+      learnMoreBtn.textContent = 'Learn More'; 
+  }
+}
+
 
 
 
@@ -552,6 +565,7 @@ document
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
       },
+      credentials: "include",
       body: JSON.stringify({
         question_text: questionText,
         correct_answer: answerText,
