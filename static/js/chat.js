@@ -72,7 +72,6 @@ function fetchAndDisplayMessages(classId) {
       if (data.success && data.isClassActive) {
         isClassActive = data.isClassActive;
         const currentUserIdFromServer = data.currentUserId;
-        localStorage.setItem("userId", userIdFromServer);
         data.messages.forEach((message) => {
           const isSender = message.sender_id === currentUserIdFromServer;
           displayMessage(message, isSender);
