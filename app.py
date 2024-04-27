@@ -925,7 +925,9 @@ def toggle_display(class_id, question_id):
 
 @app.route("/chat")
 def chat():
-    html_code = flask.render_template("chat.html")
+    username = session.get('username')
+    print(username)
+    html_code = flask.render_template("chat.html", username=username)
     response = flask.make_response(html_code)
     return response
 
@@ -934,7 +936,6 @@ def chat():
 def handle_send_message(data):
     user_id = session.get('username')
     db_session = SessionLocal()
-
     class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
 
     if not class_id or not session_id:
@@ -957,7 +958,7 @@ def handle_send_message(data):
         )
         db_session.add(new_message)
         db_session.commit()
-        emit('receive_message', {'content': content}, broadcast=True)
+        emit('receive_message', {'content': content, 'sender_id': user_id}, broadcast=True)
     except Exception as e:
         db_session.rollback()
         emit('error', {'error': f'Failed to save message: {str(e)}'})
@@ -965,38 +966,37 @@ def handle_send_message(data):
         db_session.close()
 
 
+
 @app.route('/chat/<class_id>/messages', methods=['GET'])
 def fetch_chat_messages(class_id):
     db_session = SessionLocal()
     try:
-        active_session = (
-            db_session.query(ClassSession)
-            .filter_by(class_id=class_id, is_active=True)
-            .first()
-        )
+        active_session = db_session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if not active_session:
-            print(f"No active session found for class ID: {class_id}")
             return jsonify({'success': False, 'message': 'No active session for this class.'}), 404
-        messages = (
-            db_session.query(ChatMessage)
-            .filter_by(class_id=class_id, session_id=active_session.session_id)
-            .order_by(ChatMessage.timestamp.asc())
-            .all()
-        )
-        messages_list = [
-            {
-                'message_id': message.message_id,
-                'sender_id': message.sender_id,
-                'text': message.text,
-                'timestamp': message.timestamp.isoformat()
-            } for message in messages
-        ]
-        return jsonify({'success': True, 'messages': messages_list})
+
+        messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=active_session.session_id).order_by(ChatMessage.timestamp.asc()).all()
+        messages_list = [{
+            'message_id': message.message_id,
+            'sender_id': message.sender_id,
+            'text': message.text,
+            'timestamp': message.timestamp.isoformat()
+        } for message in messages]
+        
+        current_user_id = session.get('username', 'Unknown')
+        
+        return jsonify({
+            'success': True,
+            'messages': messages_list,
+            'currentUserId': current_user_id
+        })
     except Exception as e:
         print(f"Error fetching messages: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         db_session.close()
+
+
 
 
 

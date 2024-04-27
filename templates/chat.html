@@ -5,42 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Chat Interface</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@latest/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        .chat-message {
-          background-color: #f8f8f8;
-          border: 1px solid #ddd;
-          padding: 8px;
-          margin-bottom: 10px;
-          border-radius: 4px;
-        }
-        .chat-buttons {
-          text-align: right;
-          margin-top: 10px;
-        }
-        .chat-button {
-          padding: 5px 10px;
-          margin-left: 5px;
-          border: none;
-          border-radius: 3px;
-          cursor: pointer;
-        }
-      </style>
-      
 </head>
-<body>
-    <div class="container mx-auto p-4">
-        <div class="chat-messages max-h-80 overflow-y-auto border p-3 mb-4">
-            <!-- Messages will be displayed here -->
-        </div>
-        <div class="message-input">
-            <input type="text" id="message" placeholder="Type your message here..." class="border p-2 w-full mb-4" aria-label="Message Input">
-            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" aria-label="Send Message">
+<body class="bg-gray-100 h-screen p-6">
+    <div class="chat-messages overflow-y-auto p-3 mb-4 rounded" style="height: 80vh;"></div>
+    <div class="fixed inset-x-0 bottom-0 bg-white p-4 flex justify-center items-center">
+        <div class="flex-1 max-w-md mx-auto flex">
+            <input type="text" id="message" placeholder="Type your message here..." class="border p-2 flex-grow rounded-l" aria-label="Message Input">
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-r" aria-label="Send Message">
                 Send Message
             </button>
-            
         </div>
     </div>
-    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js" defer></script>
-    <script src="/static/chat.js" defer></script>
 </body>
 </html>

@@ -773,104 +773,87 @@ function logout() {
 
 
 
+// chat related fucntions
+
+
+var socket;
+var currentUserId = localStorage.getItem('userId');
 function initializeChat() {
   var messageInput = document.getElementById('message');
   var messagesContainer = document.querySelector('.chat-messages');
+  
   if (!messageInput || !messagesContainer) {
     console.error('Chat initialization failed: Essential elements are missing.');
     return;
   }
 
-  const classId = getClassIdFromUrl();
-  fetchMessages(classId);
-
-  var socket = io.connect(window.location.origin);
-  function sendMessage() {
-    var content = messageInput.value.trim();
-    if (content) {
-      console.log('Sending message:', content);  
-      socket.emit('send_message', { content: content });
-      messageInput.value = ''; 
-    }
-  }
-
-  var sendButton = document.querySelector('[aria-label="Send Message"]');
-  if (sendButton) {
-    sendButton.addEventListener('click', sendMessage);
-  } else {
-    console.error('Send button not found.');
-  }
-
+  socket = io.connect(window.location.origin);
+  document.querySelector('[aria-label="Send Message"]').addEventListener('click', () => {
+    sendMessage(messageInput.value.trim());
+  });
   messageInput.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
-      sendMessage();
+      sendMessage(messageInput.value.trim());
       e.preventDefault();
     }
   });
-
   socket.on('receive_message', function(data) {
-    console.log('Received message:', data); 
-    var messageElement = document.createElement('div');
-    messageElement.textContent = data.content;
-    messagesContainer.appendChild(messageElement);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;  
-});
-
+    fetchAndDisplayMessages(getClassIdFromUrl());
+  });
   socket.on('connect_error', function(err) {
     console.error('Connection to the server lost:', err);
   });
-
-  socket.on('connect', function() {
-    console.log('Connected to WebSocket server.');
-  });
+  fetchAndDisplayMessages(getClassIdFromUrl());
 }
-
-
-
-function fetchMessages(classId) {
+function sendMessage(content) {
+  if (content) {
+    console.log('Sending message:', content);
+    socket.emit('send_message', { content: content, sender_id: currentUserId });
+    document.getElementById('message').value = ''; 
+  }
+}
+function fetchAndDisplayMessages(classId) {
+  clearChatMessages();
   fetch(`/chat/${classId}/messages`)
-      .then(response => response.json())
-      .then(data => {
-          if (data.success) {
-              data.messages.forEach(message => {
-                  displayMessage(message);
-              });
-          } else {
-              console.error('Failed to load messages:', data.error);
-          }
-      })
-      .catch(error => console.error('Error fetching chat messages:', error));
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const currentUserIdFromServer = data.currentUserId;
+        data.messages.forEach(message => {
+          const isSender = message.sender_id === currentUserIdFromServer;
+          displayMessage(message, isSender);
+        });
+      } else {
+        console.error('Failed to load messages:', data.error);
+      }
+    })
+    .catch(error => console.error('Error fetching chat messages:', error));
 }
 
-function displayMessage(message) {
+function displayMessage(message, isSender) {
   const messagesContainer = document.querySelector('.chat-messages');
+  if (message.text.trim() === '') {
+    return; 
+  }
+  
+  const textClass = isSender ? 'text-white' : 'text-gray-700';
+  const bgClass = isSender ? 'bg-blue-500' : 'bg-gray-200';
+  const alignClass = isSender ? 'float-right' : 'float-left';
   const messageElement = document.createElement('div');
-  messageElement.className = 'chat-message p-3 rounded-lg shadow mb-3 flex justify-between items-center'; 
-  messageElement.innerHTML = `
-    <p class="flex-1">${message.text}</p>
-    <div class="chat-buttons">
-      <button class="chat-button bg-blue-500 hover:bg-blue-700 text-white rounded py-1 px-3" onclick="editMessage('${message.message_id}')">Edit</button>
-      <button class="chat-button bg-red-500 hover:bg-red-700 text-white rounded py-1 px-3" onclick="deleteMessage('${message.message_id}')">Delete</button>
-      <button class="chat-button bg-green-500 hover:bg-green-700 text-white rounded py-1 px-3" onclick="replyToMessage('${message.message_id}')">Reply</button>
-    </div>
-  `;
+  
+  messageElement.className = `rounded px-4 py-2 mb-2 ${bgClass} ${textClass} ${alignClass}`;
+  messageElement.style.width = "50%";
+  messageElement.textContent = message.text;
   messagesContainer.appendChild(messageElement);
+  const clearFix = document.createElement('div');
+  clearFix.className = 'clear-both';
+  messagesContainer.appendChild(clearFix);
   messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
-
-
-
-function editMessage(messageId) {
-  console.log('Editing message:', messageId);
-  // Add your editing logic here
+function clearChatMessages() {
+  const messagesContainer = document.querySelector('.chat-messages');
+  messagesContainer.innerHTML = '';
 }
 
-function deleteMessage(messageId) {
-  console.log('Deleting message:', messageId);
-  // Add your deletion logic here
-}
 
-function replyToMessage(messageId) {
-  console.log('Replying to message:', messageId);
-  // Add your reply logic here
-}
+
