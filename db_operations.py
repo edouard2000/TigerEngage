@@ -316,7 +316,7 @@ def get_active_class_and_session_ids(user_id, db_session: Session):
         # Fetch the user's role
         user_role = db_session.query(User.role).filter(User.user_id == user_id).scalar()
 
-        if user_role == 'instructor':
+        if user_role == 'professor':
             active_session = (
                 db_session.query(ClassSession)
                 .join(Class, Class.class_id == ClassSession.class_id)

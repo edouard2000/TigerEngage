@@ -938,24 +938,15 @@ def chat():
     return response
 
 
+
 @socketio.on('send_message')
 def handle_send_message(data):
     user_id = session.get('username')
-    print(f"Received data from client: {data}, User ID from session: {user_id}")
-    
     db_session = SessionLocal()
     try:
         class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
-        print(f"Attempting to send message. Class ID: {class_id}, Session ID: {session_id}")
-
         if not class_id or not session_id:
-            print("No active class session found for this user.")
-            emit('error', {'error': 'No active session or class found for the user.'})
-            return
-
-        content = data.get('content')
-        if not content:
-            emit('error', {'error': 'Message content cannot be empty.'})
+            emit('error', {'error': 'No active session or class found.'})
             return
 
         new_message = ChatMessage(
@@ -963,22 +954,22 @@ def handle_send_message(data):
             sender_id=user_id,
             class_id=class_id,
             session_id=session_id,
-            text=content,
-            timestamp=datetime.now(timezone("UTC"))
+            text=data.get('content'),
+            timestamp=datetime.utcnow()
         )
         db_session.add(new_message)
         db_session.commit()
-        print("Message saved:", new_message)
-        emit('receive_message', {'content': content, 'sender_id': user_id}, broadcast=True)
+        emit('new_message', {
+            'message_id': new_message.message_id,
+            'text': new_message.text,
+            'sender_id': new_message.sender_id,
+            'timestamp': new_message.timestamp.isoformat()
+        },  broadcast=True, include_self=False)
     except Exception as e:
         db_session.rollback()
-        print(f"Failed to save message: {e}")
-        emit('error', {'error': f'Failed to save message: {str(e)}'})
+        emit('error', {'error': str(e)})
     finally:
         db_session.close()
-
-
-
 
 @app.route('/chat/<class_id>/messages', methods=['GET'])
 def fetch_chat_messages(class_id):

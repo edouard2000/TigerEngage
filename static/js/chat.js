@@ -42,11 +42,20 @@ function initializeChat() {
 
   fetchAndDisplayMessages(getClassIdFromUrl());
 
+  // Listen for incoming messages
+  socket.on('new_message', function(message) {
+    console.log('New message received:', message);
+    if (message.sender_id !== currentUserId) {
+      displayMessage(message, false);
+  }
+  });
+
   socket.on("error", function (data) {
-    console.error("Socket error received:", data); 
+    console.error("Socket error received:", data);
     Swal.fire("Error", data.error || "An unknown error occurred.", "error");
   });
 }
+
 
 function sendMessage(content) {
   console.log("Attempting to send message:", content);
