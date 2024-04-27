@@ -10,14 +10,16 @@ import io
 import os
 import uuid
 from datetime import datetime
-import logging
 from zoneinfo import ZoneInfo
 
 # Related third-party imports
 from dotenv import load_dotenv
 import flask
-from flask import jsonify, request, flash, redirect, session, url_for, render_template, send_file
-from flask_socketio import SocketIO, send, emit
+from flask import (
+    jsonify, request, flash, redirect,
+    session, url_for, render_template, send_file
+    )
+from flask_socketio import SocketIO, emit
 from flask_wtf.csrf import CSRFProtect
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -26,10 +28,12 @@ from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 # Local application/library specific imports
 from auth import authenticate
 from conciseNotes import LectureNoteSummarizer
-from database import ChatMessage, ClassSession, Question, SessionLocal, User, Student, Class, Enrollment, Answer
+from database import (
+    ChatMessage, ClassSession, Question,
+    SessionLocal, User, Student, Class, Enrollment, Answer
+)
 import db_operations
 from req_lib import ReqLib
-from summarizer import TextSummarizer
 
 load_dotenv()
 
@@ -81,7 +85,6 @@ def logout():
     try:
         user_id = flask.session.get("username")
         if user_id:
-            # Check if the user has an active class session
             active_session = (
                 db.query(ClassSession)
                 .join(Class, ClassSession.class_id == Class.class_id)
@@ -189,7 +192,10 @@ def edit_user(class_id, user_id):
         return redirect(url_for("professor_dashboard", class_id=class_id))
 
     db_session.close()
-    return render_template("edit_student.html", student=student, class_id=class_id, score=enrollment.score if enrollment else None, is_ta=enrollment.is_ta if enrollment else None)
+    return render_template("edit_student.html", student=student,
+                           class_id=class_id, score=enrollment.score
+                           if enrollment else None, is_ta=enrollment.is_ta
+                           if enrollment else None)
 
 
 @app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
@@ -972,8 +978,10 @@ def fetch_chat_messages(class_id):
     db_session = SessionLocal()
     try:
         active_session = db_session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        is_class_active = bool(active_session) 
+
         if not active_session:
-            return jsonify({'success': False, 'message': 'No active session for this class.'}), 404
+            return jsonify({'success': False, 'isClassActive': is_class_active, 'message': 'No active session for this class.'}), 404
 
         messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=active_session.session_id).order_by(ChatMessage.timestamp.asc()).all()
         messages_list = [{
@@ -987,14 +995,16 @@ def fetch_chat_messages(class_id):
         
         return jsonify({
             'success': True,
+            'isClassActive': is_class_active,
             'messages': messages_list,
             'currentUserId': current_user_id
         })
     except Exception as e:
         print(f"Error fetching messages: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        return jsonify({'success': False, 'isClassActive': False, 'error': str(e)}), 500
     finally:
         db_session.close()
+
 
 
 

@@ -205,6 +205,6 @@ class ChatMessage(Base):
         "ChatMessage", backref=backref("replied_to", remote_side=[message_id])
     )
 
-# Base.metadata.drop_all(_engine)
 
+# Base.metadata.drop_all(_engine)
 Base.metadata.create_all(_engine)

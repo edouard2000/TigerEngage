@@ -1,3 +1,5 @@
+let classId = null;
+
 document.addEventListener("DOMContentLoaded", () => {
   loadContent("/chat");
 
@@ -13,34 +15,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("nav-feedback").addEventListener("click", (e) => {
     e.preventDefault();
-    const classId = getClassIdFromUrl(); 
+    classId = getClassIdFromUrl(); 
     loadContent(`/class/${classId}/feedback`);
   });
 
   document.getElementById("nav-attendance").addEventListener("click", (e) => {
     e.preventDefault();
-    const classId = getClassIdFromUrl(); 
+    classId = getClassIdFromUrl(); 
     loadContent(`/attendance/${classId}/`);
 });
 });
 
+
 function loadContent(url) {
   fetch(url)
-    .then((response) => response.text())
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.text();
+    })
     .then((html) => {
       document.getElementById("content-area").innerHTML = html;
-      if (url.endsWith("/questions")) {
-        fetchActiveQuestion();
+      if (url.includes("/questions")) {
+        fetchActiveQuestion(); 
+        setupDynamicContent(); 
+      } else if (url.includes("/chat")) {
+        initializeChat();
+      } else if (url.includes("/feedback") || url.includes("/attendance")) {
+        setupDynamicContent();
       }
-      setupDynamicContent();
     })
     .catch((error) => {
       console.error("Error loading content:", error);
+      document.getElementById("content-area").innerHTML = `<p>Error loading content: ${error.message}</p>`;
     });
 }
 
+
 function fetchActiveQuestion() {
-  const classId = getClassIdFromUrl();
+  classId = getClassIdFromUrl();
   fetch(`/class/${classId}/active-question`)
     .then((response) => response.json())
     .then((data) => {
@@ -82,7 +96,7 @@ function submitAnswer(questionId) {
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
 
-  const classId = getClassIdFromUrl();
+  classId = getClassIdFromUrl();
   fetch(`/class/${classId}/submit-answer`, {
     method: "POST",
     headers: {

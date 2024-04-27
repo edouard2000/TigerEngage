@@ -12,9 +12,12 @@
         <div class="flex-1 max-w-md mx-auto flex">
             <input type="text" id="message" placeholder="Type your message here..." class="border p-2 flex-grow rounded-l" aria-label="Message Input">
             <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-r" aria-label="Send Message">
-                Send Message
+                Send
             </button>
         </div>
     </div>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-interactions.js') }}"></script>
 </body>
 </html>

@@ -15,41 +15,41 @@
   
   <p class="welcome-message  text-sky-600">Welcome <span class="font-bold">{{username}}</span> to your Dashboard.</p>
   
-  <div class="flex content-area overflow-hidden">
-    <div class="w-1/5 ml-2 bg-gray-100 overflow-hidden">
-      <ul class="flex flex-col space-y-4 p-8">
+  <div class="flex content-area">
+    <div class="w-1/5 bg-gray-100">
+      <ul class="flex flex-col space-y-4 p-2">
         <li>
-          <button id="startClass" data-class-id="{{ class_id }}" class="w-full bg-green-800 text-white py-2 px-1 rounded hover:bg-green-900 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
+          <button id="startClass" data-class-id="{{ class_id }}" class="w-full bg-green-800 text-white py-2 px-2 rounded hover:bg-green-900 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
             Start
           </button>
         </li>
         <li>
-          <button id="addQuestion" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-1 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
+          <button id="addQuestion" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-2 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
             Question
           </button>
         </li>
         <li>
-          <button id="classUsers" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-1 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
+          <button id="classUsers" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-2 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
             Users
           </button>
         </li>
         <li>
-          <button id="feedback" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-1 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
+          <button id="feedback" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-2 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
             Feedback
           </button>
         </li>
         <li>
-          <button id="liveChat" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-1 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
+          <button id="liveChat" data-class-id="{{ class_id }}" class="w-full bg-sky-600 text-white py-2 px-2 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis">
             Chat
           </button>
         </li>
         <li>
-          <button class="w-full bg-sky-600 text-white py-2 px-1 roundedpx-4 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis" id="mic">
+          <button class="w-full bg-sky-600 text-white py-2 px-2 roundedpx-4 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis" id="mic">
             Record
           </button>
           <span class="recording-dot"></span>
           <audio class="playback" controls style="width: 100%;"></audio>
-          <button class="w-full bg-sky-600 text-white py-2 px-1 roundedpx-4 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis" id="submitTranscript">
+          <button class="w-full bg-sky-600 text-white py-2 px-2 roundedpx-4 rounded hover:bg-sky-700 transition duration-300 text-left text-xs sm:text-sm md:text-base overflow-hidden whitespace-normal text-overflow-ellipsis" id="submitTranscript">
           Make Notes
           </button>
         </li>

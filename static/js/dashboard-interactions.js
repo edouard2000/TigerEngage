@@ -1,3 +1,5 @@
+// author: Edouard KWIZERA
+
 let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -25,6 +27,8 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
+
+
   initializeStartEndToggle();
 
   document
@@ -119,6 +123,7 @@ function toggleClassSession(classId, action, button) {
           confirmButtonText: "OK",
         }).then((result) => {
           if (result.isConfirmed) {
+            initializeChat(); 
             checkSessionStatusAndUpdateButton(classId, button);
           }
         });
@@ -386,7 +391,6 @@ function toggleDisplay(questionId, button) {
         text: `Question has been ${!isDisplayed ? 'displayed' : 'undisplayed'} successfully.`
       });
     } else {
-      // Handle specific server-side error messages
       Swal.fire({
         icon: 'error',
         title: 'Action Denied',
@@ -770,90 +774,4 @@ function logout() {
       }
   });
 }
-
-
-
-// chat related fucntions
-
-
-var socket;
-var currentUserId = localStorage.getItem('userId');
-function initializeChat() {
-  var messageInput = document.getElementById('message');
-  var messagesContainer = document.querySelector('.chat-messages');
-  
-  if (!messageInput || !messagesContainer) {
-    console.error('Chat initialization failed: Essential elements are missing.');
-    return;
-  }
-
-  socket = io.connect(window.location.origin);
-  document.querySelector('[aria-label="Send Message"]').addEventListener('click', () => {
-    sendMessage(messageInput.value.trim());
-  });
-  messageInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      sendMessage(messageInput.value.trim());
-      e.preventDefault();
-    }
-  });
-  socket.on('receive_message', function(data) {
-    fetchAndDisplayMessages(getClassIdFromUrl());
-  });
-  socket.on('connect_error', function(err) {
-    console.error('Connection to the server lost:', err);
-  });
-  fetchAndDisplayMessages(getClassIdFromUrl());
-}
-function sendMessage(content) {
-  if (content) {
-    console.log('Sending message:', content);
-    socket.emit('send_message', { content: content, sender_id: currentUserId });
-    document.getElementById('message').value = ''; 
-  }
-}
-function fetchAndDisplayMessages(classId) {
-  clearChatMessages();
-  fetch(`/chat/${classId}/messages`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        const currentUserIdFromServer = data.currentUserId;
-        data.messages.forEach(message => {
-          const isSender = message.sender_id === currentUserIdFromServer;
-          displayMessage(message, isSender);
-        });
-      } else {
-        console.error('Failed to load messages:', data.error);
-      }
-    })
-    .catch(error => console.error('Error fetching chat messages:', error));
-}
-
-function displayMessage(message, isSender) {
-  const messagesContainer = document.querySelector('.chat-messages');
-  if (message.text.trim() === '') {
-    return; 
-  }
-  
-  const textClass = isSender ? 'text-white' : 'text-gray-700';
-  const bgClass = isSender ? 'bg-blue-500' : 'bg-gray-200';
-  const alignClass = isSender ? 'float-right' : 'float-left';
-  const messageElement = document.createElement('div');
-  
-  messageElement.className = `rounded px-4 py-2 mb-2 ${bgClass} ${textClass} ${alignClass}`;
-  messageElement.style.width = "50%";
-  messageElement.textContent = message.text;
-  messagesContainer.appendChild(messageElement);
-  const clearFix = document.createElement('div');
-  clearFix.className = 'clear-both';
-  messagesContainer.appendChild(clearFix);
-  messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-function clearChatMessages() {
-  const messagesContainer = document.querySelector('.chat-messages');
-  messagesContainer.innerHTML = '';
-}
-
-
 
