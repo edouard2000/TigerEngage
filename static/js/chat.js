@@ -42,21 +42,20 @@ function initializeChat() {
   fetchAndDisplayMessages(getClassIdFromUrl());
 
   socket.on("error", function (data) {
+    console.error("Socket error received:", data); 
     Swal.fire("Error", data.error || "An unknown error occurred.", "error");
   });
 }
 
 function sendMessage(content) {
+  console.log("Attempting to send message:", content);
   if (isClassActive) {
-    displayMessageOptimistically(content);
-    socket.emit("send_message", { content: content, sender_id: currentUserId });
-    document.getElementById("message").value = "";
+      displayMessageOptimistically(content);
+      socket.emit('send_message', { content: content, sender_id: currentUserId });
+      document.getElementById('message').value = '';
   } else {
-    Swal.fire(
-      "Error",
-      "Cannot send message. The class has not started.",
-      "error"
-    );
+      console.log("Failed to send message: Class is not active");  
+      Swal.fire('Error', 'Cannot send message. The class has not started.', 'error');
   }
 }
 
@@ -65,6 +64,7 @@ function displayMessageOptimistically(content) {
 }
 
 function fetchAndDisplayMessages(classId) {
+  console.log("Fetching messages for class ID:", classId);
   clearChatMessages();
   fetch(`/chat/${classId}/messages`)
     .then((response) => response.json())

@@ -10,7 +10,7 @@ import io
 import os
 import uuid
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from pytz import timezone
 
 # Related third-party imports
 from dotenv import load_dotenv
@@ -940,32 +940,38 @@ def chat():
 
 @socketio.on('send_message')
 def handle_send_message(data):
+    print("Received data from client:", data) 
     user_id = session.get('username')
+    print("User ID from session:", user_id) 
+
     db_session = SessionLocal()
-    class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
-
-    if not class_id or not session_id:
-        emit('error', {'error': 'No active session or class found for the user.'})
-        return
-
-    content = data.get('content')
-    if not content:
-        emit('error', {'error': 'Message content cannot be empty.'})
-        return
-
     try:
+        class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
+        print(f"Class ID: {class_id}, Session ID: {session_id}") 
+
+        if not class_id or not session_id:
+            emit('error', {'error': 'No active session or class found for the user.'})
+            return
+
+        content = data.get('content')
+        if not content:
+            emit('error', {'error': 'Message content cannot be empty.'})
+            return
+
         new_message = ChatMessage(
             message_id=str(uuid.uuid4()),
             sender_id=user_id,
             class_id=class_id,
             session_id=session_id,
             text=content,
-            timestamp=datetime.now(ZoneInfo("UTC"))
+            timestamp=datetime.now(timezone("UTC"))
         )
         db_session.add(new_message)
         db_session.commit()
+        print("Message saved:", new_message)  
         emit('receive_message', {'content': content, 'sender_id': user_id}, broadcast=True)
     except Exception as e:
+        print("Exception occurred:", str(e)) 
         db_session.rollback()
         emit('error', {'error': f'Failed to save message: {str(e)}'})
     finally:
