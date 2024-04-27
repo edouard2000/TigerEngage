@@ -940,16 +940,16 @@ def chat():
 
 @socketio.on('send_message')
 def handle_send_message(data):
-    print("Received data from client:", data) 
     user_id = session.get('username')
-    print("User ID from session:", user_id) 
-
+    print(f"Received data from client: {data}, User ID from session: {user_id}")
+    
     db_session = SessionLocal()
     try:
         class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
-        print(f"Class ID: {class_id}, Session ID: {session_id}") 
+        print(f"Attempting to send message. Class ID: {class_id}, Session ID: {session_id}")
 
         if not class_id or not session_id:
+            print("No active class session found for this user.")
             emit('error', {'error': 'No active session or class found for the user.'})
             return
 
@@ -968,14 +968,15 @@ def handle_send_message(data):
         )
         db_session.add(new_message)
         db_session.commit()
-        print("Message saved:", new_message)  
+        print("Message saved:", new_message)
         emit('receive_message', {'content': content, 'sender_id': user_id}, broadcast=True)
     except Exception as e:
-        print("Exception occurred:", str(e)) 
         db_session.rollback()
+        print(f"Failed to save message: {e}")
         emit('error', {'error': f'Failed to save message: {str(e)}'})
     finally:
         db_session.close()
+
 
 
 

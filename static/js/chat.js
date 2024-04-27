@@ -3,6 +3,7 @@
 
 var socket;
 var currentUserId = localStorage.getItem("userId");
+let sender_id = null;
 
 function initializeChat() {
   var messageInput = document.getElementById("message");
@@ -72,6 +73,7 @@ function fetchAndDisplayMessages(classId) {
       if (data.success && data.isClassActive) {
         isClassActive = data.isClassActive;
         const currentUserIdFromServer = data.currentUserId;
+        sender_id = currentUserIdFromServer;
         data.messages.forEach((message) => {
           const isSender = message.sender_id === currentUserIdFromServer;
           displayMessage(message, isSender);

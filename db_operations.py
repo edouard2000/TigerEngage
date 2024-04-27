@@ -313,13 +313,23 @@ def get_students_class_id(user_id):
 def get_active_class_and_session_ids(user_id, db_session: Session):
     """Fetch the class ID and active session ID for the specified user."""
     try:
-        active_session = (
-            db_session.query(ClassSession)
-            .join(Class, Class.class_id == ClassSession.class_id)
-            .join(User, Class.instructor_id == User.user_id)
-            .filter(User.user_id == user_id, ClassSession.is_active == True)
-            .first()
-        )
+        # Fetch the user's role
+        user_role = db_session.query(User.role).filter(User.user_id == user_id).scalar()
+
+        if user_role == 'instructor':
+            active_session = (
+                db_session.query(ClassSession)
+                .join(Class, Class.class_id == ClassSession.class_id)
+                .filter(Class.instructor_id == user_id, ClassSession.is_active == True)
+                .first()
+            )
+        elif user_role == 'student':
+            active_session = (
+                db_session.query(ClassSession)
+                .join(Enrollment, Enrollment.class_id == ClassSession.class_id)
+                .filter(Enrollment.student_id == user_id, ClassSession.is_active == True)
+                .first()
+            )
 
         if active_session:
             return active_session.class_id, active_session.session_id
@@ -328,6 +338,7 @@ def get_active_class_and_session_ids(user_id, db_session: Session):
     except Exception as e:
         print(f"Error fetching active class and session IDs: {e}")
         return None, None
+
 
 
 
