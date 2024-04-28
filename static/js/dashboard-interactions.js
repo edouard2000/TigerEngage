@@ -68,12 +68,11 @@ function fetchContent(endpoint) {
       } else if (endpoint === "/add-question") {
         initializeQuestionFormEventListeners();
       } else if (endpoint === "/chat") {
-        initializeChat(); 
+        fetchCurrentUserId(); 
       }
     })
     .catch((error) => console.error("Error loading content:", error));
 }
-
 
 
 function initializeStartEndToggle() {
