@@ -876,28 +876,20 @@ def toggle_display(class_id, question_id):
     try:
         data = request.get_json()
         should_display = data.get('displayed', False)
-        
-        # Fetch the question to be updated
         question = session.query(Question).filter_by(class_id=class_id, question_id=question_id).first()
         if not question:
             return jsonify({"success": False, "message": "Question not found."}), 404
-
-        # Check if a class session is currently active
         active_session = session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if not active_session:
             return jsonify({
                 "success": False,
                 "message": "No active class session. Please start a session before displaying questions."
             }), 403
-
-        # Check if the question is currently active and the request is to display it
         if should_display and question.is_active:
             return jsonify({
                 "success": False,
                 "message": "This question is currently active. Please stop it before displaying."
             }), 409
-
-        # Check if another question is already displayed when trying to display this one
         if should_display:
             currently_displayed_question = session.query(Question).filter(
                 Question.class_id == class_id,

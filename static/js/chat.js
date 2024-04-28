@@ -9,7 +9,7 @@ function fetchCurrentUserId() {
           if (data.success) {
               localStorage.setItem('userId', data.userId);
               currentUserId = data.userId;
-              initializeChat();
+              initializeChat();  
           } else {
               console.error('Failed to get current user ID:', data.message);
               Swal.fire("Error", "Failed to load user data. Please log in again.", "error");
@@ -20,8 +20,6 @@ function fetchCurrentUserId() {
           Swal.fire("Error", "Failed to fetch user data.", "error");
       });
 }
-
-document.addEventListener("DOMContentLoaded", fetchCurrentUserId);
 
 
 var socket;
@@ -38,13 +36,9 @@ function initializeChat() {
   var messagesContainer = document.querySelector(".chat-messages");
 
   if (!messageInput || !messagesContainer) {
-    Swal.fire(
-      "Error",
-      "Chat initialization failed: Essential elements are missing.",
-      "error"
-    );
+    setTimeout(initializeChat, 100);
     return;
-  }
+}
 
   socket = io.connect(window.location.origin);
 

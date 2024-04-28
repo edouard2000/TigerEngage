@@ -71,6 +71,8 @@
       </p>
     </footer>
 
-    {% block scripts %} {% endblock %}
+    {% block scripts %}
+    <script src="{{ url_for('static', filename='js/dashboard-interactions.js') }}"></script>
+     {% endblock %}
   </body>
 </html>
