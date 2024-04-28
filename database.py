@@ -190,6 +190,7 @@ class ChatMessage(Base):
     class_id = Column(String, ForeignKey("classes.class_id"))
     session_id = Column(String, ForeignKey("class_sessions.session_id"))
     text = Column(Text, nullable=False)
+    role = Column(String(50))
     timestamp = Column(
         DateTime(timezone=True), default=lambda: datetime.now(ZoneInfo("UTC"))
     )

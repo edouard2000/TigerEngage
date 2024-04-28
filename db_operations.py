@@ -339,9 +339,6 @@ def get_active_class_and_session_ids(user_id, db_session: Session):
         print(f"Error fetching active class and session IDs: {e}")
         return None, None
 
-
-
-
 def get_questions_for_class(class_id: str):
     """
     Retrieves questions for a specific class ordered by their question_id to maintain consistency.

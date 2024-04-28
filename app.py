@@ -10,7 +10,6 @@ import io
 import os
 import uuid
 from datetime import datetime
-from pytz import timezone
 
 # Related third-party imports
 from dotenv import load_dotenv
@@ -166,6 +165,7 @@ def professor_dashboard(class_id):
         course_name=course_name,
         username=display_name,
         class_id=class_id,
+        User_id = username
     )
 
 
@@ -261,15 +261,11 @@ def authenticate_and_direct():
         elif actual_role == "student":
             class_id = db_operations.get_students_class_id(username)
             if not class_id:
-                print(f"No class associated with the student {username}")
                 return flask.redirect(url_for("student_dashboard"))
             flask.session['class_id'] = class_id 
             return flask.redirect(flask.url_for("student_dashboard", class_id=class_id))
     else:
         role = flask.session.get("role", "student")
-        print(
-            f"{username} does not exist in the database, creating one with role {role}"
-        )
         db_operations.create_user(username, role)
         flask.session['visited'] = True
         if role == "professor":
@@ -946,30 +942,45 @@ def handle_send_message(data):
     try:
         class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
         if not class_id or not session_id:
-            emit('error', {'error': 'No active session or class found.'})
+            emit('error', {'error': 'No active session or class found.'}, room=request.sid)
             return
-
+        
+        role = db_operations.get_user_role(user_id)
         new_message = ChatMessage(
             message_id=str(uuid.uuid4()),
             sender_id=user_id,
             class_id=class_id,
             session_id=session_id,
             text=data.get('content'),
+            role=role,
             timestamp=datetime.utcnow()
         )
         db_session.add(new_message)
         db_session.commit()
+        
+        # Emit back to sender for confirmation
         emit('new_message', {
             'message_id': new_message.message_id,
             'text': new_message.text,
             'sender_id': new_message.sender_id,
+            'role': new_message.role,
             'timestamp': new_message.timestamp.isoformat()
-        },  broadcast=True, include_self=False)
+        }, room=request.sid)
+        
+        # Broadcast to others
+        emit('new_message', {
+            'message_id': new_message.message_id,
+            'text': new_message.text,
+            'sender_id': new_message.sender_id,
+            'role': new_message.role,
+            'timestamp': new_message.timestamp.isoformat()
+        }, broadcast=True, include_self=False)
     except Exception as e:
         db_session.rollback()
-        emit('error', {'error': str(e)})
+        emit('error', {'error': str(e)}, room=request.sid)
     finally:
         db_session.close()
+
 
 @app.route('/chat/<class_id>/messages', methods=['GET'])
 def fetch_chat_messages(class_id):
@@ -986,6 +997,7 @@ def fetch_chat_messages(class_id):
             'message_id': message.message_id,
             'sender_id': message.sender_id,
             'text': message.text,
+            'role': message.role,
             'timestamp': message.timestamp.isoformat()
         } for message in messages]
         
@@ -1003,9 +1015,14 @@ def fetch_chat_messages(class_id):
     finally:
         db_session.close()
 
-
-
-
+@app.route('/get-current-user')
+def get_current_user():
+    user_id = session.get('username', None)
+    print(f"user_id: {user_id}" )
+    if user_id:
+        return jsonify({'success': True, 'userId': user_id})
+    else:
+        return jsonify({'success': False, 'message': 'No user logged in'}), 404
 
 
 if __name__ == '__main__':

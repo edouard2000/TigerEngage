@@ -1,11 +1,39 @@
 // file: chat.js 
 // author: Edouard KWIZERA
 
+
+function fetchCurrentUserId() {
+  fetch('/get-current-user')
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              localStorage.setItem('userId', data.userId);
+              currentUserId = data.userId;
+              initializeChat();
+          } else {
+              console.error('Failed to get current user ID:', data.message);
+              Swal.fire("Error", "Failed to load user data. Please log in again.", "error");
+          }
+      })
+      .catch(error => {
+          console.error('Error fetching current user ID:', error);
+          Swal.fire("Error", "Failed to fetch user data.", "error");
+      });
+}
+
+document.addEventListener("DOMContentLoaded", fetchCurrentUserId);
+
+
 var socket;
 var currentUserId = localStorage.getItem("userId");
-let sender_id = null;
+console.log("Current user ID:", currentUserId);
 
 function initializeChat() {
+  console.log("Current user ID:", currentUserId);
+  if (!currentUserId) {
+    console.error("Current user ID not set. Unable to initialize chat.");
+    return;
+}
   var messageInput = document.getElementById("message");
   var messagesContainer = document.querySelector(".chat-messages");
 
@@ -42,12 +70,13 @@ function initializeChat() {
 
   fetchAndDisplayMessages(getClassIdFromUrl());
 
-  // Listen for incoming messages
   socket.on('new_message', function(message) {
     console.log('New message received:', message);
-    if (message.sender_id !== currentUserId) {
-      displayMessage(message, false);
-  }
+    console.log('Is this message from the current user?', message.sender_id === currentUserId);
+    const isSender = message.sender_id === currentUserId;
+    if (!document.getElementById(`msg-${message.message_id}`)) {
+      displayMessage(message, isSender);
+    }
   });
 
   socket.on("error", function (data) {
@@ -60,18 +89,13 @@ function initializeChat() {
 function sendMessage(content) {
   console.log("Attempting to send message:", content);
   if (isClassActive) {
-      displayMessageOptimistically(content);
       socket.emit('send_message', { content: content, sender_id: currentUserId });
-      document.getElementById('message').value = '';
   } else {
-      console.log("Failed to send message: Class is not active");  
+      console.log("Failed to send message: Class is not active");
       Swal.fire('Error', 'Cannot send message. The class has not started.', 'error');
   }
 }
 
-function displayMessageOptimistically(content) {
-  displayMessage({ text: content, sender_id: currentUserId }, true);
-}
 
 function fetchAndDisplayMessages(classId) {
   console.log("Fetching messages for class ID:", classId);
@@ -110,10 +134,21 @@ function displayMessage(message, isSender) {
   const bgClass = isSender ? "bg-blue-500" : "bg-gray-200";
   const alignClass = isSender ? "float-right" : "float-left";
   const messageElement = document.createElement("div");
-
+  messageElement.id = `msg-${message.message_id}`;
   messageElement.className = `rounded-xl px-4 py-2 mb-2 ${bgClass} ${textClass} ${alignClass}`;
-  messageElement.textContent = message.text;
+
+
+  const roleLabel = document.createElement("div");
+  roleLabel.className = isSender ? "role-label-sender" : "role-label-receiver";
+  roleLabel.textContent = message.role;
+  messageElement.appendChild(roleLabel);
+
+  const messageText = document.createElement("div");
+  messageText.textContent = message.text;
+  messageElement.appendChild(messageText);
+
   messagesContainer.appendChild(messageElement);
+
 
   const clearFix = document.createElement("div");
   clearFix.className = "clear-both";
@@ -125,3 +160,6 @@ function clearChatMessages() {
   const messagesContainer = document.querySelector(".chat-messages");
   messagesContainer.innerHTML = "";
 }
+
+
+
