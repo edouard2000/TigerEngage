@@ -122,7 +122,6 @@ function getClassIdFromUrl() {
   return urlParts[lastIndex] || urlParts[lastIndex - 1];
 }
 
-
 function toggleMoreInfo() {
   var infoContent = document.getElementById('moreInfoContent');
   var learnMoreBtn = document.getElementById('learnMoreBtn'); 
