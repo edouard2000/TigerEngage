@@ -25,6 +25,7 @@ from database import (
     Answer,
 )
 from summarizer import TextSummarizer
+from req_lib import ReqLib
 
 
 def create_user(netid, role):
@@ -33,10 +34,13 @@ def create_user(netid, role):
     """
     with SessionLocal() as session:
         email = f"{netid}@princeton.edu"
+        req_lib = ReqLib()
+        name = req_lib.getJSON(req_lib.configs.USERS, uid=netid,)
+        name = name[0].get('displayname')
         if role == "student":
-            new_user = Student(user_id=netid, email=email, netid=netid)
+            new_user = Student(user_id=netid, email=email, name=name)
         elif role == "professor":
-            new_user = Professor(user_id=netid, email=email, netid=netid)
+            new_user = Professor(user_id=netid, email=email, name=name)
         else:
             print(f"Invalid role: {role}")
             return False
@@ -123,7 +127,7 @@ def get_student_classes(netid: str) -> list:
                 .joinedload(Enrollment.class_)
                 .joinedload(Class.instructor)
             )
-            .filter(Student.netid == netid)
+            .filter(Student.user_id == netid)
             .first()
         )
         if not student:
@@ -164,10 +168,12 @@ def get_students_for_class(class_id: str):
                 percentage_score = (enrollment.score / class_info.possible_scores) * 100
             else:
                 percentage_score = None
+            display_name = student.name
             students_data.append(
                 {
                     "user_id": student.user_id,
-                    "netid": student.netid,
+                    "display_name": display_name,
+                    "netid": student.user_id,
                     "percentage": (
                         f"{percentage_score:.2f}%"
                         if percentage_score is not None
@@ -220,7 +226,7 @@ def get_professor_class(netid: str) -> str:
         professor_class = (
             session.query(Class.title)
             .join(Professor, Professor.user_id == Class.instructor_id)
-            .filter(Professor.netid == netid)
+            .filter(Professor.user_id == netid)
             .first()
         )
         if professor_class:
@@ -238,7 +244,7 @@ def get_user_role(username):
         str: The role of the user (e.g., 'student', 'professor') or None if not found.
     """
     with SessionLocal() as session:
-        user = session.query(User).filter_by(netid=username).first()
+        user = session.query(User).filter_by(user_id=username).first()
         if user:
             return user.role
         return None
@@ -283,27 +289,78 @@ def get_professors_class_id(user_id):
         session.close()
 
 
+def get_students_class_id(user_id):
+    session = SessionLocal()
+    try:
+        student_class = (
+            session.query(Class)
+            .join(Enrollment, Class.class_id == Enrollment.class_id)
+            .join(Student, Enrollment.student_id == Student.user_id)
+            .filter(Student.user_id == user_id)
+            .first()
+        )
+        if student_class:
+            return student_class.class_id
+        else:
+            return None
+    except Exception as e:
+        print(f"Error fetching student's class_id: {e}")
+        return None
+    finally:
+        session.close()
+        
+
+def get_active_class_and_session_ids(user_id, db_session: Session):
+    """Fetch the class ID and active session ID for the specified user."""
+    try:
+        # Fetch the user's role
+        user_role = db_session.query(User.role).filter(User.user_id == user_id).scalar()
+
+        if user_role == 'professor':
+            active_session = (
+                db_session.query(ClassSession)
+                .join(Class, Class.class_id == ClassSession.class_id)
+                .filter(Class.instructor_id == user_id, ClassSession.is_active == True)
+                .first()
+            )
+        elif user_role == 'student':
+            active_session = (
+                db_session.query(ClassSession)
+                .join(Enrollment, Enrollment.class_id == ClassSession.class_id)
+                .filter(Enrollment.student_id == user_id, ClassSession.is_active == True)
+                .first()
+            )
+
+        if active_session:
+            return active_session.class_id, active_session.session_id
+        else:
+            return None, None
+    except Exception as e:
+        print(f"Error fetching active class and session IDs: {e}")
+        return None, None
+
 def get_questions_for_class(class_id: str):
     """
-    Retrieves questions for a specific class.
+    Retrieves questions for a specific class ordered by their question_id to maintain consistency.
 
     Args:
         class_id (str): The unique identifier for the class.
 
     Returns:
-        list: A list of dictionaries, each containing the question ID, text, and correct answer.
+        list: A list of dictionaries, each containing the question ID, text, and correct answer, ordered by creation.
     """
     with SessionLocal() as session:
-        questions = session.query(Question).filter_by(class_id=class_id).all()
+        questions = session.query(Question).filter_by(class_id=class_id).order_by(Question.created_at).all()
         questions_data = [
             {
                 "question_id": question.question_id,
                 "text": question.text,
-                "correct_answer": question.correct_answer,
+                "correct_answer": question.correct_answer
             }
             for question in questions
         ]
         return questions_data
+
 
 
 def enroll_student(user_id, class_id):
@@ -326,7 +383,7 @@ def is_instructor_for_class(username, class_id):
     with SessionLocal() as db:
         instructor = (
             db.query(User)
-            .filter(User.netid == username, User.role == "professor")
+            .filter(User.user_id == username, User.role == "professor")
             .first()
         )
         class_ = db.query(Class).filter_by(class_id=class_id).first()
@@ -368,7 +425,7 @@ def start_new_session(class_id):
 
 def has_checked_in(username, session_id):
     with SessionLocal() as db:
-        user = db.query(User).filter(User.netid == username).first()
+        user = db.query(User).filter(User.user_id == username).first()
         if not user:
             return False
         attendance_record = (
@@ -382,7 +439,7 @@ def has_checked_in(username, session_id):
 
 def record_attendance_and_update(username, class_id, session_id):
     with SessionLocal() as db:
-        student = db.query(Student).filter_by(netid=username).first()
+        student = db.query(Student).filter_by(user_id=username).first()
         enrollment = (
             db.query(Enrollment)
             .filter_by(student_id=student.user_id, class_id=class_id)
@@ -429,7 +486,7 @@ def is_student_enrolled_in_class(username, class_id):
         bool: True if the student is enrolled in the class, False otherwise.
     """
     with SessionLocal() as db:
-        user = db.query(User).filter(User.netid == username).first()
+        user = db.query(User).filter(User.user_id == username).first()
         if not user:
             return False
         enrollment = (
@@ -557,9 +614,7 @@ def check_question_not_active(
     return question is not None and not question.is_active
 
 
-def fetch_answers_generate_summary(
-    session: Session, class_id: str, question_id: str
-) -> str:
+def fetch_answers_generate_summary(session: Session, class_id: str, question_id: str) -> str:
     question = (
         session.query(Question)
         .filter_by(class_id=class_id, question_id=question_id)
@@ -575,13 +630,15 @@ def fetch_answers_generate_summary(
     summary = summarizer.summarize_student_answers(
         question.text, student_answers, question.correct_answer
     )
-    return summary
+    notes = summarizer.learn_more(question.text, question.correct_answer)
+    
+    return summary, notes
 
 
-def store_summary(session: Session, question_id: str, summary_text: str):
+def store_summary(session: Session, question_id: str, summary_text: str, explation: str):
     summary = session.query(Summary).filter_by(question_id=question_id).first()
     if not summary:
-        summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, text=summary_text)
+        summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, text=summary_text, notes=explation)
         session.add(summary)
     else:
         summary.text = summary_text
@@ -596,13 +653,13 @@ def get_feedback_data(session: Session, class_id: str, question_id: str) -> dict
         feedback_data = {
             "question_content": question.text,
             "answers_summary": summary.text,
-            "correct_answer": question.correct_answer, 
+            "correct_answer": question.correct_answer,
+            "notes": summary.notes
         }
         return feedback_data
     else:
         return None 
-
-
+    
 
 def fetch_user_answer(
     session: Session, question_id: str, user_id: str, user_role: str
@@ -630,3 +687,13 @@ def fetch_user_answer(
         )
         return answer.text if answer else "No answer submitted."
     return "Role not recognized."
+
+
+def store_detailed_explanation(session, question_id, explanation_note):
+    summary = session.query(Summary).filter_by(question_id=question_id).first()
+    if summary:
+        summary.notes = explanation_note 
+    else:
+        new_summary = Summary(summary_id=str(uuid.uuid4()), question_id=question_id, notes=explanation_note)
+        session.add(new_summary)
+    session.commit()

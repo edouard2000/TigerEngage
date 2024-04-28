@@ -1,32 +1,46 @@
+// author: Edouard KWIZERA
+
 let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
   globalClassId = getClassIdFromUrl();
+
   document
     .getElementById("addQuestion")
     .addEventListener("click", () => fetchContent("/add-question"));
+
   document.getElementById("classUsers").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/userlist`);
   });
+
+  const userListButton = document.getElementById("classUsers");
+  if (userListButton) {
+    userListButton.click();
+  }
+
   document.getElementById("feedback").addEventListener("click", function () {
     const classId = this.getAttribute("data-class-id");
     fetchContent(`/class/${classId}/feedback`);
   });
-  
+
   document
     .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
-  setupDisplayButtons();
+
+
   initializeStartEndToggle();
-  initializeQuestionFormEventListeners();
-  fetchQuestionsAndDisplay(globalClassId);
+
   document
     .querySelector(".edit-question-modal .close-button")
     .addEventListener("click", function () {
       document.getElementById("editQuestionModal").style.display = "none";
     });
+
+  initializeQuestionEventListeners();
 });
+
+
 
 function showEditQuestionModal(
   questionId,
@@ -38,6 +52,8 @@ function showEditQuestionModal(
   document.getElementById("editAnswerText").value = currentAnswerText;
   document.getElementById("editingQuestionId").value = questionId;
 }
+
+
 
 function fetchContent(endpoint) {
   fetch(endpoint)
@@ -51,10 +67,14 @@ function fetchContent(endpoint) {
         fetchQuestionsAndDisplay(globalClassId);
       } else if (endpoint === "/add-question") {
         initializeQuestionFormEventListeners();
+      } else if (endpoint === "/chat") {
+        initializeChat(); 
       }
     })
     .catch((error) => console.error("Error loading content:", error));
 }
+
+
 
 function initializeStartEndToggle() {
   const startClassBtn = document.getElementById("startClass");
@@ -66,6 +86,22 @@ function initializeStartEndToggle() {
     toggleClassSession(classId, action, startClassBtn);
   });
 }
+
+
+
+function toggleMoreInfo() {
+  var infoContent = document.getElementById('moreInfoContent');
+  var learnMoreBtn = document.getElementById('learnMoreBtn'); 
+
+  if (infoContent.style.display === 'none' || !infoContent.style.display) {
+      infoContent.style.display = 'block';
+      learnMoreBtn.textContent = 'Close'; 
+  } else {
+      infoContent.style.display = 'none';
+      learnMoreBtn.textContent = 'Learn More'; 
+  }
+}
+
 
 function toggleClassSession(classId, action, button) {
   const endpoint = `/class/${classId}/${action}_session`;
@@ -82,21 +118,40 @@ function toggleClassSession(classId, action, button) {
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        alert(
-          `Class session ${
-            action === "start" ? "started" : "ended"
-          } successfully.`
-        );
-        checkSessionStatusAndUpdateButton(classId, button);
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: `Class session ${action === "start" ? "started" : "ended"} successfully.`,
+          confirmButtonText: "OK",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            initializeChat(); 
+            checkSessionStatusAndUpdateButton(classId, button);
+          }
+        });
       } else {
-        alert(data.message || `Failed to ${action} class session.`);
+ 
+        Swal.fire({
+          icon: "error",
+          title: "Failed!",
+          text: data.message, 
+          confirmButtonText: "OK",
+        });
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert(`An error occurred while trying to ${action} the class session.`);
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: `An error occurred while trying to ${action} the class session: ${error.message}`,
+        confirmButtonText: "OK",
+      });
     });
 }
+
+
+
 
 function checkSessionStatusAndUpdateButton(classId, button) {
   fetch(`/class/${classId}/session_status`)
@@ -117,13 +172,12 @@ function checkSessionStatusAndUpdateButton(classId, button) {
     });
 }
 
+
 function initializeQuestionFormEventListeners() {
   let csrfToken = document
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
-  console.log(` classid:${globalClassId}`);
   const classId = globalClassId;
-  console.log(`this is a classid: ${classId}`);
 
   const createQuestionBtn = document.getElementById("createQuestionBtn");
   const questionForm = document.getElementById("questionForm");
@@ -135,14 +189,25 @@ function initializeQuestionFormEventListeners() {
     });
   }
 
+
+
+
+
   const addQuestionBtn = document.getElementById("addQuestionBtn");
+
   if (addQuestionBtn) {
     addQuestionBtn.addEventListener("click", function () {
       const questionInput = document.getElementById("questionInput");
       const answerInput = document.getElementById("answerInput");
 
       if (!questionInput.value.trim() || !answerInput.value.trim()) {
-        alert("Please fill in both the question and the answer.");
+        Swal.fire({
+          icon: "warning",
+          title: "Incomplete Fields",
+          text: "Please fill in both the question and the answer.",
+          confirmButtonColor: "#0284c7",
+          confirmButtonText: "OK",
+        });
         return;
       }
 
@@ -173,13 +238,32 @@ function initializeQuestionFormEventListeners() {
             fetchQuestionsAndDisplay(classId);
             questionForm.classList.add("hidden");
             createQuestionBtn.classList.remove("hidden");
+            Swal.fire({
+              icon: "success",
+              title: "Question Added",
+              text: "The question has been successfully added.",
+              confirmButtonColor: "#0284c7", 
+              confirmButtonText: "OK",
+            });
           } else {
-            alert("Failed to add the question. Please try again.");
+            Swal.fire({
+              icon: "error",
+              title: "Failed",
+              text: "Failed to add the question. Please try again.",
+              confirmButtonColor: "#0284c7",
+              confirmButtonText: "OK",
+            });
           }
         })
         .catch((error) => {
           console.error("Error adding question:", error);
-          alert("An error occurred while trying to add the question.");
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "An error occurred while trying to add the question.",
+            confirmButtonColor: "#0284c7",
+            confirmButtonText: "OK",
+          });
           questionForm.classList.add("hidden");
           createQuestionBtn.classList.remove("hidden");
         });
@@ -188,184 +272,236 @@ function initializeQuestionFormEventListeners() {
 
   fetchQuestionsAndDisplay(classId);
 }
-
 function fetchQuestionsAndDisplay(classId) {
+  console.log("Fetching questions...");
   fetch(`/class/${classId}/questions`)
-    .then((response) => response.json())
-    .then((data) => {
+    .then(response => response.json())
+    .then(data => {
       const questionsContainer = document.getElementById("questionsList");
+      if (!questionsContainer) {
+        console.error("The questionsList container was not found on the page.");
+        return;
+      }
       questionsContainer.innerHTML = "";
       if (data.questions && data.questions.length > 0) {
-        data.questions.forEach((question) => {
-          const questionElement = createQuestionElement(question);
-          questionsContainer.appendChild(questionElement);
+        data.questions.forEach(question => {
+          const questionElement = createQuestionElement(question);  
+          questionsContainer.appendChild(questionElement); 
         });
+
+
+        data.questions.forEach(question => {
+          fetch(`/class/${classId}/question/${question.question_id}/status`)
+            .then(statusResponse => statusResponse.json())
+            .then(statusData => {
+              if (statusData.success) {
+                const questionElement = document.querySelector(`[data-question-id="${question.question_id}"]`);
+                updateQuestionStatus(questionElement, statusData.isActive, statusData.isDisplayed);
+
+                localStorage.setItem(`askState-${question.question_id}`, statusData.isActive.toString());
+                localStorage.setItem(`displayState-${question.question_id}`, statusData.isDisplayed.toString());
+              }
+            })
+            .catch(statusError => {
+              console.error(`Error fetching status for question ${question.question_id}:`, statusError);
+            });
+        });
+
         initializeQuestionEventListeners();
-        updateButtonsStateBasedOnActivity();
-        setupDisplayButtons();
       } else {
-        questionsContainer.innerHTML =
-          "<p>No questions found for this class.</p>";
+        questionsContainer.innerHTML = "<p>No questions found for this class.</p>";
       }
     })
-    .catch((error) => {
+    .catch(error => {8
       console.error("Error fetching questions:", error);
     });
 }
 
+function updateQuestionStatus(questionElement, isActive, isDisplayed) {
+  if (questionElement) {
+    questionElement.classList.toggle('active', isActive);
+    questionElement.classList.toggle('displayed', isDisplayed);
+  }
+}
+
+
+
 function createQuestionElement(question) {
+  const isActive = localStorage.getItem(`askState-${question.question_id}`) === 'true';
+  const isDisplayed = localStorage.getItem(`displayState-${question.question_id}`) === 'true';
+  
   const element = document.createElement("div");
-  element.className =
-    "question-element flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 text-white";
+  element.className = "question-element flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 text-white";
   element.innerHTML = `
-        <div class="flex-1">
-            <div><span class="font-semibold">Q:</span> ${question.text}</div>
-            <div><span class="font-semibold">A:</span> ${
-              question.correct_answer
-            }</div>
-        </div>
-        <div class="actions">
-            <button class="edit-button py-1 px-3 rounded bg-yellow-500 hover:bg-yellow-600 transition duration-300" data-question-id="${
-              question.question_id
-            }">
-                Edit
-            </button>
-            <button class="delete-button py-1 px-3 rounded bg-red-500 hover:bg-red-600 transition duration-300 ml-2" data-question-id="${
-              question.question_id
-            }">
-                Delete
-            </button>
+    <div class="flex-1">
+        <div><span class="font-semibold">Q:</span> ${question.text}</div>
+        <div><span class="font-semibold">A:</span> ${question.correct_answer}</div>
+    </div>
+    <div class="actions">
+        <button class="edit-button py-1 px-3 rounded bg-yellow-500 hover:bg-yellow-600 transition duration-300" data-question-id="${question.question_id}">
+            Edit
+        </button>
+        <button class="delete-button py-1 px-3 rounded bg-red-500 hover:bg-red-600 transition duration-300 ml-2" data-question-id="${question.question_id}">
+            Delete
+        </button>
+        <button class="ask-button py-1 px-3 rounded ${isActive ? "bg-red-600" : "bg-green-500"} hover:bg-green-600 transition duration-300 ml-2" data-question-id="${question.question_id}" data-is-active="${isActive}">
+            ${isActive ? "Stop" : "Ask"}
+        </button>
+        <button class="display-button py-1 px-3 rounded ${isDisplayed ? "bg-blue-700" : "bg-blue-500"} hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${question.question_id}" data-is-displayed="${isDisplayed}">
+            ${isDisplayed ? "UnDisplay" : "Display"}
+        </button>
+    </div>
+  `;
 
-            <button class="ask-button py-1 px-3 rounded ${
-              question.is_active ? "bg-red-600" : "bg-green-500"
-            } hover:bg-green-600 transition duration-300 ml-2" data-question-id="${
-    question.question_id
-  }" data-is-active="${question.is_active}">
-                ${question.is_active ? "Stop" : "Ask"}
-            </button>
-            <button class="display-button py-1 px-3 rounded bg-blue-500 hover:bg-blue-700 transition duration-300 ml-2" data-question-id="${
-              question.question_id
-            }">
-                Display
-            </button>
-        </div>
-    `;
-
-  const askButton = element.querySelector(".ask-button");
-  askButton.addEventListener("click", function () {
-    const isActive = this.getAttribute("data-is-active") === "true";
-    handleAskStopQuestion(question.question_id, !isActive, this);
+  element.querySelector(".ask-button").addEventListener("click", function () {
+    handleAskStopQuestion(question.question_id, this);
   });
-
-  element
-    .querySelector(".delete-button")
-    .addEventListener("click", function () {
-      deleteQuestion(question.question_id);
-    });
-
-  const editButton = element.querySelector(".edit-button");
-  editButton.addEventListener("click", function () {
-    showEditQuestionModal(
-      question.question_id,
-      question.text,
-      question.correct_answer
-    );
+  element.querySelector(".display-button").addEventListener("click", function () {
+    toggleDisplay(question.question_id, this);
+  });
+  element.querySelector(".delete-button").addEventListener("click", function () {
+    deleteQuestion(question.question_id);
+  });
+  element.querySelector(".edit-button").addEventListener("click", function () {
+    showEditQuestionModal(question.question_id, question.text, question.correct_answer);
   });
 
   return element;
 }
 
-function updateButtonsStateBasedOnActivity() {
-  const askButtons = document.querySelectorAll(".ask-button");
-  let isActiveQuestionPresent = false;
 
-  askButtons.forEach((button) => {
-    const isActive = button.getAttribute("data-is-active") === "true";
-    button.textContent = isActive ? "Stop" : "Ask";
 
-    if (isActive) {
-      isActiveQuestionPresent = true;
-    }
-  });
-
-  if (isActiveQuestionPresent) {
-    askButtons.forEach((button) => {
-      const isActive = button.getAttribute("data-is-active") === "true";
-      if (!isActive) {
-        button.disabled = true;
-      }
-    });
-  }
-}
-
-function handleAskStopQuestion(questionId, isAsking, buttonElement) {
-  const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
-
-  buttonElement.disabled = true;
-
+function toggleDisplay(questionId, button) {
+  const isDisplayed = button.getAttribute('data-is-displayed') === 'true';
+  const endpoint = `/class/${globalClassId}/question/${questionId}/toggle_display`;
   fetch(endpoint, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": document
-        .querySelector('meta[name="csrf-token"]')
-        .getAttribute("content"),
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
     },
-    body: JSON.stringify({ active: isAsking }),
+    body: JSON.stringify({ displayed: !isDisplayed })
   })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        buttonElement.textContent = isAsking ? "Stop" : "Ask";
-        buttonElement.setAttribute("data-is-active", isAsking.toString());
-        if (isAsking) {
-          disableAllOtherAskButtons(buttonElement);
-        } else {
-          enableAllAskButtons();
-        }
-      } else {
-        throw new Error(data.message);
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      alert(`An error occurred: ${error.message}`);
-      buttonElement.textContent = isAsking ? "Ask" : "Stop";
-      buttonElement.setAttribute("data-is-active", (!isAsking).toString());
-    })
-    .finally(() => {
-      buttonElement.disabled = false;
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      button.setAttribute('data-is-displayed', (!isDisplayed).toString());
+      button.textContent = isDisplayed ? 'Display' : 'UnDisplay';
+      Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: `Question has been ${!isDisplayed ? 'displayed' : 'undisplayed'} successfully.`
+      });
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'Action Denied',
+        text: data.message,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'OK'
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error toggling display:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: `An error occurred: ${error.message}`
     });
+  });
 }
 
 
-function disableAllOtherAskButtons(excludeButton) {
-  document.querySelectorAll(".ask-button").forEach((btn) => {
-    if (btn !== excludeButton) {
-      btn.disabled = true;
+
+function handleAskStopQuestion(questionId, buttonElement) {
+  const currentState = buttonElement.getAttribute("data-is-active") === "true";
+  const isAsking = !currentState;
+  const endpoint = `/class/${globalClassId}/question/${questionId}/ask`;
+  const actionText = isAsking ? "ask" : "stop";
+
+  Swal.fire({
+    title: `Are you sure you want to ${actionText} this question?`,
+    text: `This will ${isAsking ? "start" : "stop"} showing the question to the class.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: `Yes, ${actionText} it!`,
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
+        },
+        body: JSON.stringify({ active: isAsking }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            buttonElement.setAttribute("data-is-active", isAsking.toString());
+            updateAskButtons(questionId, isAsking);
+            Swal.fire({
+              icon: "success",
+              title: "Success!",
+              text: `Question was successfully ${isAsking ? "asked" : "stopped"}.`,
+              confirmButtonColor: "#3085d6",
+              confirmButtonText: "OK",
+            });
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Activation Conflict",
+              text: data.message,
+              confirmButtonColor: "#d33",
+              confirmButtonText: "OK",
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: `An error occurred while trying to ${actionText} the question: ${error.message}`,
+            confirmButtonColor: "#d33",
+            confirmButtonText: "Close",
+          });
+        });
     }
   });
 }
 
-function enableAllAskButtons() {
-  document.querySelectorAll(".ask-button").forEach((btn) => {
-    btn.disabled = false;
+
+function updateAskButtons(questionId, isAsking) {
+  const buttons = document.querySelectorAll(".ask-button");
+  buttons.forEach((btn) => {
+    if (btn.getAttribute("data-question-id") === questionId) {
+      btn.textContent = isAsking ? "Stop" : "Ask";
+      btn.setAttribute("data-is-active", isAsking.toString());
+    }
+    btn.disabled =
+      isAsking && btn.getAttribute("data-question-id") !== questionId;
   });
 }
+
+
 
 function initializeQuestionEventListeners() {
   const askButtons = document.querySelectorAll(".ask-button");
   askButtons.forEach((button) => {
-    const questionId = button.getAttribute("data-question-id");
-    const isActive = button.getAttribute("data-is-active") === "true";
-    button.addEventListener("click", () =>
-      handleAskStopQuestion(questionId, !isActive, button)
-    );
+    if (!button.dataset.listenerAdded) {
+      button.addEventListener("click", function () {
+        const isActive = button.getAttribute("data-is-active") === "true";
+        const newIsActive = !isActive;
+
+        handleAskStopQuestion(this.dataset.questionId, this);
+        button.setAttribute("data-is-active", newIsActive.toString());
+      });
+      button.dataset.listenerAdded = "true";
+    }
   });
 }
 
@@ -374,73 +510,48 @@ function getClassIdFromUrl() {
   return urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
 }
 
+
+
 function deleteQuestion(questionId) {
-  if (!confirm("Are you sure you want to delete this question?")) return;
-  const csrfToken = document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
-
-  fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken,
-    },
-    credentials: "include",
-  })
-    .then((response) =>
-      response.json().then((data) => ({ status: response.status, data: data }))
-    )
-    .then((result) => {
-      if (result.status !== 200) {
-        throw new Error(
-          result.data.message ||
-            "An error occurred while trying to delete the question."
-        );
-      }
-      alert("Question successfully deleted.");
-      fetchQuestionsAndDisplay(globalClassId);
-    })
-    .catch((error) => {
-      console.error("Error deleting question:", error);
-      alert(error.message);
-    });
-}
-
-function setupDisplayButtons() {
-  document.querySelectorAll(".display-button").forEach((button) => {
-      button.addEventListener("click", function () {
-          const questionId = this.getAttribute("data-question-id");
-          if (!confirm("Do you want to change the display status of this question?")) return;
-
-          const csrfToken = document
-              .querySelector('meta[name="csrf-token"]')
-              .getAttribute("content");
-
-          fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
-              method: "POST",
-              headers: {
-                  "Content-Type": "application/json",
-                  "X-CSRF-Token": csrfToken,
-              },
-              credentials: "include",
-          })
-          .then((response) => response.json())
-          .then((data) => {
-              alert(data.message);
-
-              if (data.isDisplayed) {
-                  button.textContent = "UnDisplay";
-              } else {
-                  button.textContent = "Display";
-              }
-              fetchQuestionsAndDisplay(globalClassId);
-          })
-          .catch((error) => {
-              console.error("Error:", error);
-              alert("There was an issue toggling the display status of the question.");
-          });
+  Swal.fire({
+    title: "Are you sure?",
+    text: "You won't be able to revert this!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, delete it!"
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute("content");
+      fetch(`/class/${globalClassId}/question/${questionId}/delete`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken
+        },
+        credentials: "include"
+      })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.success) {
+          Swal.fire("Deleted!", "Your question has been deleted.", "success");
+          fetchQuestionsAndDisplay(globalClassId);
+        } else {
+          throw new Error(data.message);
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting question:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: `An error occurred: ${error.message}`,
+          confirmButtonColor: "#d33",
+          confirmButtonText: "OK"
+        });
       });
+    }
   });
 }
 
@@ -457,47 +568,42 @@ document
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CSRF-Token": document
-          .querySelector('meta[name="csrf-token"]')
-          .getAttribute("content"),
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
       },
+      credentials: "include",
       body: JSON.stringify({
         question_text: questionText,
         correct_answer: answerText,
       }),
     })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          alert("Question successfully updated.");
-          fetchQuestionsAndDisplay(globalClassId);
-          document.getElementById("editQuestionModal").style.display = "none";
-        } else {
-          throw new Error("Failed to update the question.");
-        }
-      })
-      .catch((error) => {
-        console.error("Error updating question:", error);
-        alert(`An error occurred: ${error.message}`);
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        fetchQuestionsAndDisplay(globalClassId);
+        document.getElementById("editQuestionModal").style.display = "none";
+        Swal.fire({
+          title: 'Success!',
+          text: 'Question updated successfully.',
+          icon: 'success',
+          confirmButtonText: 'Ok'
+        });
+      } else {
+        throw new Error(data.message);
+      }
+    })
+    .catch(error => {
+      console.error("Error updating question:", error);
+      Swal.fire({
+        title: 'Error!',
+        text: error.message,
+        icon: 'error',
+        confirmButtonText: 'Ok'
       });
+    });
   });
 
-document.getElementById("openEditModal").addEventListener("click", function () {
-  fetch("/edit_question_modal")
-    .then((response) => response.text())
-    .then((html) => {
-      document.getElementById("modalContainer").innerHTML = html;
-      document.getElementById("editQuestionModal").style.display = "block";
-    })
-    .catch((error) => {
-      console.error("Error fetching the edit question modal:", error);
-    });
-});
+
+
 
 function fetchEditModalContent(
   questionId,
@@ -539,6 +645,10 @@ function fetchEditModalContent(
     });
 }
 
+
+
+
+
 function showEditQuestionModal(
   questionId,
   currentQuestionText,
@@ -556,6 +666,8 @@ document
     e.preventDefault();
     submitEditForm();
   });
+
+
 
 function submitEditForm() {
   const questionId = document.getElementById("editingQuestionId").value;
@@ -582,50 +694,87 @@ function submitEditForm() {
     })
     .then((data) => {
       if (data.success) {
-        alert("Question successfully updated.");
-        document.getElementById("editQuestionModal").style.display = "none";
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: "Question successfully updated.",
+          confirmButtonColor: "#3085d6",
+          confirmButtonText: "OK",
+        });
         fetchQuestionsAndDisplay(globalClassId);
+        document.getElementById("editQuestionModal").style.display = "none";
       } else {
         throw new Error("Failed to update the question.");
       }
     })
     .catch((error) => {
       console.error("Error updating question:", error);
-      alert(`An error occurred: ${error.message}`);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: `An error occurred: ${error.message}`,
+        confirmButtonColor: "#d33",
+        confirmButtonText: "OK",
+      });
     });
 }
 
-function setupDisplayButtons() {
-  document.querySelectorAll(".display-button").forEach((button) => {
-    button.addEventListener("click", function () {
-      const questionId = button.getAttribute("data-question-id");
 
-      fetch(`/class/${globalClassId}/question/${questionId}/toggle_display`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Token": document
-            .querySelector('meta[name="csrf-token"]')
-            .getAttribute("content"),
-        },
-        credentials: "include",
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          alert(data.message);
 
-          if (data.isDisplayed) {
-            button.textContent = "UnDisplay";
-          } else {
-            button.textContent = "Display";
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          alert(
-            "There was an issue toggling the display status of the question."
-          );
-        });
-    });
+
+document.getElementById("logoutButton").addEventListener("click", function (e) {
+  e.preventDefault(); 
+  logout();  
+});
+
+
+function logout() {
+  Swal.fire({
+      title: 'Are you sure you want to logout?',
+      text: "Make sure all activities are properly closed.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, logout!'
+  }).then((result) => {
+      if (result.isConfirmed) {
+          fetch("/logout", {
+              method: "GET",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              credentials: "include"
+          })
+          .then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  Swal.fire(
+                      'Logged Out!',
+                      'You have been successfully logged out.',
+                      'success'
+                  ).then(() => {
+                      window.location.href = '/'; 
+                  });
+              } else {
+                  Swal.fire({
+                      icon: 'error',
+                      title: 'Logout Failed',
+                      text: data.message,
+                      confirmButtonText: 'OK'
+                  });
+              }
+          })
+          .catch(error => {
+              console.error('Logout error:', error);
+              Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'An unexpected error occurred during logout.',
+                  confirmButtonText: 'OK'
+              });
+          });
+      }
   });
 }
+

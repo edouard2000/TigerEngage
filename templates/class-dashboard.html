@@ -9,6 +9,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
@@ -54,12 +55,11 @@
         >
       </div>
     </nav>
+
     <div id="content-area" class="pt-20"></div>
-
-    <script src="{{ url_for('static', filename='js/learn-more.js') }}"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-
- 
     <script>
       document
         .getElementById("menu-btn")

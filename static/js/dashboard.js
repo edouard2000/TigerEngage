@@ -1,6 +1,8 @@
-document.addEventListener("DOMContentLoaded", () => {
-  loadContent("/chat");
+let classId = null;
 
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOMContentLoaded");
+  loadContent("/chat");
   document.getElementById("nav-question").addEventListener("click", (e) => {
     e.preventDefault();
     loadContent("/questions");
@@ -13,34 +15,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("nav-feedback").addEventListener("click", (e) => {
     e.preventDefault();
-    const classId = getClassIdFromUrl(); 
+    classId = getClassIdFromUrl(); 
     loadContent(`/class/${classId}/feedback`);
   });
 
   document.getElementById("nav-attendance").addEventListener("click", (e) => {
     e.preventDefault();
-    const classId = getClassIdFromUrl(); 
+    classId = getClassIdFromUrl(); 
     loadContent(`/attendance/${classId}/`);
 });
 });
 
+
 function loadContent(url) {
   fetch(url)
-    .then((response) => response.text())
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.text();
+    })
     .then((html) => {
       document.getElementById("content-area").innerHTML = html;
-      if (url.endsWith("/questions")) {
-        fetchActiveQuestion();
-      }
-      setupDynamicContent();
+      if (url.includes("/questions")) {
+        fetchActiveQuestion(); 
+      } else if (url.includes("/chat")) {
+        fetchCurrentUserId();
+      } 
     })
     .catch((error) => {
       console.error("Error loading content:", error);
+      document.getElementById("content-area").innerHTML = `<p>Error loading content: ${error.message}</p>`;
     });
 }
-
 function fetchActiveQuestion() {
-  const classId = getClassIdFromUrl();
+  classId = getClassIdFromUrl();
   fetch(`/class/${classId}/active-question`)
     .then((response) => response.json())
     .then((data) => {
@@ -82,7 +91,7 @@ function submitAnswer(questionId) {
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
 
-  const classId = getClassIdFromUrl();
+  classId = getClassIdFromUrl();
   fetch(`/class/${classId}/submit-answer`, {
     method: "POST",
     headers: {
@@ -111,4 +120,17 @@ function getClassIdFromUrl() {
   const urlParts = window.location.pathname.split("/");
   const lastIndex = urlParts.length - 1;
   return urlParts[lastIndex] || urlParts[lastIndex - 1];
+}
+
+function toggleMoreInfo() {
+  var infoContent = document.getElementById('moreInfoContent');
+  var learnMoreBtn = document.getElementById('learnMoreBtn'); 
+
+  if (infoContent.style.display === 'none' || !infoContent.style.display) {
+      infoContent.style.display = 'block';
+      learnMoreBtn.textContent = 'Close'; 
+  } else {
+      infoContent.style.display = 'none';
+      learnMoreBtn.textContent = 'Learn More'; 
+  }
 }

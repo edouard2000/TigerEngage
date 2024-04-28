@@ -15,7 +15,6 @@ import flask
 _CAS_URL = 'https://fed.princeton.edu/cas/'
 
 #-----------------------------------------------------------------------
-
 # Return url after stripping out the "ticket" parameter that was
 # added by the CAS server.
 

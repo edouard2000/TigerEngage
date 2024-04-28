@@ -5,28 +5,34 @@
 # Authors: Edouard Kwizera, Roshaan Khalid, Jourdain Babisa, Wangari Karani
 # --------------------------------------------------------------------------------------------
 
+# Standard library imports
+import io
 import os
 import uuid
 from datetime import datetime
-from auth import authenticate
-from flask_wtf.csrf import CSRFProtect
+
+# Related third-party imports
+from dotenv import load_dotenv
 import flask
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.exc import NoResultFound
-from flask import jsonify, request, flash, redirect, session, url_for, render_template
+from flask import (
+    jsonify, request, flash, redirect,
+    session, url_for, render_template, send_file
+    )
+from flask_socketio import SocketIO, emit
+from flask_wtf.csrf import CSRFProtect
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from sqlalchemy.exc import SQLAlchemyError, NoResultFound
+
+# Local application/library specific imports
+from auth import authenticate
+from conciseNotes import LectureNoteSummarizer
 from database import (
-    ClassSession,
-    Question,
-    SessionLocal,
-    User,
-    Class,
-    Enrollment,
-    Answer,
-    Summary,
+    ChatMessage, ClassSession, Question,
+    SessionLocal, User, Student, Class, Enrollment, Answer
 )
 import db_operations
 from req_lib import ReqLib
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -34,6 +40,7 @@ load_dotenv()
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("APP_SECRET_KEY", "123456")
 csrf = CSRFProtect(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
@@ -42,16 +49,60 @@ if database_url:
     )
 else:
     print("The DATABASE_URL environment variable is not set.")
-
-
 # -------------------------------------------
 @app.route("/", methods=["GET"])
-@app.route("/home", methods=["GET"])
-def home():
+def index():
+    if 'visited' in session:
+        return redirect(url_for("authenticate_and_direct"))
+    return redirect(url_for("get_started"))
+
+@app.route("/get-started", methods=["GET"])
+def get_started():
+    username = authenticate()
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
 
+@app.route("/home", methods=["GET"])
+def home():
+    if 'role' in session:
+        role = flask.session['role']
+        if role == 'student':
+            return redirect(url_for("student_dashboard"))
+        elif role == 'professor':
+            username = flask.session['username']
+            class_id = db_operations.get_professors_class_id(username)
+            return redirect(url_for("professor_dashboard", class_id=class_id))
+    html_code = flask.render_template("home.html")
+    response = flask.make_response(html_code)
+    return response
+
+
+@app.route("/logout", methods=["GET"])
+def logout():
+    db = SessionLocal()
+    try:
+        user_id = flask.session.get("username")
+        if user_id:
+            active_session = (
+                db.query(ClassSession)
+                .join(Class, ClassSession.class_id == Class.class_id)
+                .filter(Class.instructor_id == user_id, ClassSession.is_active == True)
+                .first()
+            )
+            if active_session:
+                return jsonify({
+                    "success": False,
+                    "message": "There is an active session. Please end the session before logging out."
+                }), 400
+
+        flask.session.clear()
+        return jsonify({"success": True, "message": "You have been logged out successfully."})
+
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
 
 @app.route("/role-selection")
 def role_selection():
@@ -75,50 +126,11 @@ def student_dashboard():
     username = username[0].get('displayname')
     return flask.render_template("student-dashboard.html", student_name=username)
 
-
-@app.route("/chat")
-def chat():
-    html_code = flask.render_template("chat.html")
-    response = flask.make_response(html_code)
-    return response
-
-
 @app.route("/questions")
 def questions():
     html_code = flask.render_template("Question.html")
     response = flask.make_response(html_code)
     return response
-
-
-# @app.route("/feedback")
-# def feedback():
-#     feedback_data = {
-#         "question_content": "What is the capital of France?",
-#         "answers_summary": "Most students answered correctly that the capital of France is Paris.",
-#         "correct_answer": "The correct answer is Paris.",
-#         "user_answer": "Your answer was Paris.",
-#     }
-#
-#     classid = flask.session.get("classes.class_id")
-#     question, correct_answer = db_operations.get_questions_for_class(class_id=classid)
-#     user_id = flask.session.get("user_id")
-#     question_id = flask.session.get("question_id")
-#     user_answer, student_answers = db_operations.get_answers(user_id, question_id)
-
-#     summarized_feedback = GenerateFeedback.answers_summary(
-#         correct_answer=correct_answer, list_of_student_answers=student_answers
-#     )
-
-#     html_code = flask.render_template(
-#         "feedback.html",
-#         question_content=question,
-#         answers_summary=summarized_feedback,
-#         correct_answer=correct_answer,
-#         user_answer=user_answer,
-#     )
-#     response = flask.make_response(html_code)
-#     return response
-
 
 @app.route("/class_dashboard/<class_id>")
 def class_dashboard(class_id):
@@ -133,7 +145,6 @@ def class_dashboard(class_id):
 
 @app.route("/professor_dashboard/<class_id>")
 def professor_dashboard(class_id):
-    print("Professor dashboard")
     username = flask.session.get("username")
     if not username:
         return flask.redirect(url_for("home"))
@@ -151,32 +162,37 @@ def professor_dashboard(class_id):
         course_name=course_name,
         username=display_name,
         class_id=class_id,
+        User_id = username
     )
 
 
 @app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
 def edit_user(class_id, user_id):
     db_session = SessionLocal()
-    user = db_session.query(User).filter_by(user_id=user_id).first()
+    student = db_session.query(Student).filter_by(user_id=user_id).first()
 
-    if user is None:
+    if student is None:
         db_session.close()
         flash("Student not found.", "error")
         return redirect(url_for("class_userlist", class_id=class_id))
 
+    enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
+    
     if request.method == "POST":
-        user.netid = request.form.get("name", user.netid)
-        enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
         if enrollment:
-            enrollment.score = float(request.form.get("score", enrollment.score))
+            enrollment.score = request.form.get("score", enrollment.score)
+            enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
             db_session.commit()
             flash("Student information updated successfully.", "success")
         else:
             flash("Enrollment information not found.", "error")
-        return redirect(url_for("class_userlist", class_id=class_id))
+        return redirect(url_for("professor_dashboard", class_id=class_id))
 
     db_session.close()
-    return render_template("edit_student.html", student=user, class_id=class_id)
+    return render_template("edit_student.html", student=student,
+                           class_id=class_id, score=enrollment.score
+                           if enrollment else None, is_ta=enrollment.is_ta
+                           if enrollment else None)
 
 
 @app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
@@ -185,14 +201,16 @@ def delete_user(class_id, user_id):
     user = db_session.query(User).filter_by(user_id=user_id).first()
 
     if user:
-        db_session.delete(user)
+        delete_enrollment = db_session.query(Enrollment).filter(Enrollment.student_id == user_id).first()
+        db_session.delete(delete_enrollment)
+        
         db_session.commit()
         flash("User successfully deleted", "success")
     else:
         flash("User not found.", "error")
     db_session.close()
 
-    return redirect(url_for("class_userlist", class_id=class_id))
+    return redirect(url_for("professor_dashboard", class_id=class_id))
 
 
 @app.route("/class/<class_id>/userlist")
@@ -211,9 +229,7 @@ def class_userlist(class_id):
 @app.route("/select_role", methods=["POST"])
 def select_role():
     role = request.json["role"]
-    print(f"we got a role: {role}")
     flask.session["role"] = role
-    print("we are now redirecting")
     return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
 
 
@@ -227,31 +243,34 @@ def authenticate_and_direct():
         flask.session["actual_role"] = actual_role
         if actual_role != flask.session.get("role"):
             flash(f"Access denied. Your role is {actual_role}.", "error")
-            return flask.redirect(flask.url_for("home"))
+            return flask.redirect(flask.url_for("get_started"))
 
+        flask.session['visited'] = True
         if actual_role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
-                print(f"{username} has no class yet, so let create one")
+                print(f"No class associated with the professor {username}")
                 return flask.redirect(flask.url_for("create_class_form"))
-            return flask.redirect(
-                flask.url_for("professor_dashboard", class_id=class_id)
-            )
-        else:
-            return flask.redirect(flask.url_for("student_dashboard"))
+            flask.session['class_id'] = class_id  
+            return flask.redirect(flask.url_for("professor_dashboard", class_id=class_id))
+        
+        
+        elif actual_role == "student":
+            class_id = db_operations.get_students_class_id(username)
+            if not class_id:
+                return flask.redirect(url_for("student_dashboard"))
+            flask.session['class_id'] = class_id 
+            return flask.redirect(flask.url_for("student_dashboard", class_id=class_id))
     else:
         role = flask.session.get("role", "student")
-        print(
-            f"{username} does not exist in the database, creating one with role {role}"
-        )
         db_operations.create_user(username, role)
+        flask.session['visited'] = True
         if role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
-                print(f"{username} has no class yet")
                 return flask.redirect(flask.url_for("create_class_form"))
-            dashboard_url = "professor_dashboard"
-            return flask.redirect(flask.url_for(dashboard_url, class_id=class_id))
+            flask.session['class_id'] = class_id  
+            return flask.redirect(flask.url_for("professor_dashboard", class_id=class_id))
         else:
             dashboard_url = "student_dashboard"
             return flask.redirect(flask.url_for(dashboard_url))
@@ -270,12 +289,16 @@ def create_class():
         username, class_name
     )
     if success:
-        return flask.redirect(
-            flask.url_for("professor_dashboard", class_id=class_id_returned)
-        )
+        return jsonify({
+            'status': 'success',
+            'message': 'Class successfully created!',
+            'class_id': class_id_returned
+        })
     else:
-        flash("Error creating class.", "error")
-        return flask.redirect(flask.url_for("create_class_form"))
+        return jsonify({
+            'status': 'error',
+            'message': 'Error creating class.'
+        }), 400
 
 
 @app.route("/add-question")
@@ -317,7 +340,6 @@ def add_question_to_class_route(class_id):
 @app.route("/class/<class_id>/questions", methods=["GET"])
 def get_questions_for_class_route(class_id):
     results = db_operations.get_questions_for_class(class_id)
-    print(f"this is results: {results}")
     if results:
         return jsonify({"success": True, "questions": results})
     else:
@@ -329,6 +351,42 @@ def get_questions_for_class_route(class_id):
         )
 
 
+@app.route('/process_transcript', methods=['POST'])
+@csrf.exempt
+def process_transcript():
+    data = request.get_json()
+    transcript = data.get('transcript')
+    if not transcript:
+        return jsonify({'error': 'No transcript provided'}), 400
+
+    summarizer = LectureNoteSummarizer()
+    notes = summarizer.create_concise_notes(transcript)
+    if not notes:
+        return jsonify({'error': 'Failed to generate notes'}), 500
+
+    
+    pdf_buffer = io.BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=letter)
+    width, height = letter
+
+    textobject = p.beginText(72, height - 100)  
+    textobject.setFont("Helvetica", 12)  
+    lines = notes.split('\n')  
+    for line in lines:
+        textobject.textLine(line)  
+    p.drawText(textobject)  
+    p.showPage()
+    p.save()
+    pdf_buffer.seek(0)
+
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        mimetype='application/pdf',
+        download_name='notes.pdf'
+    )
+    
+    
 @app.route("/search_classes", methods=["GET"])
 def search_classes():
     if "username" not in session:
@@ -362,9 +420,6 @@ def search_classes():
 def enroll_in_class():
     username = session.get("username")
     class_id = request.json.get("class_id")
-
-    print(f"username: {username}, class_id: {class_id}")
-
     if not username and class_id:
         return jsonify({"success": False, "message": "User not authenticated"}), 401
 
@@ -445,74 +500,84 @@ def get_enrolled_classes():
     return jsonify({"success": True, "classes": classes_data})
 
 
+
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
     db = SessionLocal()
     try:
-        active_session = (
-            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
-        )
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if active_session:
             return jsonify({"success": False, "message": "Session already active"}), 400
+
         class_ = db.query(Class).filter_by(class_id=class_id).first()
         if not class_:
             return jsonify({"success": False, "message": "Class not found"}), 404
         class_.total_sessions_planned += 1
         class_.possible_scores += 1
+
         new_session = ClassSession(
             session_id=str(uuid.uuid4()),
             class_id=class_id,
             start_time=datetime.now(),
             is_active=True,
         )
-        db.add(new_session)
 
+        db.add(new_session)
         db.commit()
 
-        return (
-            jsonify(
-                {"success": True, "message": "Class session started successfully."}
-            ),
-            200,
-        )
+        session['class_session_id'] = new_session.session_id 
+
+        return jsonify({"success": True, "message": "Class session started successfully.", "session_id": new_session.session_id}), 200
+
+    except db_exc.SQLAlchemyError as e:
+        db.rollback()
+        return jsonify({"success": False, "message": "Database error: " + str(e)}), 500
     except Exception as e:
         db.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": "Error: " + str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/class/<class_id>/end_session", methods=["POST"])
 def end_class_session(class_id):
     db = SessionLocal()
     try:
-        active_session = (
-            db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
-        )
+        # Fetch the active session that needs to be ended
+        active_session = db.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if not active_session:
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "message": "No active session found for this class",
-                    }
-                ),
-                404,
-            )
-        active_session.is_active = False
-        active_session.end_time = datetime.now()
+            return jsonify({
+                "success": False,
+                "message": "No active session found for this class"
+            }), 404
 
+        # Check for active or displayed questions
+        active_or_displayed_questions = db.query(Question).filter(
+            Question.class_id == class_id, (Question.is_active == True) | (Question.is_displayed == True)
+        ).first()
+        if active_or_displayed_questions:
+            return jsonify({
+                "success": False,
+                "message": "There are still active or displayed questions. Please resolve them before ending the session."
+            }), 400
+
+        active_session.is_active = False
+        active_session.ended = True  
+        active_session.end_time = datetime.now()
         db.commit()
 
-        return (
-            jsonify({"success": True, "message": "Class session ended successfully."}),
-            200,
-        )
+        return jsonify({
+            "success": True,
+            "message": "Class session ended successfully."
+        }), 200
+
     except Exception as e:
         db.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
         db.close()
+
 
 
 @app.route("/class/<class_id>/session_status", methods=["GET"])
@@ -566,55 +631,82 @@ def check_in(class_id):
         )
     else:
         return jsonify({"success": False, "message": message}), 500
+    
+
+@app.route("/class/<class_id>/question/<question_id>/status", methods=["GET"])
+def get_question_status(class_id, question_id):
+    db_session = SessionLocal()
+    try:
+        question = db_session.query(Question).filter_by(
+            class_id=class_id, question_id=question_id).first()
+        if not question:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+
+        return jsonify({
+            "success": True,
+            "isActive": question.is_active,
+            "isDisplayed": question.is_displayed
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db_session.close()
 
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
 def toggle_question(class_id, question_id):
+    session = SessionLocal()
     try:
         data = request.get_json()
         is_active = data.get("active", True)
+        
+        # Check for an active class session
+        active_session = session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        if not active_session:
+            return jsonify({
+                "success": False, 
+                "message": "No active class session. Please start a session before asking questions."
+            }), 403
 
-        with SessionLocal() as session:
-            if is_active:
-                session.query(Question).filter(
-                    Question.class_id == class_id, Question.is_active.is_(True)
-                ).update({Question.is_active: False}, synchronize_session="fetch")
+        # Check if the question is currently displayed
+        question_to_update = session.query(Question).filter_by(question_id=question_id, class_id=class_id).first()
+        if question_to_update.is_displayed:
+            return jsonify({
+                "success": False, 
+                "message": "This question is currently displayed. Please undisplay it before asking."
+            }), 409
 
-            question_to_update = (
-                session.query(Question)
-                .filter_by(question_id=question_id, class_id=class_id)
-                .first()
-            )
+        # Check if another question is already active
+        if is_active:
+            active_question = session.query(Question).filter(
+                Question.class_id == class_id,
+                Question.is_active == True,
+                Question.question_id != question_id
+            ).first()
+            if active_question:
+                return jsonify({
+                    "success": False, 
+                    "message": "Another question is currently active. Please deactivate it first.",
+                    "activeQuestionId": active_question.question_id
+                }), 409  
 
-            if question_to_update:
-                question_to_update.is_active = is_active
-                session.commit()
+        question_to_update.is_active = is_active
+        session.commit()
+        if not is_active:
+            summary_text, explanations = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
+            db_operations.store_summary(session, question_id, summary_text, explanations)
 
-                if not is_active:
-                    summary_text = db_operations.fetch_answers_generate_summary(session, class_id, question_id)
-                    db_operations.store_summary(session, question_id, summary_text)
-                return (
-                    jsonify({"success": True, "message": "Question status updated."}),
-                    200,
-                )
-            else:
-                return (
-                    jsonify({"success": False, "message": "Question not found."}),
-                    404,
-                )
+        return jsonify({"success": True, "message": "Question status updated."}), 200
     except SQLAlchemyError as e:
         session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        session.close()
 
-
-
-@app.route(
-    "/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"]
-)
+@app.route("/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
 def edit_question(class_id, question_id):
     data = request.get_json()
+    print(data)
     db = SessionLocal()
     try:
         question = (
@@ -623,6 +715,20 @@ def edit_question(class_id, question_id):
             .first()
         )
         if question:
+            if question.summaries or question.is_displayed or question.is_active:
+                messages = []
+                if question.summaries:
+                    messages.append("This question has summaries associated with it.")
+                if question.is_displayed:
+                    messages.append("This question is currently displayed to students.")
+                if question.is_active:
+                    messages.append("This question is currently active.")
+                
+                return jsonify({
+                    "success": False,
+                    "message": " ".join(messages)
+                }), 403
+
             question.text = data["question_text"]
             question.correct_answer = data["correct_answer"]
             db.commit()
@@ -635,8 +741,7 @@ def edit_question(class_id, question_id):
         db.close()
 
 
-@app.route(
-    "/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
+@app.route("/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
 def delete_question(class_id, question_id):
     db = SessionLocal()
     try:
@@ -646,21 +751,21 @@ def delete_question(class_id, question_id):
             .first()
         )
         if question:
-            if question.is_active:
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": "Question is active. Please deactivate the question before deleting.",
-                        }
-                    ),
-                    400,
-                )
+            if question.is_active or question.is_displayed:
+                message = "Question is "
+                if question.is_active:
+                    message += "active"
+                if question.is_displayed:
+                    if question.is_active:
+                        message += " and displayed"
+                    else:
+                        message += "displayed"
+                message += ". Please deactivate and ensure it is not displayed before deleting."
+                return jsonify({"success": False, "message": message}), 400
+            
             db.delete(question)
             db.commit()
-            return jsonify(
-                {"success": True, "message": "Question deleted successfully."}
-            )
+            return jsonify({"success": True, "message": "Question deleted successfully."})
         else:
             return jsonify({"success": False, "message": "Question not found."}), 404
     except Exception as e:
@@ -670,9 +775,9 @@ def delete_question(class_id, question_id):
         db.close()
 
 
+
 @app.route("/class/<class_id>/submit-answer", methods=["POST"])
 def submit_answer(class_id):
-    print("Submitting answer")
     data = request.get_json()
     question_id = data.get("questionId")
     answer_text = data.get("answerText")
@@ -709,10 +814,8 @@ def submit_answer(class_id):
             500,
         )
 
-
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
-    print("Getting active question")
     active_question = db_operations.get_active_questions_for_class(class_id)
     if active_question:
         question_data = {
@@ -735,61 +838,177 @@ def attendance(class_id):
     return flask.render_template("attendance.html", data=data)
 
 
-
+#
 @app.route("/class/<class_id>/feedback")
 def class_feedback(class_id):
-    db_session = SessionLocal()  
+    db_session = SessionLocal()
     try:
         logged_in_user_id = flask.session.get("username")
         user_role = flask.session.get("role")
 
         displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
         if not displayed_question:
-            return render_template("feedback.html", error="No question is currently displayed.")
+            return render_template("feedback.html", question_content="No question is currently displayed.", notes = "No question is currently displayed")
 
         feedback_data = db_operations.get_feedback_data(db_session, class_id, displayed_question.question_id)
         if not feedback_data:
-            return render_template("feedback.html", error="Feedback data not available.")
+            return render_template("feedback.html", question_content="Question haven't asked yet")
 
         user_answer_text = "You are an instructor; you don't have a submitted answer."
         if user_role == "student":
             user_answer = (
                 db_session.query(Answer)
                 .filter_by(question_id=displayed_question.question_id, student_id=logged_in_user_id)
-                .first()
-            )
+                .first())
             user_answer_text = user_answer.text if user_answer else "No answer submitted."
         feedback_data.update({"user_answer": user_answer_text})
-
         return render_template("feedback.html", **feedback_data)
     finally:
         db_session.close()
+        
 
- 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
+    session = SessionLocal()
+    try:
+        data = request.get_json()
+        should_display = data.get('displayed', False)
+        question = session.query(Question).filter_by(class_id=class_id, question_id=question_id).first()
+        if not question:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+        active_session = session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        if not active_session:
+            return jsonify({
+                "success": False,
+                "message": "No active class session. Please start a session before displaying questions."
+            }), 403
+        if should_display and question.is_active:
+            return jsonify({
+                "success": False,
+                "message": "This question is currently active. Please stop it before displaying."
+            }), 409
+        if should_display:
+            currently_displayed_question = session.query(Question).filter(
+                Question.class_id == class_id,
+                Question.is_displayed == True,
+                Question.question_id != question_id
+            ).first()
+            if currently_displayed_question:
+                return jsonify({
+                    "success": False,
+                    "message": "Another question is currently displayed. Please undisplay it before displaying this one."
+                }), 409
+
+        question.is_displayed = should_display
+        session.commit()
+        return jsonify({
+            "success": True,
+            "message": f"Question display status updated to {'displayed' if question.is_displayed else 'undisplayed'}.",
+            "isDisplayed": question.is_displayed
+        }), 200
+
+    except SQLAlchemyError as e:
+        session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        session.close()
+        
+
+@app.route("/chat")
+def chat():
+    username = session.get('username')
+    print(username)
+    html_code = flask.render_template("chat.html", username=username)
+    response = flask.make_response(html_code)
+    return response
+
+
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    user_id = session.get('username')
     db_session = SessionLocal()
     try:
-        question = db_session.query(Question).filter_by(class_id=class_id, question_id=question_id, is_active=False).first()
-        if not question:
-            return jsonify({"error": "Question not found or is still active."}), 404
+        class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
+        if not class_id or not session_id:
+            emit('error', {'error': 'No active session or class found.'}, room=request.sid)
+            return
         
-        currently_displayed_question = db_session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
-        if currently_displayed_question and currently_displayed_question.question_id != question_id:
-            currently_displayed_question.is_displayed = False
-        
-        question.is_displayed = not question.is_displayed
+        role = db_operations.get_user_role(user_id)
+        new_message = ChatMessage(
+            message_id=str(uuid.uuid4()),
+            sender_id=user_id,
+            class_id=class_id,
+            session_id=session_id,
+            text=data.get('content'),
+            role=role,
+            timestamp=datetime.utcnow()
+        )
+        db_session.add(new_message)
         db_session.commit()
-
-        status_message = "displayed" if question.is_displayed else "undisplayed"
-        return jsonify({"message": f"Question {status_message} successfully.", "isDisplayed": question.is_displayed}), 200
+        
+        emit('new_message', {
+            'message_id': new_message.message_id,
+            'text': new_message.text,
+            'sender_id': new_message.sender_id,
+            'role': new_message.role,
+            'timestamp': new_message.timestamp.isoformat()
+        }, room=request.sid)
+    
+        emit('new_message', {
+            'message_id': new_message.message_id,
+            'text': new_message.text,
+            'sender_id': new_message.sender_id,
+            'role': new_message.role,
+            'timestamp': new_message.timestamp.isoformat()
+        }, broadcast=True, include_self=False)
     except Exception as e:
         db_session.rollback()
-        return jsonify({"error": f"Failed to toggle the display status of the question: {e}"}), 500
+        emit('error', {'error': str(e)}, room=request.sid)
     finally:
         db_session.close()
 
 
+@app.route('/chat/<class_id>/messages', methods=['GET'])
+def fetch_chat_messages(class_id):
+    db_session = SessionLocal()
+    try:
+        active_session = db_session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
+        is_class_active = bool(active_session) 
 
-if __name__ == "__main__":
-    app.run(debug=False)
+        if not active_session:
+            return jsonify({'success': False, 'isClassActive': is_class_active, 'message': 'No active session for this class.'}), 404
+
+        messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=active_session.session_id).order_by(ChatMessage.timestamp.asc()).all()
+        messages_list = [{
+            'message_id': message.message_id,
+            'sender_id': message.sender_id,
+            'text': message.text,
+            'role': message.role,
+            'timestamp': message.timestamp.isoformat()
+        } for message in messages]
+        
+        current_user_id = session.get('username', 'Unknown')
+        
+        return jsonify({
+            'success': True,
+            'isClassActive': is_class_active,
+            'messages': messages_list,
+            'currentUserId': current_user_id
+        })
+    except Exception as e:
+        print(f"Error fetching messages: {str(e)}")
+        return jsonify({'success': False, 'isClassActive': False, 'error': str(e)}), 500
+    finally:
+        db_session.close()
+
+@app.route('/get-current-user')
+def get_current_user():
+    user_id = session.get('username', None)
+    print(f"user_id: {user_id}" )
+    if user_id:
+        return jsonify({'success': True, 'userId': user_id})
+    else:
+        return jsonify({'success': False, 'message': 'No user logged in'}), 404
+if __name__ == '__main__':
+    socketio.run(app)

@@ -9,7 +9,7 @@
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship, backref
 from sqlalchemy import (
     create_engine,
     Column,
@@ -19,12 +19,13 @@ from sqlalchemy import (
     ForeignKey,
     Boolean,
     Text,
-    Float,
 )
 
-
 # Database URL and engine setup
-_DATABASE_URL = os.environ.get("DATABASE_URL", "postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage")
+_DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage",
+)
 _DATABASE_URL = _DATABASE_URL.replace("postgres://", "postgresql://")
 _engine = create_engine(_DATABASE_URL)
 
@@ -39,8 +40,12 @@ class User(Base):
     __tablename__ = "users"
     user_id = Column(String, primary_key=True)
     email = Column(String, unique=True, nullable=False)
-    netid = Column(String, nullable=False)
+    name = Column(String, nullable=False)
     role = Column(String(50))
+
+    messages = relationship(
+        "ChatMessage", back_populates="sender", order_by="ChatMessage.timestamp"
+    )
 
     __mapper_args__ = {"polymorphic_identity": "user", "polymorphic_on": role}
 
@@ -78,6 +83,9 @@ class Class(Base):
     enrollments = relationship("Enrollment", back_populates="class_")
     sessions = relationship("ClassSession", back_populates="class_")
     questions = relationship("Question", back_populates="class_")
+    messages = relationship(
+        "ChatMessage", back_populates="class_", order_by="ChatMessage.timestamp"
+    )
 
 
 class Enrollment(Base):
@@ -86,7 +94,8 @@ class Enrollment(Base):
     student_id = Column(String, ForeignKey("students.user_id"))
     class_id = Column(String, ForeignKey("classes.class_id"))
     sessions_attended = Column(Integer, default=0)
-    score = Column(Float, default=0.0)
+    score = Column(Integer, default=0)
+    is_ta = Column(Boolean, default=False)
     student = relationship("Student", back_populates="enrollments")
     class_ = relationship("Class", back_populates="enrollments")
 
@@ -100,8 +109,15 @@ class ClassSession(Base):
     )
     end_time = Column(DateTime(timezone=True))
     is_active = Column(Boolean, default=False)
+    ended = Column(Boolean, default=False)
     class_ = relationship("Class", back_populates="sessions")
     attendances = relationship("Attendance", back_populates="class_session")
+    messages = relationship(
+        "ChatMessage",
+        back_populates="session",
+        order_by="ChatMessage.timestamp",
+        cascade="all, delete",
+    )
 
 
 class Attendance(Base):
@@ -113,14 +129,16 @@ class Attendance(Base):
     class_session = relationship("ClassSession", back_populates="attendances")
     student = relationship("Student", back_populates="attendances")
 
+
 class Question(Base):
     __tablename__ = "questions"
     question_id = Column(String, primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
     class_id = Column(String, ForeignKey("classes.class_id"))
     text = Column(Text, nullable=False)
     correct_answer = Column(Text, nullable=True)
     is_active = Column(Boolean, default=False)
-    is_displayed = Column(Boolean, default=False, nullable=False)  
+    is_displayed = Column(Boolean, default=False, nullable=False)
     class_ = relationship("Class", back_populates="questions")
     answers = relationship("Answer", back_populates="question")
     summaries = relationship("Summary", back_populates="question")
@@ -141,9 +159,53 @@ class Summary(Base):
     summary_id = Column(String, primary_key=True)
     question_id = Column(String, ForeignKey("questions.question_id"))
     text = Column(Text, nullable=False)
+    notes = Column(Text, nullable=False)
     question = relationship("Question", back_populates="summaries")
 
-# Base.metadata.drop_all(_engine)# # 
+
+class AfterClassInputs(Base):
+    __tablename__ = "after_class_inputs"
+    input_id = Column(String, primary_key=True)
+    class_session_id = Column(String, ForeignKey("class_sessions.session_id"))
+    class_id = Column(String, ForeignKey("classes.class_id"))
+    student_id = Column(String, ForeignKey("students.user_id"))
+    response_category = Column(String, nullable=False)
+    comment = Column(Text, nullable=True)
+    class_session = relationship("ClassSession", back_populates="feedbacks")
+    class_ = relationship("Class", back_populates="feedbacks")
+    student = relationship("Student", back_populates="feedbacks")
+
+
+ClassSession.feedbacks = relationship(
+    "AfterClassInputs", back_populates="class_session"
+)
+Class.feedbacks = relationship("AfterClassInputs", back_populates="class_")
+Student.feedbacks = relationship("AfterClassInputs", back_populates="student")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+    message_id = Column(String, primary_key=True)
+    sender_id = Column(String, ForeignKey("users.user_id"))
+    class_id = Column(String, ForeignKey("classes.class_id"))
+    session_id = Column(String, ForeignKey("class_sessions.session_id"))
+    text = Column(Text, nullable=False)
+    role = Column(String(50))
+    timestamp = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(ZoneInfo("UTC"))
+    )
+    replied_to_id = Column(
+        String, ForeignKey("chat_messages.message_id"), nullable=True
+    )
+
+    # Relationships
+    sender = relationship("User", back_populates="messages")
+    class_ = relationship("Class", back_populates="messages")
+    session = relationship("ClassSession", back_populates="messages")
+    replies = relationship(
+        "ChatMessage", backref=backref("replied_to", remote_side=[message_id])
+    )
+
+
+# Base.metadata.drop_all(_engine)
 Base.metadata.create_all(_engine)
-
-

@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <title>
       {% block title %}{% endblock %} - Empower Your Educational Experience
     </title>
@@ -15,11 +17,19 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/main.css" />
   </head>
-  <body class="flex flex-col h-screen bg-gray-100 text-gray-900 font-sans">
+  <body class="flex flex-col h-screen text-gray-900 font-sans">
     <header class="bg-sky-600 shadow-md">
       <nav class="flex justify-between items-center p-4 text-white">
-        <a class="text-xl font-bold" href="{{ url_for('home') }}"
+        <a
+          class="text-xl font-bold"
+          href="#"
+          onclick="window.location.reload(); return false;"
           >TigerEngage</a
         >
         <div>
@@ -40,20 +50,20 @@
 
     <div id="editQuestionModal" class="edit-question-modal hidden">
       <div class="edit-question-modal-content">
-          <span class="close-button">&times;</span>
-          <form id="editQuestionForm">
-              <label for="editQuestionText">Question:</label>
-              <input type="text" id="editQuestionText" name="question" required />
+        <span class="close-button">&times;</span>
+        <form id="editQuestionForm">
+          <label for="editQuestionText">Question:</label>
+          <input type="text" id="editQuestionText" name="question" required />
 
-              <label for="editAnswerText">Correct Answer:</label>
-              <input type="text" id="editAnswerText" name="answer" required />
+          <label for="editAnswerText">Correct Answer:</label>
+          <input type="text" id="editAnswerText" name="answer" required />
 
-              <input type="hidden" id="editingQuestionId" />
+          <input type="hidden" id="editingQuestionId" />
 
-              <button type="submit" class="submit-edit">Save Changes</button>
-          </form>
+          <button type="submit" class="submit-edit">Save Changes</button>
+        </form>
       </div>
-  </div>
+    </div>
 
     <footer class="py-2 bg-sky-600 text-white w-full mt-auto">
       <p class="text-sm text-center">
@@ -62,8 +72,10 @@
     </footer>
 
     {% block scripts %}
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard-interactions.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/add-question.js') }}"></script>
-    {% endblock %}
+     {% endblock %}
   </body>
 </html>
