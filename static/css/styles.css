@@ -5,6 +5,11 @@
 main {
   overflow: auto;
 }
+.white-text {
+  color: white;
+  position: relative; 
+  z-index: 10; 
+}
 
 .active {
   background-color: #0369a1;
@@ -123,3 +128,13 @@ main {
   opacity: 0.8;
 }
 
+
+.button-active {
+  background-color: #4CAF50; /
+  color: white;
+}
+
+.button-inactive {
+  background-color: #D3D3D3;
+  color: black;
+}

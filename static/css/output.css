@@ -617,10 +617,6 @@ video {
   top: 5rem;
 }
 
-.z-50 {
-  z-index: 50;
-}
-
 .float-right {
   float: right;
 }
@@ -760,10 +756,6 @@ video {
 
 .w-full {
   width: 100%;
-}
-
-.max-w-48 {
-  max-width: 12rem;
 }
 
 .max-w-4xl {
@@ -976,11 +968,6 @@ video {
   background-color: rgb(229 231 235 / var(--tw-bg-opacity));
 }
 
-.bg-gray-500 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(107 114 128 / var(--tw-bg-opacity));
-}
-
 .bg-gray-600 {
   --tw-bg-opacity: 1;
   background-color: rgb(75 85 99 / var(--tw-bg-opacity));
@@ -1055,15 +1042,6 @@ video {
   padding: 1.5rem;
 }
 
-.p-8 {
-  padding: 2rem;
-}
-
-.px-1 {
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-}
-
 .px-2 {
   padding-left: 0.5rem;
   padding-right: 0.5rem;
@@ -1117,10 +1095,6 @@ video {
 .py-64 {
   padding-top: 16rem;
   padding-bottom: 16rem;
-}
-
-.pb-3 {
-  padding-bottom: 0.75rem;
 }
 
 .pl-5 {
@@ -1296,6 +1270,12 @@ main {
   overflow: auto;
 }
 
+.white-text {
+  color: white;
+  position: relative;
+  z-index: 10;
+}
+
 .active {
   background-color: #0369a1;
   color: white;
@@ -1412,6 +1392,18 @@ main {
   opacity: 0.8;
 }
 
+.button-active {
+  background-color: #4CAF50;
+  /* Green for active */
+  color: white;
+}
+
+.button-inactive {
+  background-color: #D3D3D3;
+  /* Gray for inactive */
+  color: black;
+}
+
 .before\:overflow-hidden::before {
   content: var(--tw-content);
   overflow: hidden;
@@ -1425,11 +1417,6 @@ main {
 .hover\:bg-blue-900:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(30 58 138 / var(--tw-bg-opacity));
-}
-
-.hover\:bg-gray-700:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(55 65 81 / var(--tw-bg-opacity));
 }
 
 .hover\:bg-green-600:hover {
@@ -1585,4 +1572,3 @@ main {
     padding-right: 2rem;
   }
 }
-

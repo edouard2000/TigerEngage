@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}
-  {{ student_name }}'s Dashboard
+  <span class="white-text">{{ student_name }}'s Dashboard</span>
 {% endblock %}
 
 {% block navbar %}
@@ -34,4 +34,7 @@
 {% block scripts %}
   {{ super() }}
   <script src="{{ url_for('static', filename='js/student-dashboard.js') }}"></script>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

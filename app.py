@@ -104,9 +104,6 @@ def logout():
     finally:
         db.close()
 
-
-
-
 @app.route("/role-selection")
 def role_selection():
     html_code = flask.render_template("role-selection.html")
@@ -950,7 +947,6 @@ def handle_send_message(data):
         db_session.add(new_message)
         db_session.commit()
         
-        # Emit back to sender for confirmation
         emit('new_message', {
             'message_id': new_message.message_id,
             'text': new_message.text,
@@ -958,8 +954,7 @@ def handle_send_message(data):
             'role': new_message.role,
             'timestamp': new_message.timestamp.isoformat()
         }, room=request.sid)
-        
-        # Broadcast to others
+    
         emit('new_message', {
             'message_id': new_message.message_id,
             'text': new_message.text,
@@ -1015,7 +1010,5 @@ def get_current_user():
         return jsonify({'success': True, 'userId': user_id})
     else:
         return jsonify({'success': False, 'message': 'No user logged in'}), 404
-
-
 if __name__ == '__main__':
     socketio.run(app)

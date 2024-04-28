@@ -87,6 +87,8 @@ function initializeStartEndToggle() {
   });
 }
 
+
+
 function toggleMoreInfo() {
   var infoContent = document.getElementById('moreInfoContent');
   var learnMoreBtn = document.getElementById('learnMoreBtn'); 
@@ -724,6 +726,7 @@ document.getElementById("logoutButton").addEventListener("click", function (e) {
   e.preventDefault(); 
   logout();  
 });
+
 
 function logout() {
   Swal.fire({

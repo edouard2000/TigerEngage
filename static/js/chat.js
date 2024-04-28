@@ -1,8 +1,8 @@
 // file: chat.js 
 // author: Edouard KWIZERA
 
-
 function fetchCurrentUserId() {
+  console.log("Fetching current user");
   fetch('/get-current-user')
       .then(response => response.json())
       .then(data => {
@@ -20,7 +20,6 @@ function fetchCurrentUserId() {
           Swal.fire("Error", "Failed to fetch user data.", "error");
       });
 }
-
 
 var socket;
 var currentUserId = localStorage.getItem("userId");

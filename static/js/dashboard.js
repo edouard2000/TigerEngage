@@ -1,8 +1,8 @@
 let classId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("DOMContentLoaded");
   loadContent("/chat");
-
   document.getElementById("nav-question").addEventListener("click", (e) => {
     e.preventDefault();
     loadContent("/questions");
@@ -39,20 +39,15 @@ function loadContent(url) {
       document.getElementById("content-area").innerHTML = html;
       if (url.includes("/questions")) {
         fetchActiveQuestion(); 
-        setupDynamicContent(); 
       } else if (url.includes("/chat")) {
-        initializeChat();
-      } else if (url.includes("/feedback") || url.includes("/attendance")) {
-        setupDynamicContent();
-      }
+        fetchCurrentUserId();
+      } 
     })
     .catch((error) => {
       console.error("Error loading content:", error);
       document.getElementById("content-area").innerHTML = `<p>Error loading content: ${error.message}</p>`;
     });
 }
-
-
 function fetchActiveQuestion() {
   classId = getClassIdFromUrl();
   fetch(`/class/${classId}/active-question`)
@@ -125,4 +120,18 @@ function getClassIdFromUrl() {
   const urlParts = window.location.pathname.split("/");
   const lastIndex = urlParts.length - 1;
   return urlParts[lastIndex] || urlParts[lastIndex - 1];
+}
+
+
+function toggleMoreInfo() {
+  var infoContent = document.getElementById('moreInfoContent');
+  var learnMoreBtn = document.getElementById('learnMoreBtn'); 
+
+  if (infoContent.style.display === 'none' || !infoContent.style.display) {
+      infoContent.style.display = 'block';
+      learnMoreBtn.textContent = 'Close'; 
+  } else {
+      infoContent.style.display = 'none';
+      learnMoreBtn.textContent = 'Learn More'; 
+  }
 }
