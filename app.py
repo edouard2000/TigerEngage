@@ -1012,5 +1012,17 @@ def get_current_user():
         return jsonify({'success': True, 'userId': user_id})
     else:
         return jsonify({'success': False, 'message': 'No user logged in'}), 404
+    
+@app.route('/class/<class_id>/answers')
+def display_answers_for_question(class_id):
+    print(f"class_id: {class_id} and I was reached")
+    answers, question_text = db_operations.get_answers_for_displayed_question(class_id)
+    if answers is None:
+        if question_text == "No active session found" or question_text == "No displayed question found":
+            answers = []  
+        else:
+            os.abort(404, description="Resource not found")
+    return render_template('answers-page.html', question_text=question_text, answers=answers)
+
 if __name__ == '__main__':
     socketio.run(app)

@@ -1,0 +1,29 @@
+<div class="bg-gray-100 rounded px-8 pt-6 pb-8 mb-4">
+    {% if question_text == "No active session found" or question_text == "No displayed question found" %}
+    <h1 class="block text-gray-700 font-bold mb-2 text-xl">No question displayed yet.</h1>
+    <p class="text-gray-500 mt-4">Please check back when a question has been displayed.</p>
+    {% else %}
+    <h1 class="block text-gray-700 font-bold mb-2 text-xl">Answers for: <span class="text-sky-600">{{ question_text }}</span></h1>
+    <table class="table-auto w-full mt-4">
+        <thead>
+            <tr class="bg-sky-600 text-white">
+                <th class="w-1/6 px-4 py-2 text-left">Sender</th>
+                <th class="w-5/6 px-4 py-2 text-left">Answer</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for answer in answers %}
+            <tr class="bg-gray-50 border-b">
+                <td class="px-4 py-2">{{ answer.sender_name }}</td>
+                <td class="px-4 py-2">{{ answer.text }}</td>
+            </tr>
+            {% endfor %}
+            {% if answers|length == 0 %}
+            <tr class="bg-gray-50">
+                <td class="px-4 py-2" colspan="2">No answers have been submitted for this question yet.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>

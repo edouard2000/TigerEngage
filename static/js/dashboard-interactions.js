@@ -25,6 +25,11 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchContent(`/class/${classId}/feedback`);
   });
 
+  document.getElementById("answers").addEventListener("click", function () {
+    const classId = this.getAttribute("data-class-id");
+    fetchContent(`/class/${classId}/answers`);
+  });
+
   document
     .getElementById("liveChat")
     .addEventListener("click", () => fetchContent("/chat"));
