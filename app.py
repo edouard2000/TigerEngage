@@ -831,14 +831,14 @@ def get_active_question(class_id):
 @app.route("/attendance/<class_id>/")
 def attendance(class_id):
     student_id = flask.session.get("username")
+    print(f"Student:{student_id}")
     data = db_operations.get_attendance_and_scores(class_id, student_id)
+    print(f"data: {data}")
     if not data:
         flask.flash("Could not retrieve attendance and scores data.", "error")
         return flask.redirect(flask.url_for("dashboard"))
     return flask.render_template("attendance.html", data=data)
 
-
-#
 @app.route("/class/<class_id>/feedback")
 def class_feedback(class_id):
     db_session = SessionLocal()
