@@ -3,6 +3,7 @@
 let globalClassId = null;
 
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("DOMContentLoaded");
   globalClassId = getClassIdFromUrl();
 
   document
@@ -68,7 +69,7 @@ function fetchContent(endpoint) {
       } else if (endpoint === "/add-question") {
         initializeQuestionFormEventListeners();
       } else if (endpoint === "/chat") {
-        initializeChat(); 
+        fetchCurrentUserId(); 
       }
     })
     .catch((error) => console.error("Error loading content:", error));
