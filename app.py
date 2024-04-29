@@ -15,8 +15,8 @@ from datetime import datetime
 
 # Related third-party imports
 from dotenv import load_dotenv
-# from gevent import monkey
-# monkey.patch_all()
+from gevent import monkey
+monkey.patch_all()
 import flask
 from flask import (
     jsonify, request, flash, redirect,
