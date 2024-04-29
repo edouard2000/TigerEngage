@@ -937,6 +937,11 @@ def handle_send_message(data):
             return
         
         role = db_operations.get_user_role(user_id)
+        is_ta = db_operations.is_user_a_ta_in_class(user_id, class_id)
+        print(f"is_ta: {is_ta }")
+        if is_ta:
+            role = "TA"
+        
         new_message = ChatMessage(
             message_id=str(uuid.uuid4()),
             sender_id=user_id,
@@ -982,6 +987,8 @@ def fetch_chat_messages(class_id):
             return jsonify({'success': False, 'isClassActive': is_class_active, 'message': 'No active session for this class.'}), 404
 
         messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=active_session.session_id).order_by(ChatMessage.timestamp.asc()).all()
+        current_user_id = session.get('username', 'Unknown')
+       
         messages_list = [{
             'message_id': message.message_id,
             'sender_id': message.sender_id,
@@ -990,8 +997,9 @@ def fetch_chat_messages(class_id):
             'timestamp': message.timestamp.isoformat()
         } for message in messages]
         
-        current_user_id = session.get('username', 'Unknown')
-        
+        print(f"messages_list: {messages_list}")
+    
+
         return jsonify({
             'success': True,
             'isClassActive': is_class_active,
@@ -1003,6 +1011,8 @@ def fetch_chat_messages(class_id):
         return jsonify({'success': False, 'isClassActive': False, 'error': str(e)}), 500
     finally:
         db_session.close()
+        
+        
 
 @app.route('/get-current-user')
 def get_current_user():

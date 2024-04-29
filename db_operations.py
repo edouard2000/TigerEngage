@@ -719,3 +719,18 @@ def get_answers_for_displayed_question(class_id):
         } for answer in answers if answer.user]
 
         return answers_data, displayed_question.text
+    
+def is_user_a_ta_in_class(user_id, class_id):
+    """
+    Check if the specified user is a teaching assistant in a specific class.
+
+    Args:
+        user_id (str): The ID of the user to check.
+        class_id (str): The ID of the class to check.
+
+    Returns:
+        bool: True if the user is a TA in the specified class, False otherwise.
+    """
+    with SessionLocal() as session:
+        is_ta = session.query(Enrollment).filter(Enrollment.student_id == user_id, Enrollment.class_id == class_id, Enrollment.is_ta == True).first()
+        return is_ta is not None
