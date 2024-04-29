@@ -69,7 +69,6 @@ function initializeChat() {
     const isSender = message.sender_id === currentUserId;
     if (!document.getElementById(`msg-${message.message_id}`)) {
       displayMessage(message, isSender);
-      setTimeout(scrollToBottom, 100);
     }
   });
 
