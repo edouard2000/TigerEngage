@@ -83,7 +83,11 @@ function displayNoActiveQuestion() {
 function submitAnswer(questionId) {
   const answerText = document.getElementById("student-answer").value.trim();
   if (answerText === "") {
-    alert("Please enter your answer before submitting.");
+    Swal.fire({
+      icon: 'error',
+      title: 'Oops...',
+      text: 'Please enter your answer before submitting.',
+    });
     return;
   }
 
@@ -91,7 +95,7 @@ function submitAnswer(questionId) {
     .querySelector('meta[name="csrf-token"]')
     .getAttribute("content");
 
-  classId = getClassIdFromUrl();
+  const classId = getClassIdFromUrl();
   fetch(`/class/${classId}/submit-answer`, {
     method: "POST",
     headers: {
@@ -104,17 +108,30 @@ function submitAnswer(questionId) {
     .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        alert("Answer submitted successfully.");
+        Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Answer submitted successfully.',
+        });
         document.getElementById("student-answer").value = "";
       } else {
-        alert(data.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Failed to submit',
+          text: data.message,
+        });
       }
     })
     .catch((error) => {
       console.error("Error submitting answer:", error);
-      alert("An error occurred while submitting your answer.");
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An error occurred while submitting your answer.',
+      });
     });
 }
+
 
 function getClassIdFromUrl() {
   const urlParts = window.location.pathname.split("/");

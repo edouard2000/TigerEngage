@@ -816,7 +816,9 @@ def submit_answer(class_id):
 
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
+    print(f"class_id: {class_id}")
     active_question = db_operations.get_active_questions_for_class(class_id)
+    print(f"Active question: {active_question}")
     if active_question:
         question_data = {
             "question_id": active_question[0].question_id,
