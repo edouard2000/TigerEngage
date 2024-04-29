@@ -702,17 +702,12 @@ def store_detailed_explanation(session, question_id, explanation_note):
 def get_answers_for_displayed_question(class_id):
     """Fetch answers for the displayed question in an active session for a given class."""
     with SessionLocal() as session:
-        # Find the active session for the class
         active_session = session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
         if not active_session:
             return None, "No active session found"
-
-        # Find the displayed question in the active session
         displayed_question = session.query(Question).filter_by(class_id=class_id, is_displayed=True).first()
         if not displayed_question:
             return None, "No displayed question found"
-
-        # Fetch answers for the displayed question, including user information
         answers = session.query(Answer)\
                          .options(joinedload(Answer.user))\
                          .filter(Answer.question_id == displayed_question.question_id)\
@@ -724,6 +719,3 @@ def get_answers_for_displayed_question(class_id):
         } for answer in answers if answer.user]
 
         return answers_data, displayed_question.text
-
-
-
