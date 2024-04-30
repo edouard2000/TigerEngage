@@ -10,6 +10,8 @@ import io
 import os
 import uuid
 from datetime import datetime
+from gevent import monkey
+monkey.patch_all()
 
 # Related third-party imports
 from dotenv import load_dotenv
@@ -24,8 +26,7 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 
-from gevent import monkey
-monkey.patch_all()
+
 # Local application/library specific imports
 from auth import authenticate
 from conciseNotes import LectureNoteSummarizer
