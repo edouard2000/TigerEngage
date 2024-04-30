@@ -6,17 +6,13 @@
 # --------------------------------------------------------------------------------------------
 
 # Standard library imports
-
 import io
 import os
 import uuid
 from datetime import datetime
 
-
 # Related third-party imports
 from dotenv import load_dotenv
-from gevent import monkey
-monkey.patch_all()
 import flask
 from flask import (
     jsonify, request, flash, redirect,
@@ -28,6 +24,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 
+from gevent import monkey
+monkey.patch_all()
 # Local application/library specific imports
 from auth import authenticate
 from conciseNotes import LectureNoteSummarizer
@@ -39,7 +37,6 @@ import db_operations
 from req_lib import ReqLib
 
 load_dotenv()
-
 # -------------------------------------------
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("APP_SECRET_KEY", "123456")
@@ -53,7 +50,7 @@ if database_url:
     )
 else:
     print("The DATABASE_URL environment variable is not set.")
-# -------------------------------------------
+# ------------------------------------------------------------
 @app.route("/", methods=["GET"])
 def index():
     if 'visited' in session:
@@ -1037,6 +1034,8 @@ def display_answers_for_question(class_id):
         else:
             os.abort(404, description="Resource not found")
     return render_template('answers-page.html', question_text=question_text, answers=answers)
+
+
 
 @app.errorhandler(404)
 def page_not_found(e):

@@ -131,8 +131,8 @@ function toggleClassSession(classId, action, button) {
           confirmButtonText: "OK",
         }).then((result) => {
           if (result.isConfirmed) {
-            clearChatMessages(); 
             checkSessionStatusAndUpdateButton(classId, button);
+            clearChatMessages(); 
           }
         });
       } else {
