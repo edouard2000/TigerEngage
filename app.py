@@ -838,7 +838,7 @@ def get_active_question(class_id):
         }
         return jsonify({"success": True, "question": question_data})
     else:
-        return jsonify({"success": False, "question": None}), 404
+        return jsonify({"success": False, "question": None})
 
 
 @app.route("/attendance/<class_id>/")

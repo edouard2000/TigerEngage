@@ -6,42 +6,50 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("DOMContentLoaded");
   globalClassId = getClassIdFromUrl();
 
-  document
-    .getElementById("addQuestion")
-    .addEventListener("click", () => fetchContent("/add-question"));
-
-  document.getElementById("classUsers").addEventListener("click", function () {
-    const classId = this.getAttribute("data-class-id");
-    fetchContent(`/class/${classId}/userlist`);
-  });
-
-  const userListButton = document.getElementById("classUsers");
-  if (userListButton) {
-    userListButton.click();
+  const addQuestion = document.getElementById("addQuestion");
+  if (addQuestion) {
+      addQuestion.addEventListener("click", () => fetchContent("/add-question"));
   }
 
-  document.getElementById("feedback").addEventListener("click", function () {
-    const classId = this.getAttribute("data-class-id");
-    fetchContent(`/class/${classId}/feedback`);
-  });
+  const classUsersButton = document.getElementById("classUsers");
+  if (classUsersButton) {
+      classUsersButton.addEventListener("click", function () {
+          const classId = this.getAttribute("data-class-id");
+          fetchContent(`/class/${classId}/userlist`);
+      });
 
-  document.getElementById("answers").addEventListener("click", function () {
-    const classId = this.getAttribute("data-class-id");
-    fetchContent(`/class/${classId}/answers`);
-  });
+      classUsersButton.click();
+  }
 
-  document
-    .getElementById("liveChat")
-    .addEventListener("click", () => fetchContent("/chat"));
+  const feedbackButton = document.getElementById("feedback");
+  if (feedbackButton) {
+      feedbackButton.addEventListener("click", function () {
+          const classId = this.getAttribute("data-class-id");
+          fetchContent(`/class/${classId}/feedback`);
+      });
+  }
 
+  const answersButton = document.getElementById("answers");
+  if (answersButton) {
+      answersButton.addEventListener("click", function () {
+          const classId = this.getAttribute("data-class-id");
+          fetchContent(`/class/${classId}/answers`);
+      });
+  }
+
+  const liveChatButton = document.getElementById("liveChat");
+  if (liveChatButton) {
+      liveChatButton.addEventListener("click", () => fetchContent("/chat"));
+  }
 
   initializeStartEndToggle();
 
-  document
-    .querySelector(".edit-question-modal .close-button")
-    .addEventListener("click", function () {
-      document.getElementById("editQuestionModal").style.display = "none";
-    });
+  const closeButton = document.querySelector(".edit-question-modal .close-button");
+  if (closeButton) {
+      closeButton.addEventListener("click", function () {
+          document.getElementById("editQuestionModal").style.display = "none";
+      });
+  }
 
   initializeQuestionEventListeners();
 });
@@ -84,13 +92,15 @@ function fetchContent(endpoint) {
 
 function initializeStartEndToggle() {
   const startClassBtn = document.getElementById("startClass");
-  const classId = getClassIdFromUrl();
-  checkSessionStatusAndUpdateButton(classId, startClassBtn);
+  if (startClassBtn) {
+      const classId = getClassIdFromUrl();
+      checkSessionStatusAndUpdateButton(classId, startClassBtn);
 
-  startClassBtn.addEventListener("click", function () {
-    const action = this.textContent.includes("Start") ? "start" : "end";
-    toggleClassSession(classId, action, startClassBtn);
-  });
+      startClassBtn.addEventListener("click", function () {
+          const action = this.textContent.includes("Start") ? "start" : "end";
+          toggleClassSession(classId, action, startClassBtn);
+      });
+  }
 }
 
 

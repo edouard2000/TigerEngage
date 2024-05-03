@@ -1,33 +1,51 @@
-let classId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("DOMContentLoaded");
   loadContent("/chat");
-  document.getElementById("nav-question").addEventListener("click", (e) => {
-    e.preventDefault();
-    loadContent("/questions");
-  });
+  let classId;
+  const navQuestion = document.getElementById("nav-question");
+  if (navQuestion) {
+      navQuestion.addEventListener("click", (e) => {
+          e.preventDefault();
+          loadContent("/questions");
+      });
+  }
 
-  document.getElementById("nav-chat").addEventListener("click", (e) => {
-    e.preventDefault();
-    loadContent("/chat");
-  });
+  const navChat = document.getElementById("nav-chat");
+  if (navChat) {
+      navChat.addEventListener("click", (e) => {
+          e.preventDefault();
+          loadContent("/chat");
+      });
+  }
 
-  document.getElementById("nav-feedback").addEventListener("click", (e) => {
-    e.preventDefault();
-    classId = getClassIdFromUrl(); 
-    loadContent(`/class/${classId}/feedback`);
-  });
+  const navFeedback = document.getElementById("nav-feedback");
+  if (navFeedback) {
+      navFeedback.addEventListener("click", (e) => {
+          e.preventDefault();
+          const classId = getClassIdFromUrl(); 
+          loadContent(`/class/${classId}/feedback`);
+      });
+  }
 
-  document.getElementById("nav-attendance").addEventListener("click", (e) => {
-    e.preventDefault();
-    classId = getClassIdFromUrl(); 
-    loadContent(`/attendance/${classId}/`);
-});
+  const navAttendance = document.getElementById("nav-attendance");
+  if (navAttendance) {
+      navAttendance.addEventListener("click", (e) => {
+          e.preventDefault();
+          const classId = getClassIdFromUrl(); 
+          loadContent(`/attendance/${classId}/`);
+      });
+  }
 });
 
 
 function loadContent(url) {
+  const contentArea = document.getElementById("content-area");
+  if (!contentArea) {
+    // console.error("Element with ID 'content-area' not found.");
+    return;
+  }
+
   fetch(url)
     .then((response) => {
       if (!response.ok) {
@@ -36,7 +54,7 @@ function loadContent(url) {
       return response.text();
     })
     .then((html) => {
-      document.getElementById("content-area").innerHTML = html;
+      contentArea.innerHTML = html;
       if (url.includes("/questions")) {
         fetchActiveQuestion(); 
       } else if (url.includes("/chat")) {
@@ -45,9 +63,10 @@ function loadContent(url) {
     })
     .catch((error) => {
       console.error("Error loading content:", error);
-      document.getElementById("content-area").innerHTML = `<p>Error loading content: ${error.message}</p>`;
+      contentArea.innerHTML = `<p>Error loading content: ${error.message}</p>`;
     });
 }
+
 function fetchActiveQuestion() {
   classId = getClassIdFromUrl();
   fetch(`/class/${classId}/active-question`)
