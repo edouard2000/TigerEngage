@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
       classes.forEach((cls) => {
           const classDiv = document.createElement("div");
           classDiv.className = "flex justify-center items-center p-4 border-b border-gray-200";
-          classDiv.innerHTML = `<span class="font-semibold">${cls.name}</span> - <span>${cls.instructor}</span>`;
+          classDiv.innerHTML = `<span class="font-semibold" style="margin-right: 5px;">${cls.name} </span> - Professor ${cls.instructor}`;
 
           const enrollButton = document.createElement("button");
           enrollButton.className = "ml-2 bg-sky-950 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded";
@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
           classInfoDiv.className = 'mb-2 sm:mb-0';
           classInfoDiv.innerHTML = `
               <p class="text-lg sm:text-xl font-bold text-white truncate">${cls.name}</p>
-              <p class="text-xs sm:text-sm text-gray-300">${cls.instructor}</p>
+              <p class="text-xs sm:text-sm text-gray-300">Professor ${cls.instructor}</p>
           `;
 
           const classActionsDiv = document.createElement('div');

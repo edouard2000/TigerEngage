@@ -136,7 +136,7 @@ def get_student_classes(netid: str) -> list:
             {
                 "id": enrollment.class_.class_id,
                 "name": enrollment.class_.title,
-                "instructor": enrollment.class_.instructor.user_id,
+                "instructor": enrollment.class_.instructor.name,
                 "is_active": db_session.query(ClassSession)
                 .filter_by(class_id=enrollment.class_.class_id, is_active=True)
                 .count()

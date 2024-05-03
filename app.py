@@ -25,6 +25,7 @@ from flask_wtf.csrf import CSRFProtect
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
+from sqlalchemy.orm import joinedload
 
 
 # Local application/library specific imports
@@ -402,13 +403,21 @@ def search_classes():
                 jsonify({"success": False, "message": "Search term is required"}),
                 400,
             )
-        classes = db.query(Class).filter(Class.title.ilike(f"%{search_term}%")).all()
+        
+        # Join the Class and User tables based on the instructor_id field
+        classes = (
+            db.query(Class)
+            .join(Class.instructor)
+            .filter(Class.title.ilike(f"%{search_term}%"))
+            .options(joinedload(Class.instructor))
+            .all()
+            )
 
         classes_data = [
             {
                 "id": cls.class_id,
                 "name": cls.title,
-                "instructor": cls.instructor.user_id,
+                "instructor": cls.instructor.name,
             }
             for cls in classes
         ]
@@ -531,7 +540,7 @@ def start_class_session(class_id):
 
         return jsonify({"success": True, "message": "Class session started successfully.", "session_id": new_session.session_id}), 200
 
-    except db_exc.SQLAlchemyError as e:
+    except SQLAlchemyError as e:
         db.rollback()
         return jsonify({"success": False, "message": "Database error: " + str(e)}), 500
     except Exception as e:
