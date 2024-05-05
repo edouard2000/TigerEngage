@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 import openai
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -42,8 +41,6 @@ class TextSummarizer:
             return "An error occurred while generating the enhanced explanation."
 
 
-
-
     def summarize_student_answers(self, question, student_answers, correct_answer):
         openai.api_key = self.api_key
 
@@ -64,17 +61,3 @@ class TextSummarizer:
         except Exception as e:
             print(f"Error generating summary: {e}")
             return "An error occurred while generating the summary."
-
-if __name__ == "__main__":
-    summarizer = TextSummarizer()
-    question = "How binary search work"
-    student_answers = [
-        "Linear search goes one by one through the list, but binary search divides the list and eliminates half of it each time.",
-        "Binary search is faster than linear search but requires the array to be sorted first.",
-        "With linear search, you look at every element, which can be slow. Binary search is quicker but needs a sorted array.",
-        "Linear search can be used on any list, sorted or not, but binary search cuts down the search area quickly in a sorted list."
-    ]
-    correct_answer = "Repeatedly dividing in half the portion of the list that could contain the item, until you've narrowed down the possible locations to just one"
-    summary = summarizer.summarize_student_answers(question, student_answers, correct_answer)
-    summary2 = summarizer.learn_more(question, correct_answer)
-    print("Summary (Detailed Analysis):", summary2)
