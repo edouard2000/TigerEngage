@@ -1,49 +1,47 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------------------------------------------
+# ============================================================================================
 # app.py
 # Authors: Edouard Kwizera, Roshaan Khalid, Jourdain Babisa, Wangari Karani
-# --------------------------------------------------------------------------------------------
+# ============================================================================================
 
 # Standard library imports
-import io
-import os
-import uuid
 from datetime import datetime
 from gevent import monkey
 monkey.patch_all()
+import uuid
+import io
+import os
 
-# Related third-party imports
-from dotenv import load_dotenv
+# Related third=party imports
 import flask
 from flask import (
     jsonify, request, flash, redirect,
     session, url_for, render_template, send_file
     )
-from flask_socketio import SocketIO, emit
-from flask_wtf.csrf import CSRFProtect
+from dotenv import load_dotenv
 from reportlab.pdfgen import canvas
+from sqlalchemy.orm import joinedload
+from flask_wtf.csrf import CSRFProtect
+from flask_socketio import SocketIO, emit
 from reportlab.lib.pagesizes import letter
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
-from sqlalchemy.orm import joinedload
-
 
 # Local application/library specific imports
+import db_operations
+from req_lib import ReqLib
 from auth import authenticate
 from conciseNotes import LectureNoteSummarizer
 from database import (
     ChatMessage, ClassSession, Question,
     SessionLocal, User, Student, Class, Enrollment, Answer
 )
-import db_operations
-from req_lib import ReqLib
 
 load_dotenv()
-# -------------------------------------------
 app = flask.Flask(__name__)
 app.secret_key = os.environ.get("APP_SECRET_KEY", "123456")
-csrf = CSRFProtect(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
+csrf = CSRFProtect(app)
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
@@ -52,14 +50,18 @@ if database_url:
     )
 else:
     print("The DATABASE_URL environment variable is not set.")
-# ------------------------------------------------------------
+
+# ============================================================================================
+# Getting Started
+# ============================================================================================
+
 @app.route("/", methods=["GET"])
 def index():
     if 'visited' in session:
         return redirect(url_for("authenticate_and_direct"))
     return redirect(url_for("get_started"))
 
-@app.route("/get-started", methods=["GET"])
+@app.route("/get=started", methods=["GET"])
 def get_started():
     username = authenticate()
     html_code = flask.render_template("home.html")
@@ -79,7 +81,6 @@ def home():
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
-
 
 @app.route("/logout", methods=["GET"])
 def logout():
@@ -107,134 +108,17 @@ def logout():
     finally:
         db.close()
 
-@app.route("/role-selection")
+@app.route("/role=selection")
 def role_selection():
-    html_code = flask.render_template("role-selection.html")
+    html_code = flask.render_template("role=selection.html")
     response = flask.make_response(html_code)
     return response
-
-
-@app.route("/student_dashboard")
-def student_dashboard():
-    username = flask.session.get("username")
-    if not username:
-        return flask.redirect(url_for("home"))
-    req_lib = ReqLib()
-
-    username = req_lib.getJSON(
-        req_lib.configs.USERS,
-        uid=username,
-    )
-
-    username = username[0].get('displayname')
-    return flask.render_template("student-dashboard.html", student_name=username)
-
-@app.route("/questions")
-def questions():
-    html_code = flask.render_template("Question.html")
-    response = flask.make_response(html_code)
-    return response
-
-@app.route("/class_dashboard/<class_id>")
-def class_dashboard(class_id):
-    with SessionLocal() as session:
-        class_info = session.query(Class).filter(Class.class_id == class_id).first()
-        if class_info:
-            class_name = class_info.title
-        else:
-            class_name = "Class not found"
-    return render_template("class-dashboard.html", class_name=class_name)
-
-
-@app.route("/professor_dashboard/<class_id>")
-def professor_dashboard(class_id):
-    username = flask.session.get("username")
-    if not username:
-        return flask.redirect(url_for("home"))
-    req_lib = ReqLib()
-
-    display_name = req_lib.getJSON(
-        req_lib.configs.USERS,
-        uid=username,
-    )
-
-    display_name = display_name[0].get('displayname')
-    course_name = db_operations.get_professor_class(username)
-    return flask.render_template(
-        "professor-dashboard.html",
-        course_name=course_name,
-        username=display_name,
-        class_id=class_id,
-        User_id = username
-    )
-
-
-@app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
-def edit_user(class_id, user_id):
-    db_session = SessionLocal()
-    student = db_session.query(Student).filter_by(user_id=user_id).first()
-
-    if student is None:
-        db_session.close()
-        flash("Student not found.", "error")
-        return redirect(url_for("class_userlist", class_id=class_id))
-
-    enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
-    
-    if request.method == "POST":
-        if enrollment:
-            enrollment.score = request.form.get("score", enrollment.score)
-            enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
-            db_session.commit()
-            flash("Student information updated successfully.", "success")
-        else:
-            flash("Enrollment information not found.", "error")
-        return redirect(url_for("professor_dashboard", class_id=class_id))
-
-    db_session.close()
-    return render_template("edit_student.html", student=student,
-                           class_id=class_id, score=enrollment.score
-                           if enrollment else None, is_ta=enrollment.is_ta
-                           if enrollment else None)
-
-
-@app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
-def delete_user(class_id, user_id):
-    db_session = SessionLocal()
-    user = db_session.query(User).filter_by(user_id=user_id).first()
-
-    if user:
-        delete_enrollment = db_session.query(Enrollment).filter(Enrollment.student_id == user_id).first()
-        db_session.delete(delete_enrollment)
-        
-        db_session.commit()
-        flash("User successfully deleted", "success")
-    else:
-        flash("User not found.", "error")
-    db_session.close()
-
-    return redirect(url_for("professor_dashboard", class_id=class_id))
-
-
-@app.route("/class/<class_id>/userlist")
-def class_userlist(class_id):
-    try:
-        users_data = db_operations.get_students_for_class(class_id)
-        return render_template("class-users.html", users=users_data, class_id=class_id)
-    except Exception as e:
-        print(e)
-        return (
-            jsonify({"success": False, "message": "Unable to fetch class users"}),
-            500,
-        )
-
 
 @app.route("/select_role", methods=["POST"])
 def select_role():
     role = request.json["role"]
     flask.session["role"] = role
     return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
-
 
 @app.route("/authenticate_and_direct", methods=["GET"])
 def authenticate_and_direct():
@@ -277,119 +161,20 @@ def authenticate_and_direct():
         else:
             dashboard_url = "student_dashboard"
             return flask.redirect(flask.url_for(dashboard_url))
-
-
-@app.route("/create_class_form", methods=["GET"])
-def create_class_form():
-    return flask.render_template("create_class_form.html")
-
-
-@app.route("/create_class", methods=["POST"])
-def create_class():
-    class_name = request.form.get("class_name")
-    username = flask.session.get("username")
-    success, class_id_returned = db_operations.create_class_for_professor(
-        username, class_name
-    )
-    if success:
-        return jsonify({
-            'status': 'success',
-            'message': 'Class successfully created!',
-            'class_id': class_id_returned
-        })
+        
+@app.route('/get=current=user')
+def get_current_user():
+    user_id = session.get('username', None)
+    print(f"user_id: {user_id}" )
+    if user_id:
+        return jsonify({'success': True, 'userId': user_id})
     else:
-        return jsonify({
-            'status': 'error',
-            'message': 'Error creating class.'
-        }), 400
-
-
-@app.route("/add-question")
-def add_question():
-    """this method will render a form with input to add questions
-
-    Returns:
-        _type_: render template
-    """
-    return flask.render_template("add-question.html")
-
-
-@app.route("/class/<class_id>/add-question", methods=["POST"])
-def add_question_to_class_route(class_id):
-    data = request.json
-    question_text = data.get("question_text")
-    correct_answer = data.get("correct_answer")
-
-    if not question_text or not correct_answer:
-        return (
-            jsonify(
-                {
-                    "success": False,
-                    "message": "Missing question text or correct answer.",
-                }
-            ),
-            400,
-        )
-    success = db_operations.add_question_to_class(
-        class_id, question_text, correct_answer
-    )
-
-    if success:
-        return jsonify({"success": True, "message": "Question successfully added."})
-    else:
-        return jsonify({"success": False, "message": "Failed to add question."}), 500
-
-
-@app.route("/class/<class_id>/questions", methods=["GET"])
-def get_questions_for_class_route(class_id):
-    results = db_operations.get_questions_for_class(class_id)
-    if results:
-        return jsonify({"success": True, "questions": results})
-    else:
-        return (
-            jsonify(
-                {"success": False, "message": "No questions found for this class."}
-            ),
-            404,
-        )
-
-
-@app.route('/process_transcript', methods=['POST'])
-@csrf.exempt
-def process_transcript():
-    data = request.get_json()
-    transcript = data.get('transcript')
-    if not transcript:
-        return jsonify({'error': 'No transcript provided'}), 400
-
-    summarizer = LectureNoteSummarizer()
-    notes = summarizer.create_concise_notes(transcript)
-    if not notes:
-        return jsonify({'error': 'Failed to generate notes'}), 500
-
-    
-    pdf_buffer = io.BytesIO()
-    p = canvas.Canvas(pdf_buffer, pagesize=letter)
-    width, height = letter
-
-    textobject = p.beginText(72, height - 100)  
-    textobject.setFont("Helvetica", 12)  
-    lines = notes.split('\n')  
-    for line in lines:
-        textobject.textLine(line)  
-    p.drawText(textobject)  
-    p.showPage()
-    p.save()
-    pdf_buffer.seek(0)
-
-    return send_file(
-        pdf_buffer,
-        as_attachment=True,
-        mimetype='application/pdf',
-        download_name='notes.pdf'
-    )
+        return jsonify({'success': False, 'message': 'No user logged in'}), 404
     
     
+# -------------------------------------------------------------------------------------------- #
+# Search Classes
+# -------------------------------------------------------------------------------------------- #
 @app.route("/search_classes", methods=["GET"])
 def search_classes():
     if "username" not in session:
@@ -425,6 +210,290 @@ def search_classes():
         return jsonify({"success": True, "classes": classes_data})
     finally:
         db.close()
+
+# ============================================================================================ #
+# Professor Dashboard
+# ============================================================================================ #
+
+@app.route("/professor_dashboard/<class_id>")
+def professor_dashboard(class_id):
+    username = flask.session.get("username")
+    if not username:
+        return flask.redirect(url_for("home"))
+    req_lib = ReqLib()
+
+    display_name = req_lib.getJSON(
+        req_lib.configs.USERS,
+        uid=username,
+    )
+
+    display_name = display_name[0].get('displayname')
+    course_name = db_operations.get_professor_class(username)
+    return flask.render_template(
+        "professor=dashboard.html",
+        course_name=course_name,
+        username=display_name,
+        class_id=class_id,
+        User_id = username
+    )
+
+# -------------------------------------------------------------------------------------------- #
+# Professor : Create class 
+# -------------------------------------------------------------------------------------------- #
+
+@app.route("/create_class_form", methods=["GET"])
+def create_class_form():
+    return flask.render_template("create_class_form.html")
+
+@app.route("/create_class", methods=["POST"])
+def create_class():
+    class_name = request.form.get("class_name")
+    username = flask.session.get("username")
+    success, class_id_returned = db_operations.create_class_for_professor(
+        username, class_name
+    )
+    if success:
+        return jsonify({
+            'status': 'success',
+            'message': 'Class successfully created!',
+            'class_id': class_id_returned
+        })
+    else:
+        return jsonify({
+            'status': 'error',
+            'message': 'Error creating class.'
+        }), 400
+
+# -------------------------------------------------------------------------------------------- #
+# Professor : Manage members of the class
+# -------------------------------------------------------------------------------------------- #
+
+@app.route("/class/<class_id>/userlist")
+def class_userlist(class_id):
+    try:
+        users_data = db_operations.get_students_for_class(class_id)
+        return render_template("class=users.html", users=users_data, class_id=class_id)
+    except Exception as e:
+        print(e)
+        return (
+            jsonify({"success": False, "message": "Unable to fetch class users"}),
+            500,
+        )
+
+@app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
+def edit_user(class_id, user_id):
+    db_session = SessionLocal()
+    student = db_session.query(Student).filter_by(user_id=user_id).first()
+
+    if student is None:
+        db_session.close()
+        flash("Student not found.", "error")
+        return redirect(url_for("class_userlist", class_id=class_id))
+
+    enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
+    
+    if request.method == "POST":
+        if enrollment:
+            enrollment.score = request.form.get("score", enrollment.score)
+            enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
+            db_session.commit()
+            flash("Student information updated successfully.", "success")
+        else:
+            flash("Enrollment information not found.", "error")
+        return redirect(url_for("professor_dashboard", class_id=class_id))
+
+    db_session.close()
+    return render_template("edit_student.html", student=student,
+                           class_id=class_id, score=enrollment.score
+                           if enrollment else None, is_ta=enrollment.is_ta
+                           if enrollment else None)
+
+@app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
+def delete_user(class_id, user_id):
+    db_session = SessionLocal()
+    user = db_session.query(User).filter_by(user_id=user_id).first()
+
+    if user:
+        delete_enrollment = db_session.query(Enrollment).filter(Enrollment.student_id == user_id).first()
+        db_session.delete(delete_enrollment)
+        
+        db_session.commit()
+        flash("User successfully deleted", "success")
+    else:
+        flash("User not found.", "error")
+    db_session.close()
+
+    return redirect(url_for("professor_dashboard", class_id=class_id))
+
+# -------------------------------------------------------------------------------------------- #
+# Professor : Manage In-Class Questions
+# -------------------------------------------------------------------------------------------- #
+
+@app.route("/add=question")
+def add_question():
+    """this method will render a form with input to add questions
+
+    Returns:
+        _type_: render template
+    """
+    return flask.render_template("add=question.html")
+
+
+@app.route("/class/<class_id>/add=question", methods=["POST"])
+def add_question_to_class_route(class_id):
+    data = request.json
+    question_text = data.get("question_text")
+    correct_answer = data.get("correct_answer")
+
+    if not question_text or not correct_answer:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Missing question text or correct answer.",
+                }
+            ),
+            400,
+        )
+    success = db_operations.add_question_to_class(
+        class_id, question_text, correct_answer
+    )
+
+    if success:
+        return jsonify({"success": True, "message": "Question successfully added."})
+    else:
+        return jsonify({"success": False, "message": "Failed to add question."}), 500
+    
+
+@app.route("/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
+def edit_question(class_id, question_id):
+    data = request.get_json()
+    print(data)
+    db = SessionLocal()
+    try:
+        question = (
+            db.query(Question)
+            .filter_by(question_id=question_id, class_id=class_id)
+            .first()
+        )
+        if question:
+            if question.summaries or question.is_displayed or question.is_active:
+                messages = []
+                if question.summaries:
+                    messages.append("This question has summaries associated with it.")
+                if question.is_displayed:
+                    messages.append("This question is currently displayed to students.")
+                if question.is_active:
+                    messages.append("This question is currently active.")
+                
+                return jsonify({
+                    "success": False,
+                    "message": " ".join(messages)
+                }), 403
+
+            question.text = data["question_text"]
+            question.correct_answer = data["correct_answer"]
+            db.commit()
+            return jsonify(
+                {"success": True, "message": "Question updated successfully."}
+            )
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    finally:
+        db.close()
+
+
+@app.route("/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
+def delete_question(class_id, question_id):
+    db = SessionLocal()
+    try:
+        question = (
+            db.query(Question)
+            .filter_by(question_id=question_id, class_id=class_id)
+            .first()
+        )
+        if question:
+            if question.is_active or question.is_displayed:
+                message = "Question is "
+                if question.is_active:
+                    message += "active"
+                if question.is_displayed:
+                    if question.is_active:
+                        message += " and displayed"
+                    else:
+                        message += "displayed"
+                message += ". Please deactivate and ensure it is not displayed before deleting."
+                return jsonify({"success": False, "message": message}), 400
+            
+            db.delete(question)
+            db.commit()
+            return jsonify({"success": True, "message": "Question deleted successfully."})
+        else:
+            return jsonify({"success": False, "message": "Question not found."}), 404
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        db.close()
+
+
+# -------------------------------------------------------------------------------------------- #
+# Professor : Generate Class Notes from In-Class Recording
+# -------------------------------------------------------------------------------------------- #
+
+@app.route('/process_transcript', methods=['POST'])
+@csrf.exempt
+def process_transcript():
+    data = request.get_json()
+    transcript = data.get('transcript')
+    if not transcript:
+        return jsonify({'error': 'No transcript provided'}), 400
+
+    summarizer = LectureNoteSummarizer()
+    notes = summarizer.create_concise_notes(transcript)
+    if not notes:
+        return jsonify({'error': 'Failed to generate notes'}), 500
+
+    
+    pdf_buffer = io.BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=letter)
+    width, height = letter
+
+    textobject = p.beginText(72, height = 100)  
+    textobject.setFont("Helvetica", 12)  
+    lines = notes.split('\n')  
+    for line in lines:
+        textobject.textLine(line)  
+    p.drawText(textobject)  
+    p.showPage()
+    p.save()
+    pdf_buffer.seek(0)
+
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        mimetype='application/pdf',
+        download_name='notes.pdf'
+    )
+
+# ============================================================================================ #
+# Student Dashboard
+# ============================================================================================ #
+
+@app.route("/student_dashboard")
+def student_dashboard():
+    username = flask.session.get("username")
+    if not username:
+        return flask.redirect(url_for("home"))
+    
+    req_lib = ReqLib()
+    username = req_lib.getJSON(
+        req_lib.configs.USERS,
+        uid=username,
+    )
+
+    username = username[0].get('displayname')
+    return flask.render_template("student=dashboard.html", student_name=username)
 
 
 @app.route("/enroll_in_class", methods=["POST"])
@@ -511,6 +580,66 @@ def get_enrolled_classes():
     return jsonify({"success": True, "classes": classes_data})
 
 
+@app.route("/class/<class_id>/check_in", methods=["POST"])
+def check_in(class_id):
+    username = flask.session.get("username")
+    if not username:
+        return jsonify({"success": False, "message": "User not authenticated"}), 401
+    if not db_operations.is_student_enrolled_in_class(username, class_id):
+        return (
+            jsonify(
+                {"success": False, "message": "Student not enrolled in this class"}
+            ),
+            403,
+        )
+    active_session = db_operations.get_active_session_for_class(class_id)
+    if not active_session:
+        return (
+            jsonify({"success": False, "message": "No active session for this class"}),
+            404,
+        )
+    if db_operations.has_checked_in(username, active_session.session_id):
+        return jsonify(
+            {
+                "success": True,
+                "message": "Already checked in.",
+                "redirectUrl": url_for("class_dashboard", class_id=class_id),
+            }
+        )
+
+    success, message = db_operations.record_attendance_and_update(
+        username, class_id, active_session.session_id
+    )
+    if success:
+        return jsonify(
+            {
+                "success": True,
+                "message": "Check=in successful.",
+                "redirectUrl": url_for("class_dashboard", class_id=class_id),
+            }
+        )
+    else:
+        return jsonify({"success": False, "message": message}), 500
+    
+
+# ============================================================================================ #
+# Class Dashboard
+# ============================================================================================ #
+
+@app.route("/class_dashboard/<class_id>")
+def class_dashboard(class_id):
+    with SessionLocal() as session:
+        class_info = session.query(Class).filter(Class.class_id == class_id).first()
+        if class_info:
+            class_name = class_info.title
+        else:
+            class_name = "Class not found"
+    return render_template("class=dashboard.html", class_name=class_name)
+
+
+# -------------------------------------------------------------------------------------------- #
+# Professor starts class session
+# -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/start_session", methods=["POST"])
 def start_class_session(class_id):
@@ -549,7 +678,9 @@ def start_class_session(class_id):
     finally:
         db.close()
 
-
+# -------------------------------------------------------------------------------------------- #
+# Professor ends class session
+# -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/end_session", methods=["POST"])
 def end_class_session(class_id):
@@ -590,6 +721,9 @@ def end_class_session(class_id):
         db.close()
 
 
+# -------------------------------------------------------------------------------------------- #
+# Check Class Session Status
+# -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/session_status", methods=["GET"])
 def check_class_session_status(class_id):
@@ -600,49 +734,35 @@ def check_class_session_status(class_id):
             .first()
         )
         return jsonify({"isActive": active_session is not None})
+    
+
+# ============================================================================================ #
+# Feature: In-Class Questions for Student Engagement
+# ============================================================================================ #
+
+@app.route("/questions")
+def questions():
+    html_code = flask.render_template("Question.html")
+    response = flask.make_response(html_code)
+    return response
 
 
-@app.route("/class/<class_id>/check_in", methods=["POST"])
-def check_in(class_id):
-    username = flask.session.get("username")
-    if not username:
-        return jsonify({"success": False, "message": "User not authenticated"}), 401
-    if not db_operations.is_student_enrolled_in_class(username, class_id):
+@app.route("/class/<class_id>/questions", methods=["GET"])
+def get_questions_for_class_route(class_id):
+    results = db_operations.get_questions_for_class(class_id)
+    if results:
+        return jsonify({"success": True, "questions": results})
+    else:
         return (
             jsonify(
-                {"success": False, "message": "Student not enrolled in this class"}
+                {"success": False, "message": "No questions found for this class."}
             ),
-            403,
-        )
-    active_session = db_operations.get_active_session_for_class(class_id)
-    if not active_session:
-        return (
-            jsonify({"success": False, "message": "No active session for this class"}),
             404,
         )
-    if db_operations.has_checked_in(username, active_session.session_id):
-        return jsonify(
-            {
-                "success": True,
-                "message": "Already checked in.",
-                "redirectUrl": url_for("class_dashboard", class_id=class_id),
-            }
-        )
 
-    success, message = db_operations.record_attendance_and_update(
-        username, class_id, active_session.session_id
-    )
-    if success:
-        return jsonify(
-            {
-                "success": True,
-                "message": "Check-in successful.",
-                "redirectUrl": url_for("class_dashboard", class_id=class_id),
-            }
-        )
-    else:
-        return jsonify({"success": False, "message": message}), 500
-    
+# -------------------------------------------------------------------------------------------- #
+# Question Status
+# -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/question/<question_id>/status", methods=["GET"])
 def get_question_status(class_id, question_id):
@@ -663,6 +783,9 @@ def get_question_status(class_id, question_id):
     finally:
         db_session.close()
 
+# -------------------------------------------------------------------------------------------- #
+# Professor makes the question visible to the class
+# -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/question/<question_id>/ask", methods=["POST"])
 def toggle_question(class_id, question_id):
@@ -714,80 +837,27 @@ def toggle_question(class_id, question_id):
     finally:
         session.close()
 
-@app.route("/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
-def edit_question(class_id, question_id):
-    data = request.get_json()
-    print(data)
-    db = SessionLocal()
-    try:
-        question = (
-            db.query(Question)
-            .filter_by(question_id=question_id, class_id=class_id)
-            .first()
-        )
-        if question:
-            if question.summaries or question.is_displayed or question.is_active:
-                messages = []
-                if question.summaries:
-                    messages.append("This question has summaries associated with it.")
-                if question.is_displayed:
-                    messages.append("This question is currently displayed to students.")
-                if question.is_active:
-                    messages.append("This question is currently active.")
-                
-                return jsonify({
-                    "success": False,
-                    "message": " ".join(messages)
-                }), 403
+@app.route("/class/<class_id>/active=question", methods=["GET"])
+def get_active_question(class_id):
+    print(f"class_id: {class_id}")
+    active_question = db_operations.get_active_questions_for_class(class_id)
+    print(f"Active question: {active_question}")
+    if active_question:
+        question_data = {
+            "question_id": active_question[0].question_id,
+            "text": active_question[0].text,
+            "correct_answer": active_question[0].correct_answer,
+        }
+        return jsonify({"success": True, "question": question_data})
+    else:
+        return jsonify({"success": False, "question": None})
+    
+    
+# -------------------------------------------------------------------------------------------- #
+# Student Answer Submission for Displayed Question
+# -------------------------------------------------------------------------------------------- #
 
-            question.text = data["question_text"]
-            question.correct_answer = data["correct_answer"]
-            db.commit()
-            return jsonify(
-                {"success": True, "message": "Question updated successfully."}
-            )
-        else:
-            return jsonify({"success": False, "message": "Question not found."}), 404
-    finally:
-        db.close()
-
-
-@app.route("/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
-def delete_question(class_id, question_id):
-    db = SessionLocal()
-    try:
-        question = (
-            db.query(Question)
-            .filter_by(question_id=question_id, class_id=class_id)
-            .first()
-        )
-        if question:
-            if question.is_active or question.is_displayed:
-                message = "Question is "
-                if question.is_active:
-                    message += "active"
-                if question.is_displayed:
-                    if question.is_active:
-                        message += " and displayed"
-                    else:
-                        message += "displayed"
-                message += ". Please deactivate and ensure it is not displayed before deleting."
-                return jsonify({"success": False, "message": message}), 400
-            
-            db.delete(question)
-            db.commit()
-            return jsonify({"success": True, "message": "Question deleted successfully."})
-        else:
-            return jsonify({"success": False, "message": "Question not found."}), 404
-    except Exception as e:
-        db.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
-    finally:
-        db.close()
-
-
-
-@app.route("/class/<class_id>/submit-answer", methods=["POST"])
+@app.route("/class/<class_id>/submit=answer", methods=["POST"])
 def submit_answer(class_id):
     data = request.get_json()
     question_id = data.get("questionId")
@@ -825,32 +895,25 @@ def submit_answer(class_id):
             500,
         )
 
-@app.route("/class/<class_id>/active-question", methods=["GET"])
-def get_active_question(class_id):
-    print(f"class_id: {class_id}")
-    active_question = db_operations.get_active_questions_for_class(class_id)
-    print(f"Active question: {active_question}")
-    if active_question:
-        question_data = {
-            "question_id": active_question[0].question_id,
-            "text": active_question[0].text,
-            "correct_answer": active_question[0].correct_answer,
-        }
-        return jsonify({"success": True, "question": question_data})
-    else:
-        return jsonify({"success": False, "question": None})
+# -------------------------------------------------------------------------------------------- #
+# Professor : See individual student responses
+# -------------------------------------------------------------------------------------------- #
+
+@app.route('/class/<class_id>/answers')
+def display_answers_for_question(class_id):
+    print(f"class_id: {class_id} and I was reached")
+    answers, question_text = db_operations.get_answers_for_displayed_question(class_id)
+    if answers is None:
+        if question_text == "No active session found" or question_text == "No displayed question found":
+            answers = []  
+        else:
+            os.abort(404, description="Resource not found")
+    return render_template('answers=page.html', question_text=question_text, answers=answers)
 
 
-@app.route("/attendance/<class_id>/")
-def attendance(class_id):
-    student_id = flask.session.get("username")
-    print(f"Student:{student_id}")
-    data = db_operations.get_attendance_and_scores(class_id, student_id)
-    print(f"data: {data}")
-    if not data:
-        flask.flash("Could not retrieve attendance and scores data.", "error")
-        return flask.redirect(flask.url_for("dashboard"))
-    return flask.render_template("attendance.html", data=data)
+# ============================================================================================ #
+# Feature: Generate Feedback from student responses
+# ============================================================================================ #
 
 @app.route("/class/<class_id>/feedback")
 def class_feedback(class_id):
@@ -879,6 +942,10 @@ def class_feedback(class_id):
     finally:
         db_session.close()
         
+
+# -------------------------------------------------------------------------------------------- #
+# Professor : Display Class Feedback to Students
+# -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/question/<question_id>/toggle_display", methods=["POST"])
 def toggle_display(class_id, question_id):
@@ -927,6 +994,10 @@ def toggle_display(class_id, question_id):
         session.close()
         
 
+# ============================================================================================ #
+# Feature: Live Chat
+# ============================================================================================ #
+
 @app.route("/chat")
 def chat():
     username = session.get('username')
@@ -934,7 +1005,6 @@ def chat():
     html_code = flask.render_template("chat.html", username=username)
     response = flask.make_response(html_code)
     return response
-
 
 
 @socketio.on('send_message')
@@ -1024,33 +1094,33 @@ def fetch_chat_messages(class_id):
         db_session.close()
         
         
+# ============================================================================================ #
+# Feature: Attendance Tracking
+# ============================================================================================ #
 
-@app.route('/get-current-user')
-def get_current_user():
-    user_id = session.get('username', None)
-    print(f"user_id: {user_id}" )
-    if user_id:
-        return jsonify({'success': True, 'userId': user_id})
-    else:
-        return jsonify({'success': False, 'message': 'No user logged in'}), 404
-    
-@app.route('/class/<class_id>/answers')
-def display_answers_for_question(class_id):
-    print(f"class_id: {class_id} and I was reached")
-    answers, question_text = db_operations.get_answers_for_displayed_question(class_id)
-    if answers is None:
-        if question_text == "No active session found" or question_text == "No displayed question found":
-            answers = []  
-        else:
-            os.abort(404, description="Resource not found")
-    return render_template('answers-page.html', question_text=question_text, answers=answers)
+@app.route("/attendance/<class_id>/")
+def attendance(class_id):
+    student_id = flask.session.get("username")
+    print(f"Student:{student_id}")
+    data = db_operations.get_attendance_and_scores(class_id, student_id)
+    print(f"data: {data}")
+    if not data:
+        flask.flash("Could not retrieve attendance and scores data.", "error")
+        return flask.redirect(flask.url_for("dashboard"))
+    return flask.render_template("attendance.html", data=data)
 
 
+# -------------------------------------------------------------------------------------------- #
+# URL Error Page
+# -------------------------------------------------------------------------------------------- #
 
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
 
 
+# ============================================================================================ 
+# Main
+# ============================================================================================ 
 if __name__ == '__main__':
     socketio.run(app)
