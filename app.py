@@ -355,6 +355,20 @@ def add_question_to_class_route(class_id):
             ),
             400,
         )
+    
+    # Check if question text and correct answer exceed character limit
+    max_length = 200
+    if len(question_text) > max_length or len(correct_answer) > max_length:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Question text or correct answer exceeds maximum length of 200 characters.",
+                }
+            ),
+            400,
+        )
+    
     success = db_operations.add_question_to_class(
         class_id, question_text, correct_answer
     )
