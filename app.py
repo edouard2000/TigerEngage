@@ -13,7 +13,7 @@ import uuid
 import io
 import os
 
-# Related third=party imports
+# Related third-party imports
 import flask
 from flask import (
     jsonify, request, flash, redirect,
@@ -61,7 +61,7 @@ def index():
         return redirect(url_for("authenticate_and_direct"))
     return redirect(url_for("get_started"))
 
-@app.route("/get=started", methods=["GET"])
+@app.route("/get-started", methods=["GET"])
 def get_started():
     username = authenticate()
     html_code = flask.render_template("home.html")
@@ -108,9 +108,9 @@ def logout():
     finally:
         db.close()
 
-@app.route("/role=selection")
+@app.route("/role-selection")
 def role_selection():
-    html_code = flask.render_template("role=selection.html")
+    html_code = flask.render_template("role-selection.html")
     response = flask.make_response(html_code)
     return response
 
@@ -162,7 +162,7 @@ def authenticate_and_direct():
             dashboard_url = "student_dashboard"
             return flask.redirect(flask.url_for(dashboard_url))
         
-@app.route('/get=current=user')
+@app.route('/get-current-user')
 def get_current_user():
     user_id = session.get('username', None)
     print(f"user_id: {user_id}" )
@@ -230,7 +230,7 @@ def professor_dashboard(class_id):
     display_name = display_name[0].get('displayname')
     course_name = db_operations.get_professor_class(username)
     return flask.render_template(
-        "professor=dashboard.html",
+        "professor-dashboard.html",
         course_name=course_name,
         username=display_name,
         class_id=class_id,
@@ -272,7 +272,7 @@ def create_class():
 def class_userlist(class_id):
     try:
         users_data = db_operations.get_students_for_class(class_id)
-        return render_template("class=users.html", users=users_data, class_id=class_id)
+        return render_template("class-users.html", users=users_data, class_id=class_id)
     except Exception as e:
         print(e)
         return (
@@ -329,17 +329,17 @@ def delete_user(class_id, user_id):
 # Professor : Manage In-Class Questions
 # -------------------------------------------------------------------------------------------- #
 
-@app.route("/add=question")
+@app.route("/add-question")
 def add_question():
     """this method will render a form with input to add questions
 
     Returns:
         _type_: render template
     """
-    return flask.render_template("add=question.html")
+    return flask.render_template("add-question.html")
 
 
-@app.route("/class/<class_id>/add=question", methods=["POST"])
+@app.route("/class/<class_id>/add-question", methods=["POST"])
 def add_question_to_class_route(class_id):
     data = request.json
     question_text = data.get("question_text")
@@ -507,7 +507,7 @@ def student_dashboard():
     )
 
     username = username[0].get('displayname')
-    return flask.render_template("student=dashboard.html", student_name=username)
+    return flask.render_template("student-dashboard.html", student_name=username)
 
 
 @app.route("/enroll_in_class", methods=["POST"])
@@ -628,7 +628,7 @@ def check_in(class_id):
         return jsonify(
             {
                 "success": True,
-                "message": "Check=in successful.",
+                "message": "Check-in successful.",
                 "redirectUrl": url_for("class_dashboard", class_id=class_id),
             }
         )
@@ -648,7 +648,7 @@ def class_dashboard(class_id):
             class_name = class_info.title
         else:
             class_name = "Class not found"
-    return render_template("class=dashboard.html", class_name=class_name)
+    return render_template("class-dashboard.html", class_name=class_name)
 
 
 # -------------------------------------------------------------------------------------------- #
@@ -851,7 +851,7 @@ def toggle_question(class_id, question_id):
     finally:
         session.close()
 
-@app.route("/class/<class_id>/active=question", methods=["GET"])
+@app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
     print(f"class_id: {class_id}")
     active_question = db_operations.get_active_questions_for_class(class_id)
@@ -871,7 +871,7 @@ def get_active_question(class_id):
 # Student Answer Submission for Displayed Question
 # -------------------------------------------------------------------------------------------- #
 
-@app.route("/class/<class_id>/submit=answer", methods=["POST"])
+@app.route("/class/<class_id>/submit-answer", methods=["POST"])
 def submit_answer(class_id):
     data = request.get_json()
     question_id = data.get("questionId")
@@ -922,7 +922,7 @@ def display_answers_for_question(class_id):
             answers = []  
         else:
             os.abort(404, description="Resource not found")
-    return render_template('answers=page.html', question_text=question_text, answers=answers)
+    return render_template('answers-page.html', question_text=question_text, answers=answers)
 
 
 # ============================================================================================ #
