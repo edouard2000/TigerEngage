@@ -138,3 +138,10 @@ main {
   background-color: #D3D3D3;
   color: black;
 }
+
+.question-container {
+  max-width: 700px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
