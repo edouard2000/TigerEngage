@@ -226,6 +226,17 @@ function initializeQuestionFormEventListeners() {
         return;
       }
 
+      if (questionInput.value.trim().length > 200 || answerInput.value.trim().length > 200) {
+        Swal.fire({
+          icon: "warning",
+          title: "Character Limit Exceeded",
+          text: "Both the question and the answer must not exceed 200 characters.",
+          confirmButtonColor: "#0284c7",
+          confirmButtonText: "OK",
+        });
+        return;
+      }
+
       fetch(`/class/${classId}/add-question`, {
         method: "POST",
         headers: {
@@ -348,7 +359,7 @@ function createQuestionElement(question) {
   const element = document.createElement("div");
   element.className = "question-element flex justify-between items-center p-4 border border-gray-300 rounded-md mb-2 bg-sky-600 text-white";
   element.innerHTML = `
-    <div class="flex-1">
+    <div class="flex-1 question-container">
         <div><span class="font-semibold">Q:</span> ${question.text}</div>
         <div><span class="font-semibold">A:</span> ${question.correct_answer}</div>
     </div>
@@ -570,56 +581,6 @@ function deleteQuestion(questionId) {
   });
 }
 
-
-document
-  .getElementById("editQuestionForm")
-  .addEventListener("submit", function (e) {
-    e.preventDefault();
-    const questionId = document.getElementById("editingQuestionId").value;
-    const questionText = document.getElementById("editQuestionText").value;
-    const answerText = document.getElementById("editAnswerText").value;
-
-    fetch(`/class/${globalClassId}/question/${questionId}/edit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        question_text: questionText,
-        correct_answer: answerText,
-      }),
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        fetchQuestionsAndDisplay(globalClassId);
-        document.getElementById("editQuestionModal").style.display = "none";
-        Swal.fire({
-          title: 'Success!',
-          text: 'Question updated successfully.',
-          icon: 'success',
-          confirmButtonText: 'Ok'
-        });
-      } else {
-        throw new Error(data.message);
-      }
-    })
-    .catch(error => {
-      console.error("Error updating question:", error);
-      Swal.fire({
-        title: 'Error!',
-        text: error.message,
-        icon: 'error',
-        confirmButtonText: 'Ok'
-      });
-    });
-  });
-
-
-
-
 function fetchEditModalContent(
   questionId,
   currentQuestionText,
@@ -693,45 +654,38 @@ function submitEditForm() {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRF-Token": document
-        .querySelector('meta[name="csrf-token"]')
-        .getAttribute("content"),
+      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]').getAttribute("content"),
     },
+    credentials: "include",
     body: JSON.stringify({
       question_text: questionText,
       correct_answer: answerText,
     }),
   })
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: "Question successfully updated.",
-          confirmButtonColor: "#3085d6",
-          confirmButtonText: "OK",
-        });
-        fetchQuestionsAndDisplay(globalClassId);
-        document.getElementById("editQuestionModal").style.display = "none";
-      } else {
-        throw new Error("Failed to update the question.");
-      }
-    })
-    .catch((error) => {
-      console.error("Error updating question:", error);
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      fetchQuestionsAndDisplay(globalClassId);
+      document.getElementById("editQuestionModal").style.display = "none";
       Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: `An error occurred: ${error.message}`,
-        confirmButtonColor: "#d33",
-        confirmButtonText: "OK",
+        title: 'Success!',
+        text: 'Question updated successfully.',
+        icon: 'success',
+        confirmButtonText: 'Ok'
       });
+    } else {
+      throw new Error(data.message);
+    }
+  })
+  .catch(error => {
+    console.error("Error updating question:", error);
+    Swal.fire({
+      title: 'Error!',
+      text: error.message,
+      icon: 'error',
+      confirmButtonText: 'Ok'
     });
+  });
 }
 
 
