@@ -14,6 +14,12 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
+
+    <style> 
+      .active {
+        background-color: #004c8c;
+      }
+    </style>
   </head>
 
   <body class="bg-gray-100 text-gray-900 font-sans">
@@ -63,15 +69,14 @@
     <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
     <script>
-      document
-        .getElementById("menu-btn")
-        .addEventListener("click", function () {
-          var menu = document.getElementById("menu");
-          menu.classList.toggle("hidden");
-          menu.classList.toggle("flex");
-          menu.classList.toggle("flex-col");
-        });
-      window.addEventListener("resize", function () {
+      document.getElementById("menu-btn").addEventListener("click", function() {
+        var menu = document.getElementById("menu");
+        menu.classList.toggle("hidden");
+        menu.classList.toggle("flex");
+        menu.classList.toggle("flex-col");
+      });
+    
+      window.addEventListener("resize", function() {
         var menu = document.getElementById("menu");
         if (window.innerWidth >= 768) {
           menu.classList.add("hidden");
@@ -79,6 +84,17 @@
           menu.classList.remove("flex-col");
         }
       });
+    
+      var navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(function(item) {
+        item.addEventListener('click', function() {
+          navItems.forEach(function(nav) {
+            nav.classList.remove('active');
+          });
+          item.classList.add('active');
+        });
+      });
     </script>
+    
   </body>
 </html>
