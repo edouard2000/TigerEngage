@@ -13,7 +13,7 @@
     <div class="mb-10">
       <h2 class="text-xl font-semibold mb-3">Score</h2>
       <div class="bg-gray-200 rounded-full h-6 overflow-hidden">
-        <div id="score-progress" class="bg-green-600 h-6" style="width: {{ data['score_percentage'] }}%;"></div>
+        <div id="score-progress" class="bg-green-600 h-6" style="width: {{ score_percentage }}%;"></div>
       </div>
       <p class="text-right mt-2">Score: {{ data['score'] }} / {{ data['possibleScore'] }}</p> 
     </div>
@@ -21,7 +21,7 @@
     <div>
       <h2 class="text-xl font-semibold mb-3">Attendance</h2>
       <div class="bg-gray-200 rounded-full h-6 overflow-hidden">
-        <div id="attendance-progress" class="bg-blue-600 h-6" style="width: {{ data['attendance_percentage'] }}%;"></div>
+        <div id="attendance-progress" class="bg-blue-600 h-6" style="width: {{ attendance_percentage }}%;"></div>
       </div>
       <p class="text-right mt-2">Attendance: {{ data['attendance'] }} / {{ data['totalSessions'] }}</p> 
     </div>

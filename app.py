@@ -1129,7 +1129,13 @@ def attendance(class_id):
     if not data:
         flask.flash("Could not retrieve attendance and scores data.", "error")
         return flask.redirect(flask.url_for("dashboard"))
-    return flask.render_template("attendance.html", data=data)
+    score_percentage = 0
+    attendance_percentage = 0
+    if (data['possibleScore'] != 0):
+        score_percentage = (data['score'] / data['possibleScore']) * 100
+    if (data['totalSessions'] != 0):
+        attendance_percentage = (data['attendance'] / data['totalSessions']) * 100
+    return flask.render_template("attendance.html", data=data, score_percentage=score_percentage, attendance_percentage=attendance_percentage)
 
 
 # -------------------------------------------------------------------------------------------- #
