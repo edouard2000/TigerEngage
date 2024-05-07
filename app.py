@@ -405,6 +405,14 @@ def edit_question(class_id, question_id):
                     "message": " ".join(messages)
                 }), 403
 
+            # Validate question and answer length
+            max_question_length = 200
+            max_answer_length = 200
+            if len(data["question_text"]) > max_question_length or len(data["correct_answer"]) > max_answer_length:
+                messages = []
+                messages.append("One or both fields exceeds maximum length of 200 characters. Please try again.")
+                return jsonify({"success": False, "message": " ".join(messages)}), 403
+
             question.text = data["question_text"]
             question.correct_answer = data["correct_answer"]
             db.commit()
