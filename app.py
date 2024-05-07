@@ -55,12 +55,14 @@ else:
 # Getting Started
 # ============================================================================================
 
+# route to home if not yet authenticated
 @app.route("/", methods=["GET"])
 def index():
     if 'visited' in session:
         return redirect(url_for("authenticate_and_direct"))
     return redirect(url_for("get_started"))
 
+# route to direct to the role section option
 @app.route("/get-started", methods=["GET"])
 def get_started():
     username = authenticate()
@@ -68,6 +70,8 @@ def get_started():
     response = flask.make_response(html_code)
     return response
 
+
+# route to direct user to specifc dashbaord based on the specified role
 @app.route("/home", methods=["GET"])
 def home():
     if 'role' in session:
@@ -82,6 +86,7 @@ def home():
     response = flask.make_response(html_code)
     return response
 
+# logout route which will redirect home page
 @app.route("/logout", methods=["GET"])
 def logout():
     db = SessionLocal()
@@ -108,24 +113,34 @@ def logout():
     finally:
         db.close()
 
+# route for role selection
 @app.route("/role-selection")
 def role_selection():
     html_code = flask.render_template("role-selection.html")
     response = flask.make_response(html_code)
     return response
-
+# route for role selection
 @app.route("/select_role", methods=["POST"])
 def select_role():
     role = request.json["role"]
     flask.session["role"] = role
     return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
 
+
 @app.route("/authenticate_and_direct", methods=["GET"])
 def authenticate_and_direct():
+    """
+    Authenticates the user, verifies their role, and directs them to the appropriate dashboard.
+    It handles session management and ensures that users are redirected based on their role
+    and whether they are associated with a class. It also handles role mismatches and
+    creates new user entries if necessary.
+    """
+    # Authenticate user and store username in session
     username = authenticate()
     flask.session["username"] = username
+    
+    # Retrieve and verify user role
     actual_role = db_operations.get_user_role(username)
-
     if actual_role:
         flask.session["actual_role"] = actual_role
         if actual_role != flask.session.get("role"):
@@ -133,6 +148,8 @@ def authenticate_and_direct():
             return flask.redirect(flask.url_for("get_started"))
 
         flask.session['visited'] = True
+        
+        # Redirect professor to their dashboard or class creation form
         if actual_role == "professor":
             class_id = db_operations.get_professors_class_id(username)
             if not class_id:
@@ -141,7 +158,7 @@ def authenticate_and_direct():
             flask.session['class_id'] = class_id  
             return flask.redirect(flask.url_for("professor_dashboard", class_id=class_id))
         
-        
+        # Redirect student to their dashboard
         elif actual_role == "student":
             class_id = db_operations.get_students_class_id(username)
             if not class_id:
@@ -149,6 +166,7 @@ def authenticate_and_direct():
             flask.session['class_id'] = class_id 
             return flask.redirect(flask.url_for("student_dashboard", class_id=class_id))
     else:
+        # Default to student role if not found, create user, and redirect accordingly
         role = flask.session.get("role", "student")
         db_operations.create_user(username, role)
         flask.session['visited'] = True
@@ -164,12 +182,24 @@ def authenticate_and_direct():
         
 @app.route('/get-current-user')
 def get_current_user():
+    """
+    Retrieves the currently logged-in user's ID from the session. If a user is logged in,
+    their user ID is returned. If no user is logged in, it returns an error message.
+    """
+    # Attempt to retrieve the user ID from the session
     user_id = session.get('username', None)
-    print(f"user_id: {user_id}" )
+    
+    # Debug print statement to check the user ID retrieval
+    print(f"user_id: {user_id}")
+
+    # Check if a user ID was retrieved
     if user_id:
+        # If a user ID exists, return it with a success status
         return jsonify({'success': True, 'userId': user_id})
     else:
+        # If no user ID exists, return an error message and a 404 status
         return jsonify({'success': False, 'message': 'No user logged in'}), 404
+
     
     
 # -------------------------------------------------------------------------------------------- #
@@ -177,27 +207,35 @@ def get_current_user():
 # -------------------------------------------------------------------------------------------- #
 @app.route("/search_classes", methods=["GET"])
 def search_classes():
+    """
+    Allows users to search for classes by title. This route checks for user authentication,
+    validates the presence of a search term, and returns a list of classes that match the
+    search criteria along with their instructors.
+    """
+    # Ensure the user is authenticated by checking for 'username' in the session
     if "username" not in session:
         return jsonify({"success": False, "message": "User not authenticated"}), 401
 
+    # Initialize database session
     db = SessionLocal()
     try:
+        # Retrieve the search term from the query parameters and convert it to lower case
         search_term = request.args.get("search", "").lower()
         if not search_term:
-            return (
-                jsonify({"success": False, "message": "Search term is required"}),
-                400,
-            )
+            # Return an error if no search term is provided
+            return jsonify({"success": False, "message": "Search term is required"}), 400
         
-        # Join the Class and User tables based on the instructor_id field
+        # Perform a query to find classes whose titles contain the search term, joining with the User table
+        # to get instructor information
         classes = (
             db.query(Class)
             .join(Class.instructor)
             .filter(Class.title.ilike(f"%{search_term}%"))
             .options(joinedload(Class.instructor))
             .all()
-            )
+        )
 
+        # Transform the resulting classes into a list of dictionaries for JSON serialization
         classes_data = [
             {
                 "id": cls.class_id,
@@ -207,9 +245,12 @@ def search_classes():
             for cls in classes
         ]
 
+        # Return a successful response with the list of matching classes
         return jsonify({"success": True, "classes": classes_data})
     finally:
+        # Close the database session to free resources
         db.close()
+
 
 # ============================================================================================ #
 # Professor Dashboard
@@ -217,25 +258,37 @@ def search_classes():
 
 @app.route("/professor_dashboard/<class_id>")
 def professor_dashboard(class_id):
+    """
+    Displays the professor's dashboard for a specific class. This route checks for user authentication,
+    retrieves the user's display name from an external configuration, fetches the name of the class,
+    and then renders a dashboard view with this information.
+    """
+    # Check if the user is logged in by verifying the presence of a username in the session
     username = flask.session.get("username")
     if not username:
+        # Redirect to the home page if the user is not authenticated
         return flask.redirect(url_for("home"))
+    
+    # Instance of ReqLib to handle external requests
     req_lib = ReqLib()
 
-    display_name = req_lib.getJSON(
-        req_lib.configs.USERS,
-        uid=username,
-    )
+    # Retrieve the display name for the user using an external service
+    display_name_data = req_lib.getJSON(req_lib.configs.USERS, uid=username)
+    # Extract the display name from the returned data
+    display_name = display_name_data[0].get('displayname') if display_name_data and len(display_name_data) > 0 else "Professor"
 
-    display_name = display_name[0].get('displayname')
+    # Fetch the name of the class the professor is teaching
     course_name = db_operations.get_professor_class(username)
+
+    # Render and return the dashboard template, passing necessary data for display
     return flask.render_template(
         "professor-dashboard.html",
         course_name=course_name,
         username=display_name,
         class_id=class_id,
-        User_id = username
+        user_id=username  # Pass the user ID for potential further use in the template
     )
+
 
 # -------------------------------------------------------------------------------------------- #
 # Professor : Create class 
@@ -243,26 +296,50 @@ def professor_dashboard(class_id):
 
 @app.route("/create_class_form", methods=["GET"])
 def create_class_form():
+    """
+    Displays the form for creating a new class. This route handles the GET request
+    to show the 'create_class_form.html' template, where professors can input the
+    necessary information to create a class.
+    """
+    # Render and return the HTML form template for creating a new class
     return flask.render_template("create_class_form.html")
+
+
+
 
 @app.route("/create_class", methods=["POST"])
 def create_class():
+    """
+    Creates a new class for a professor. The professor's username is retrieved from the session,
+    and the class name is taken from the submitted form data. This route handles the POST request
+    to create a new class and returns a JSON response indicating the success or failure of the operation.
+    """
+    # Retrieve the class name from the form data
     class_name = request.form.get("class_name")
+    
+    # Get the username from the session, which represents the logged-in user (professor)
     username = flask.session.get("username")
+
+    # Call the database operation to create a new class associated with the professor
     success, class_id_returned = db_operations.create_class_for_professor(
         username, class_name
     )
+
+    # Check if the class creation was successful
     if success:
+        # Return a JSON response with success status, message, and the new class ID
         return jsonify({
             'status': 'success',
             'message': 'Class successfully created!',
             'class_id': class_id_returned
         })
     else:
+        # Return a JSON response with error status and message if creation failed
         return jsonify({
             'status': 'error',
             'message': 'Error creating class.'
         }), 400
+
 
 # -------------------------------------------------------------------------------------------- #
 # Professor : Manage members of the class
@@ -270,60 +347,116 @@ def create_class():
 
 @app.route("/class/<class_id>/userlist")
 def class_userlist(class_id):
+    """
+    Retrieves and displays a list of students enrolled in a specific class. This route uses a template
+    to render the user list, and handles exceptions to provide a robust user experience even in cases
+    of operational failures.
+    """
     try:
+        # Retrieve data for all students in the specified class
         users_data = db_operations.get_students_for_class(class_id)
+        
+        # Render a template to display the list of users, passing the retrieved data and class ID
         return render_template("class-users.html", users=users_data, class_id=class_id)
     except Exception as e:
+        # Log the exception for debugging purposes
         print(e)
+        
+        # Return a JSON response with an error message and a 500 Internal Server Error status
         return (
             jsonify({"success": False, "message": "Unable to fetch class users"}),
             500,
         )
 
+
 @app.route("/edit_student/<class_id>/<user_id>", methods=["GET", "POST"])
 def edit_user(class_id, user_id):
+    """
+    Edits the details of a student in a specific class. Handles both GET requests to display the form
+    with the student's current details and POST requests to update those details.
+    """
+    # Initialize a database session
     db_session = SessionLocal()
-    student = db_session.query(Student).filter_by(user_id=user_id).first()
-
-    if student is None:
-        db_session.close()
-        flash("Student not found.", "error")
-        return redirect(url_for("class_userlist", class_id=class_id))
-
-    enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
     
-    if request.method == "POST":
-        if enrollment:
-            enrollment.score = request.form.get("score", enrollment.score)
-            enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
-            db_session.commit()
-            flash("Student information updated successfully.", "success")
-        else:
-            flash("Enrollment information not found.", "error")
-        return redirect(url_for("professor_dashboard", class_id=class_id))
+    try:
+        # Fetch the student by user ID
+        student = db_session.query(Student).filter_by(user_id=user_id).first()
 
-    db_session.close()
-    return render_template("edit_student.html", student=student,
-                           class_id=class_id, score=enrollment.score
-                           if enrollment else None, is_ta=enrollment.is_ta
-                           if enrollment else None)
+        if student is None:
+            flash("Student not found.", "error")
+            return redirect(url_for("class_userlist", class_id=class_id))
+
+        # Fetch enrollment details for the student
+        enrollment = db_session.query(Enrollment).filter_by(student_id=user_id).first()
+        
+        if request.method == "POST":
+            if enrollment:
+                # Update the student's score and TA status if provided in the form
+                enrollment.score = request.form.get("score", enrollment.score)
+                enrollment.is_ta = bool(int(request.form.get("is_ta", enrollment.is_ta)))
+                db_session.commit()
+                flash("Student information updated successfully.", "success")
+            else:
+                flash("Enrollment information not found.", "error")
+            return redirect(url_for("professor_dashboard", class_id=class_id))
+        else:
+            # If GET method, render the edit student template with current details
+            return render_template("edit_student.html", student=student,
+                                   class_id=class_id, score=enrollment.score
+                                   if enrollment else None, is_ta=enrollment.is_ta
+                                   if enrollment else None)
+    except Exception as e:
+        # Handle exceptions and rollback any failed transactions
+        db_session.rollback()
+        flash(f"An error occurred: {str(e)}", "error")
+        return redirect(url_for("class_userlist", class_id=class_id))
+    finally:
+        # Ensure the database session is closed
+        db_session.close()
+
+    
 
 @app.route("/delete_user/<class_id>/<user_id>", methods=["POST"])
 def delete_user(class_id, user_id):
+    """
+    Deletes a user (student) from a specific class. This route handles the deletion of the user's enrollment record.
+    If the user exists, their enrollment in the specified class is deleted. If the user is not found, or there is no
+    enrollment, appropriate feedback is provided.
+    """
+    # Initialize a database session
     db_session = SessionLocal()
-    user = db_session.query(User).filter_by(user_id=user_id).first()
 
-    if user:
-        delete_enrollment = db_session.query(Enrollment).filter(Enrollment.student_id == user_id).first()
-        db_session.delete(delete_enrollment)
-        
-        db_session.commit()
-        flash("User successfully deleted", "success")
-    else:
-        flash("User not found.", "error")
-    db_session.close()
+    try:
+        # Fetch the user to check if they exist
+        user = db_session.query(User).filter_by(user_id=user_id).first()
 
+        if user:
+            # Query to find the user's enrollment in the specified class
+            delete_enrollment = db_session.query(Enrollment).filter(Enrollment.student_id == user_id, Enrollment.class_id == class_id).first()
+            
+            # Check if the enrollment record exists
+            if delete_enrollment:
+                # Delete the enrollment record if it exists
+                db_session.delete(delete_enrollment)
+                db_session.commit()
+                flash("User successfully deleted", "success")
+            else:
+                # If no enrollment is found, flash an error message
+                flash("Enrollment record not found.", "error")
+        else:
+            # If the user is not found, flash an error message
+            flash("User not found.", "error")
+    except Exception as e:
+        # Rollback in case of any exception during the database operation
+        db_session.rollback()
+        flash(f"Error deleting user: {str(e)}", "error")
+    finally:
+        # Close the database session to free resources
+        db_session.close()
+
+    # Redirect to the professor dashboard for the class
     return redirect(url_for("professor_dashboard", class_id=class_id))
+
 
 # -------------------------------------------------------------------------------------------- #
 # Professor : Manage In-Class Questions
@@ -341,10 +474,17 @@ def add_question():
 
 @app.route("/class/<class_id>/add-question", methods=["POST"])
 def add_question_to_class_route(class_id):
+    """
+    Adds a new question to a class based on the provided class_id. This endpoint
+    checks if the required fields (question text and correct answer) are provided and
+    validates that their lengths do not exceed a set maximum before attempting to add the question.
+    """
+    # Extract question details from request JSON
     data = request.json
     question_text = data.get("question_text")
     correct_answer = data.get("correct_answer")
 
+    # Ensure both question text and correct answer are provided
     if not question_text or not correct_answer:
         return (
             jsonify(
@@ -356,8 +496,9 @@ def add_question_to_class_route(class_id):
             400,
         )
     
-    # Check if question text and correct answer exceed character limit
+    # Set the maximum acceptable length for question text and correct answer
     max_length = 200
+    # Validate the length of the question text and correct answer
     if len(question_text) > max_length or len(correct_answer) > max_length:
         return (
             jsonify(
@@ -369,28 +510,44 @@ def add_question_to_class_route(class_id):
             400,
         )
     
+    # Attempt to add the question to the class in the database
     success = db_operations.add_question_to_class(
         class_id, question_text, correct_answer
     )
 
+    # Check if the database operation was successful
     if success:
         return jsonify({"success": True, "message": "Question successfully added."})
     else:
+        # Return an error if the operation fails
         return jsonify({"success": False, "message": "Failed to add question."}), 500
+
     
 
 @app.route("/class/<string:class_id>/question/<string:question_id>/edit", methods=["POST"])
 def edit_question(class_id, question_id):
+    """
+    Modifies the details of a specific question in a class, provided the question is not currently
+    active, displayed, or has associated summaries. Validates the length of the question and answer
+    text to ensure it does not exceed the maximum allowed length.
+    """
+    # Retrieve the new question data from the request's JSON body
     data = request.get_json()
-    print(data)
+    print(data)  # Log data for debugging purposes
+
+    # Initialize a database session
     db = SessionLocal()
     try:
+        # Query for the specific question using question_id and class_id
         question = (
             db.query(Question)
             .filter_by(question_id=question_id, class_id=class_id)
             .first()
         )
+
+        # Check if the question exists
         if question:
+            # Check if the question has restrictions that prevent editing
             if question.summaries or question.is_displayed or question.is_active:
                 messages = []
                 if question.summaries:
@@ -405,36 +562,47 @@ def edit_question(class_id, question_id):
                     "message": " ".join(messages)
                 }), 403
 
-            # Validate question and answer length
+            # Validate the length of the updated question and answer
             max_question_length = 200
             max_answer_length = 200
             if len(data["question_text"]) > max_question_length or len(data["correct_answer"]) > max_answer_length:
-                messages = []
-                messages.append("One or both fields exceeds maximum length of 200 characters. Please try again.")
+                messages = ["One or both fields exceeds maximum length of 200 characters. Please try again."]
                 return jsonify({"success": False, "message": " ".join(messages)}), 403
 
+            # Update question text and correct answer if validations pass
             question.text = data["question_text"]
             question.correct_answer = data["correct_answer"]
-            db.commit()
-            return jsonify(
-                {"success": True, "message": "Question updated successfully."}
-            )
+            db.commit()  # Commit the updates to the database
+            return jsonify({"success": True, "message": "Question updated successfully."})
         else:
+            # Return an error if the question is not found
             return jsonify({"success": False, "message": "Question not found."}), 404
     finally:
+        # Ensure that the database session is closed
         db.close()
+
 
 
 @app.route("/class/<string:class_id>/question/<string:question_id>/delete", methods=["DELETE"])
 def delete_question(class_id, question_id):
+    """
+    Deletes a specific question from a class, but only if the question is neither active nor displayed.
+    The route checks if the question exists, verifies its state, and deletes it if conditions are met.
+    Returns success or error messages based on the outcome of the delete operation.
+    """
+    # Initialize a database session
     db = SessionLocal()
     try:
+        # Query for the specific question using question_id and class_id
         question = (
             db.query(Question)
             .filter_by(question_id=question_id, class_id=class_id)
             .first()
         )
+        
+        # Check if the question exists
         if question:
+            # Ensure the question is neither active nor displayed before deletion
             if question.is_active or question.is_displayed:
                 message = "Question is "
                 if question.is_active:
@@ -447,15 +615,19 @@ def delete_question(class_id, question_id):
                 message += ". Please deactivate and ensure it is not displayed before deleting."
                 return jsonify({"success": False, "message": message}), 400
             
+            # Delete the question from the database
             db.delete(question)
             db.commit()
             return jsonify({"success": True, "message": "Question deleted successfully."})
         else:
+            # Return an error if the question is not found
             return jsonify({"success": False, "message": "Question not found."}), 404
     except Exception as e:
+        # Rollback in case of any exception during database operations
         db.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
+        # Ensure that the database session is closed
         db.close()
 
 
@@ -520,128 +692,195 @@ def student_dashboard():
 
 @app.route("/enroll_in_class", methods=["POST"])
 def enroll_in_class():
+    """
+    Enrolls a logged-in user into a specified class based on the class ID provided.
+    This endpoint checks user authentication, validates the existence of the class,
+    and handles duplicate enrollments, ensuring each user can enroll in a class only once.
+    """
+    # Retrieve username from the session to identify the logged-in user
     username = session.get("username")
+    # Retrieve class ID from the JSON payload of the request
     class_id = request.json.get("class_id")
+
+    # Validate the presence of both username and class ID
     if not username and class_id:
+        # Return an error if the user is not authenticated or class ID is missing
         return jsonify({"success": False, "message": "User not authenticated"}), 401
 
+    # Initialize database session
     db = SessionLocal()
     try:
+        # Fetch user from the database
         user = db.query(User).filter_by(user_id=username).first()
         if not user:
+            # Return an error if no user is found with the provided username
             return jsonify({"success": False, "message": "User not found"}), 404
 
         user_id = user.user_id
 
+        # Check for existing enrollment to prevent duplicates
         existing_enrollment = (
             db.query(Enrollment)
             .filter_by(student_id=user_id, class_id=class_id)
             .first()
         )
         if existing_enrollment:
+            # Return an error if the user is already enrolled in the class
             return jsonify({"success": False, "message": "Already enrolled"}), 400
 
+        # Create new enrollment record
         enrollment = Enrollment(
             enrollment_id=str(uuid.uuid4()), student_id=user_id, class_id=class_id
         )
         db.add(enrollment)
         db.commit()
+        # Return success message upon successful enrollment
         return jsonify({"success": True, "message": "Enrolled successfully"})
     except NoResultFound:
+        # Handle case where no class is found with the provided ID
         return jsonify({"success": False, "message": "Class not found"}), 404
     except Exception as e:
+        # Rollback the transaction in case of any exception
         db.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
+        # Ensure that the database session is closed
         db.close()
+
 
 
 @app.route("/unenroll_from_class", methods=["POST"])
 def unenroll_from_class():
+    """
+    Handles the unenrollment of the currently logged-in student from a specified class.
+    Requires user authentication and a class ID to proceed with the unenrollment.
+    Returns success or error messages based on the outcome of the unenrollment process.
+    """
+    # Retrieve user ID from session to identify the logged-in user
     user_id = flask.session.get("username")
+    
+    # Check if the user is authenticated by verifying the presence of a user ID in the session
     if not user_id:
+        # Return an error if the user is not authenticated
         return jsonify({"success": False, "message": "User not authenticated"}), 401
+    
+    # Extract class ID from the request data
     data = request.get_json()
     class_id = data.get("class_id")
+    
+    # Check if the class ID was provided
     if not class_id:
+        # Return an error if class ID is missing
         return jsonify({"success": False, "message": "Class ID is required"}), 400
+    
+    # Initialize database session
     db = SessionLocal()
     try:
+        # Query for the specific enrollment record
         enrollment = (
             db.query(Enrollment)
             .filter_by(student_id=user_id, class_id=class_id)
             .first()
         )
+        
+        # Check if the enrollment record exists
         if not enrollment:
+            # Return an error if the enrollment record is not found
             return jsonify({"success": False, "message": "Enrollment not found"}), 404
+        
+        # Delete the enrollment record from the database
         db.delete(enrollment)
         db.commit()
+        
+        # Return success message upon successful unenrollment
         return jsonify({"success": True, "message": "Unenrolled successfully"})
     except Exception as e:
+        # Rollback in case of any exception during database operations
         db.rollback()
         return (
             jsonify({"success": False, "message": "Unenrollment failed: " + str(e)}),
             500,
         )
     finally:
+        # Ensure that the database session is closed
         db.close()
+
 
 
 @app.route("/get_enrolled_classes")
 def get_enrolled_classes():
+    """
+    Retrieves a list of classes that the currently logged-in student is enrolled in.
+    This endpoint requires that the user is authenticated and will respond with the
+    appropriate class data or error messages depending on the user's enrollment status.
+    """
+    # Retrieve username from session to identify the logged-in user
     username = flask.session.get("username")
+    
+    # Check if the user is authenticated by verifying the presence of a username in the session
     if not username:
+        # Return an error if the user is not authenticated
         return jsonify({"success": False, "message": "User not authenticated"}), 401
+    
+    # Fetch data for classes in which the user is enrolled
     classes_data = db_operations.get_student_classes(username)
     if not classes_data:
+        # Log and return an error if no classes are found for the user
         print("No classes found for user:", username)
         return (
             jsonify({"success": False, "message": "No classes found for this user."}),
             404,
         )
+    
+    # Return the list of classes in JSON format if classes are found
     return jsonify({"success": True, "classes": classes_data})
+
 
 
 @app.route("/class/<class_id>/check_in", methods=["POST"])
 def check_in(class_id):
+    """
+    Handles the POST request to check in a student for an active class session. Verifies user authentication,
+    checks if the student is enrolled in the class, verifies if there is an active session, and records the
+    student's attendance. It also handles already checked-in cases and errors accordingly.
+    """
+    # Retrieve username from session
     username = flask.session.get("username")
+    
+    # Check if the user is authenticated
     if not username:
         return jsonify({"success": False, "message": "User not authenticated"}), 401
+    
+    # Verify if the user is enrolled in the class
     if not db_operations.is_student_enrolled_in_class(username, class_id):
-        return (
-            jsonify(
-                {"success": False, "message": "Student not enrolled in this class"}
-            ),
-            403,
-        )
+        return jsonify({"success": False, "message": "Student not enrolled in this class"}), 403
+    
+    # Check for an active session in the class
     active_session = db_operations.get_active_session_for_class(class_id)
     if not active_session:
-        return (
-            jsonify({"success": False, "message": "No active session for this class"}),
-            404,
-        )
+        return jsonify({"success": False, "message": "No active session for this class"}), 404
+    
+    # Check if the user has already checked in
     if db_operations.has_checked_in(username, active_session.session_id):
-        return jsonify(
-            {
-                "success": True,
-                "message": "Already checked in.",
-                "redirectUrl": url_for("class_dashboard", class_id=class_id),
-            }
-        )
+        return jsonify({
+            "success": True,
+            "message": "Already checked in.",
+            "redirectUrl": url_for("class_dashboard", class_id=class_id),
+        })
 
+    # Record attendance and update the database
     success, message = db_operations.record_attendance_and_update(
         username, class_id, active_session.session_id
     )
     if success:
-        return jsonify(
-            {
-                "success": True,
-                "message": "Check-in successful.",
-                "redirectUrl": url_for("class_dashboard", class_id=class_id),
-            }
-        )
+        return jsonify({
+            "success": True,
+            "message": "Check-in successful.",
+            "redirectUrl": url_for("class_dashboard", class_id=class_id),
+        })
     else:
         return jsonify({"success": False, "message": message}), 500
+
     
 
 # ============================================================================================ #
@@ -771,10 +1010,19 @@ def questions():
 
 @app.route("/class/<class_id>/questions", methods=["GET"])
 def get_questions_for_class_route(class_id):
+    """
+    Retrieves all questions associated with a specific class. Returns the questions in a JSON format
+    if found, or a JSON message indicating that no questions were found if the list is empty.
+    """
+    # Perform a database operation to fetch questions for the specified class
     results = db_operations.get_questions_for_class(class_id)
+    
+    # Check if any questions were returned from the database
     if results:
+        # If questions are found, return them with a success status
         return jsonify({"success": True, "questions": results})
     else:
+        # If no questions are found, return a JSON response indicating failure and a 404 status
         return (
             jsonify(
                 {"success": False, "message": "No questions found for this class."}
@@ -782,28 +1030,43 @@ def get_questions_for_class_route(class_id):
             404,
         )
 
+
 # -------------------------------------------------------------------------------------------- #
 # Question Status
 # -------------------------------------------------------------------------------------------- #
 
 @app.route("/class/<class_id>/question/<question_id>/status", methods=["GET"])
 def get_question_status(class_id, question_id):
+    """
+    Retrieves the status of a specific question within a class. It checks if the question is currently
+    active and whether it is displayed, returning this information in a JSON response.
+    """
+    # Initialize a database session
     db_session = SessionLocal()
+    
     try:
+        # Query the database for the specific question by class and question IDs
         question = db_session.query(Question).filter_by(
             class_id=class_id, question_id=question_id).first()
+        
+        # Check if the question exists
         if not question:
+            # Return an error message if the question is not found
             return jsonify({"success": False, "message": "Question not found."}), 404
 
+        # Return the status of the question including its active and displayed states
         return jsonify({
             "success": True,
             "isActive": question.is_active,
             "isDisplayed": question.is_displayed
         }), 200
     except Exception as e:
+        # Handle any exceptions that occur and return an error message
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
+        # Ensure that the database session is closed
         db_session.close()
+
 
 # -------------------------------------------------------------------------------------------- #
 # Professor makes the question visible to the class
@@ -861,20 +1124,31 @@ def toggle_question(class_id, question_id):
 
 @app.route("/class/<class_id>/active-question", methods=["GET"])
 def get_active_question(class_id):
+    """
+    Retrieves the current active question for a given class. If there is an active question,
+    it returns the question details; otherwise, it indicates that there is no active question.
+    """
+    # Log the class ID for debugging
     print(f"class_id: {class_id}")
+    
+    # Query the database for active questions related to the specified class
     active_question = db_operations.get_active_questions_for_class(class_id)
     print(f"Active question: {active_question}")
+    
+    # Check if there is an active question
     if active_question:
+        # Prepare the question data for response
         question_data = {
-            "question_id": active_question[0].question_id,
+            "question_id": active_question[0].question_id,  # Assuming the first result is the relevant one
             "text": active_question[0].text,
             "correct_answer": active_question[0].correct_answer,
         }
+        # Return the question data with success status
         return jsonify({"success": True, "question": question_data})
     else:
+        # Return a response indicating no active question
         return jsonify({"success": False, "question": None})
-    
-    
+ 
 # -------------------------------------------------------------------------------------------- #
 # Student Answer Submission for Displayed Question
 # -------------------------------------------------------------------------------------------- #
@@ -1031,20 +1305,31 @@ def chat():
 
 @socketio.on('send_message')
 def handle_send_message(data):
+    """
+    Handles the event of sending a chat message by a user. It checks for an active class and session,
+    assigns the correct user role, creates a new chat message, and broadcasts it to all connected clients.
+    If any issue occurs (like no active session), it emits an error message back to the client.
+    """
+    # Retrieve user ID from the session
     user_id = session.get('username')
-    db_session = SessionLocal()
+    db_session = SessionLocal()  # Initialize database session
+
     try:
+        # Retrieve the active class and session IDs
         class_id, session_id = db_operations.get_active_class_and_session_ids(user_id, db_session)
         if not class_id or not session_id:
+            # Emit an error if no active class or session found
             emit('error', {'error': 'No active session or class found.'}, room=request.sid)
             return
         
+        # Get the user's role and determine if they are a TA
         role = db_operations.get_user_role(user_id)
         is_ta = db_operations.is_user_a_ta_in_class(user_id, class_id)
-        print(f"is_ta: {is_ta }")
+        print(f"is_ta: {is_ta}")
         if is_ta:
-            role = "TA"
+            role = "TA"  # Assign TA role if applicable
         
+        # Create a new chat message instance
         new_message = ChatMessage(
             message_id=str(uuid.uuid4()),
             sender_id=user_id,
@@ -1055,8 +1340,9 @@ def handle_send_message(data):
             timestamp=datetime.utcnow()
         )
         db_session.add(new_message)
-        db_session.commit()
+        db_session.commit()  # Commit the new message to the database
         
+        # Emit the new message back to the sender's client
         emit('new_message', {
             'message_id': new_message.message_id,
             'text': new_message.text,
@@ -1065,6 +1351,7 @@ def handle_send_message(data):
             'timestamp': new_message.timestamp.isoformat()
         }, room=request.sid)
     
+        # Broadcast the new message to all clients except the sender
         emit('new_message', {
             'message_id': new_message.message_id,
             'text': new_message.text,
@@ -1073,36 +1360,49 @@ def handle_send_message(data):
             'timestamp': new_message.timestamp.isoformat()
         }, broadcast=True, include_self=False)
     except Exception as e:
+        # Rollback the transaction in case of an error
         db_session.rollback()
         emit('error', {'error': str(e)}, room=request.sid)
     finally:
+        # Ensure that the database session is closed
         db_session.close()
 
 
 @app.route('/chat/<class_id>/messages', methods=['GET'])
 def fetch_chat_messages(class_id):
+    """
+    Fetches chat messages for a given class if there is an active session.
+    Returns messages ordered by their timestamp and includes the status of the class session.
+    It also handles exceptions and ensures database connections are properly closed.
+    """
+    # Initialize database session
     db_session = SessionLocal()
     try:
+        # Query for an active class session based on the class ID
         active_session = db_session.query(ClassSession).filter_by(class_id=class_id, is_active=True).first()
-        is_class_active = bool(active_session) 
+        is_class_active = bool(active_session)  # Convert to bool for JSON response
 
+        # Handle cases where no active session is found
         if not active_session:
             return jsonify({'success': False, 'isClassActive': is_class_active, 'message': 'No active session for this class.'}), 404
 
+        # Retrieve messages for the active session, ordered by timestamp
         messages = db_session.query(ChatMessage).filter_by(class_id=class_id, session_id=active_session.session_id).order_by(ChatMessage.timestamp.asc()).all()
-        current_user_id = session.get('username', 'Unknown')
-       
+        current_user_id = session.get('username', 'Unknown')  # Get current user ID from session
+        
+        # Prepare list of messages for response
         messages_list = [{
             'message_id': message.message_id,
             'sender_id': message.sender_id,
             'text': message.text,
             'role': message.role,
-            'timestamp': message.timestamp.isoformat()
+            'timestamp': message.timestamp.isoformat()  # Convert timestamp to ISO format
         } for message in messages]
         
+        # Print message list for debugging
         print(f"messages_list: {messages_list}")
-    
-
+        
+        # Return success response with message data and class session status
         return jsonify({
             'success': True,
             'isClassActive': is_class_active,
@@ -1110,10 +1410,13 @@ def fetch_chat_messages(class_id):
             'currentUserId': current_user_id
         })
     except Exception as e:
+        # Handle any exceptions that occur during the process
         print(f"Error fetching messages: {str(e)}")
         return jsonify({'success': False, 'isClassActive': False, 'error': str(e)}), 500
     finally:
+        # Ensure the database session is closed
         db_session.close()
+
         
         
 # ============================================================================================ #
@@ -1145,7 +1448,6 @@ def attendance(class_id):
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404
-
 
 # ============================================================================================ 
 # Main
