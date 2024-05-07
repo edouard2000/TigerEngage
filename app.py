@@ -55,43 +55,99 @@ else:
 # Getting Started
 # ============================================================================================
 
-# route to home if not yet authenticated
 @app.route("/", methods=["GET"])
 def index():
+    """
+    The root endpoint that determines the initial direction for the user based on their session status.
+    If the user has a 'visited' flag in their session, it suggests they've interacted with the site before
+    and are redirected to authentication. If not, they are directed to start the initial setup or onboarding
+    process.
+    """
     if 'visited' in session:
         return redirect(url_for("authenticate_and_direct"))
     return redirect(url_for("get_started"))
 
-# route to direct to the role section option
+
+
+
 @app.route("/get-started", methods=["GET"])
 def get_started():
+    """
+    Initiates user onboarding by authenticating the user and then directing them
+    to a role selection or a general home page if already authenticated or no
+    specific role selection is needed.
+    """
+    # Authenticate the user
     username = authenticate()
+
+    # Check if authentication was successful
+    if username:
+        # Store the username in the session to maintain user state
+        flask.session['username'] = username
+
+        # Check if the user has already selected a role, if not direct to role selection
+        if 'role' not in flask.session:
+            return flask.redirect(url_for("role_selection"))
+
+        # If the role is already set, redirect to the home page
+        return flask.redirect(url_for("home"))
+
+    # If authentication fails, render the home template which might prompt login or show error
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
 
 
-# route to direct user to specifc dashbaord based on the specified role
+
 @app.route("/home", methods=["GET"])
 def home():
+    """
+    Directs users to their respective dashboards based on their roles (student or professor).
+    If the role is not defined in the session, it defaults to displaying the general home page.
+    This ensures that users receive a personalized experience based on their role.
+    """
+    # Check if the role is defined in the session
     if 'role' in session:
         role = flask.session['role']
+
+        # Direct student users to the student dashboard
         if role == 'student':
             return redirect(url_for("student_dashboard"))
+
+        # Direct professor users to their specific class dashboard
         elif role == 'professor':
             username = flask.session['username']
+            # Retrieve the class ID associated with the professor
             class_id = db_operations.get_professors_class_id(username)
-            return redirect(url_for("professor_dashboard", class_id=class_id))
+            # If a class ID is found, redirect to the professor dashboard for that class
+            if class_id:
+                return redirect(url_for("professor_dashboard", class_id=class_id))
+            # If no class ID is found, consider redirecting to a page that handles this case or back to home
+            else:
+                flash("No class associated with the professor. Please contact support.", "error")
+                return redirect(url_for("home"))
+
+    # Render and return the general home page if no specific role actions are required
     html_code = flask.render_template("home.html")
     response = flask.make_response(html_code)
     return response
 
-# logout route which will redirect home page
+
 @app.route("/logout", methods=["GET"])
 def logout():
+    """
+    Processes the user's logout request. Before clearing the session, it checks if the user
+    (assumed to be an instructor) has any active class sessions. If an active session exists,
+    the logout is prevented, and an error message is returned. Otherwise, the user's session
+    is cleared, and a successful logout message is returned.
+    """
+    # Initialize a database session
     db = SessionLocal()
     try:
+        # Retrieve the user ID from the session
         user_id = flask.session.get("username")
+        
+        # Check if the user is an instructor with an active class session
         if user_id:
             active_session = (
                 db.query(ClassSession)
@@ -100,31 +156,60 @@ def logout():
                 .first()
             )
             if active_session:
+                # Prevent logout and return a message if there is an active session
                 return jsonify({
                     "success": False,
                     "message": "There is an active session. Please end the session before logging out."
                 }), 400
 
+        # Clear the user's session to log them out
         flask.session.clear()
+
+        # Return a success message upon logout
         return jsonify({"success": True, "message": "You have been logged out successfully."})
 
     except Exception as e:
+        # Return an error message if an exception occurs
         return jsonify({"success": False, "message": str(e)}), 500
     finally:
+        # Ensure the database session is closed regardless of the outcome
         db.close()
 
-# route for role selection
+
 @app.route("/role-selection")
 def role_selection():
+    """
+    Displays a role selection page to the user. This route renders an HTML template that allows users
+    to choose their role within the application (e.g., student, professor, administrator).
+    """
+    # Render the role selection HTML template
     html_code = flask.render_template("role-selection.html")
+    
+    # Create a response object from the rendered HTML code
     response = flask.make_response(html_code)
+    
+    # Return the response object to the client
     return response
-# route for role selection
+
 @app.route("/select_role", methods=["POST"])
 def select_role():
+    """
+    Handles the selection of a user's role via a POST request. The selected role is stored
+    in the session, and the route responds with a JSON object indicating success and providing
+    a URL for redirection to an authentication and direction route.
+    """
+    # Retrieve the role from the JSON body of the POST request
     role = request.json["role"]
+
+    # Store the selected role in the user's session
     flask.session["role"] = role
-    return jsonify({"success": True, "redirectUrl": url_for("authenticate_and_direct")})
+
+    # Return a JSON response with success status and a redirection URL
+    return jsonify({
+        "success": True, 
+        "redirectUrl": url_for("authenticate_and_direct")
+    })
+
 
 
 @app.route("/authenticate_and_direct", methods=["GET"])
