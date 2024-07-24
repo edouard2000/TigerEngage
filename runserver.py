@@ -12,7 +12,6 @@ from app import app, socketio
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
-    
     if len(sys.argv) != 2:
         logging.error("Usage: " + sys.argv[0] + " port")
         sys.exit(1)

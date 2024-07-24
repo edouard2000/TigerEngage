@@ -24,8 +24,10 @@ from sqlalchemy import (
 # Database URL and engine setup
 _DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgres://tigerengage_user:CcchdFt18gGxz2a2dwMFdMBsxh20FcG6@dpg-cnvo5ldjm4es73drsoeg-a.ohio-postgres.render.com/tigerengage",
+    "postgresql://tigerengage_i80s_user:3ByTjcPKJW0B9ZGBOUPUqR6tAvE9XNJT@dpg-cqglsjij1k6c73dg22b0-a.ohio-postgres.render.com/tigerengage_i80s?sslmode=require",
 )
+
+
 _DATABASE_URL = _DATABASE_URL.replace("postgres://", "postgresql://")
 _engine = create_engine(_DATABASE_URL)
 
@@ -60,8 +62,6 @@ class Student(User):
     __mapper_args__ = {
         "polymorphic_identity": "student",
     }
-
-
 class Professor(User):
     __tablename__ = "professors"
     user_id = Column(String, ForeignKey("users.user_id"), primary_key=True)
@@ -70,8 +70,6 @@ class Professor(User):
     __mapper_args__ = {
         "polymorphic_identity": "professor",
     }
-
-
 class Class(Base):
     __tablename__ = "classes"
     class_id = Column(String, primary_key=True)

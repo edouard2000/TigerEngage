@@ -1,24 +1,10 @@
-from db_operations import create_user, create_class_for_professor, start_new_session
+import psycopg2
 
-# Define user information
-netid = "jdoe2024"  # Dummy NetID
-role = "professor"  # Role can be 'student' or 'professor'
+DATABASE_URL = "postgresql://tigerengage_i80s_user:3ByTjcPKJW0B9ZGBOUPUqR6tAvE9XNJT@dpg-cqglsjij1k6c73dg22b0-a.ohio-postgres.render.com/tigerengage_i80s"
 
-# Create user
-user_creation_success = create_user(netid, role)
-print(f"User creation successful: {user_creation_success}")
-
-if user_creation_success and role == "professor":
-    # Define class information if the user is a professor
-    class_title = "Introduction to Computer Science"
-
-    # Create a class for the professor
-    class_creation_success, class_id = create_class_for_professor(netid, class_title)
-    print(f"Class creation successful: {class_creation_success}, Class ID: {class_id}")
-
-    if class_creation_success:
-        # Start a new session for the created class
-        session_start_success, session_id = start_new_session(class_id)
-        print(f"Session start successful: {session_start_success}, Session ID: {session_id}")
-else:
-    print("User must be a professor to create a class.")
+try:
+    conn = psycopg2.connect(DATABASE_URL)
+    print("Connection successful")
+    conn.close()
+except Exception as e:
+    print(f"Connection failed: {e}")
